@@ -3,7 +3,7 @@
 "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
 <head>
-<!-- 2017-12-25 Mon 23:36 -->
+<!-- 2017-12-25 Mon 23:46 -->
 <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Twelve Days of Christmas #3</title>
@@ -26,17 +26,13 @@ This is the third part of <a href="../index.html">a chess-themed tutorial</a> on
 <a href="https://github.com/OvermindDL1/bucklescript-tea">Bucklescript-TEA</a>.  After this part, your app will look similar to <a href="demo.html">this demo</a>.
 </p>
 
-<div id="outline-container-org437d519" class="outline-2">
-<h2 id="org437d519">Day 3</h2>
-<div class="outline-text-2" id="text-org437d519">
 <p>
 Yesterday, we learned about commands by implementing a chess board that makes random moves.  Today, we will refactor our code by putting the board-related code into its own module, managing its own state by composing views and models.
 </p>
-</div>
 
-<div id="outline-container-org7a9d45f" class="outline-3">
-<h3 id="org7a9d45f">Refactoring the board view</h3>
-<div class="outline-text-3" id="text-org7a9d45f">
+<div id="outline-container-org7a9d45f" class="outline-2">
+<h2 id="org7a9d45f">Refactoring the board view</h2>
+<div class="outline-text-2" id="text-org7a9d45f">
 <p>
 Let's move the board view function into its own module <code>src/Board.ml</code>:
 </p>
@@ -220,9 +216,9 @@ The rest can be left unchanged as it doesn't deal with the board.  If nothing we
 </div>
 </div>
 
-<div id="outline-container-org4ddd23b" class="outline-3">
-<h3 id="org4ddd23b">A list of independent board views</h3>
-<div class="outline-text-3" id="text-org4ddd23b">
+<div id="outline-container-org4ddd23b" class="outline-2">
+<h2 id="org4ddd23b">A list of independent board views</h2>
+<div class="outline-text-2" id="text-org4ddd23b">
 <p>
 Let's go a little crazy and replace our chessboard by a list of chessboard views, where every board can be fipped independently, but all share the same position and are updated when the "random move" button is clicked.  Let's change our model and add some messages:
 </p>
@@ -326,7 +322,6 @@ For relaying of board messages and deletion of boards, we need some simple helpe
 <p>
 Head to your browser and add some boards, flip their orientation around, make random moves and watch them appear on all boards simultaneously.  This concludes today's part of the tutorial.  I implemented the board list in its own branch in my repository, because tomorrow we will go back to only one board.  We will implement drag and drop so you can finally make moves yourself.
 </p>
-</div>
 </div>
 </div>
 </div>

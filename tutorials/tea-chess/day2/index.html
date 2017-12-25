@@ -3,7 +3,7 @@
 "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
 <head>
-<!-- 2017-12-25 Mon 23:36 -->
+<!-- 2017-12-25 Mon 23:46 -->
 <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Twelve Days of Christmas #2</title>
@@ -26,17 +26,13 @@ This is the second part of <a href="../index.html">a chess-themed tutorial</a> o
 <a href="https://github.com/OvermindDL1/bucklescript-tea">Bucklescript-TEA</a>.  After this part, your app will look similar to <a href="demo.html">this demo</a>.
 </p>
 
-<div id="outline-container-org418d412" class="outline-2">
-<h2 id="org418d412">Day 2</h2>
-<div class="outline-text-2" id="text-org418d412">
 <p>
 Yesterday, we implemented a chessboard without pieces.  Today, we will add pieces and use a random number generator to play random moves.  We use an existing OCaml chess library to do the heavy lifting.
 </p>
-</div>
 
-<div id="outline-container-org9225916" class="outline-3">
-<h3 id="org9225916">Integrating existing OCaml code</h3>
-<div class="outline-text-3" id="text-org9225916">
+<div id="outline-container-org9225916" class="outline-2">
+<h2 id="org9225916">Integrating existing OCaml code</h2>
+<div class="outline-text-2" id="text-org9225916">
 <p>
 Just like Google's recent success with AlphaZero, we will only need to
 spell out the rules of chess, and our program will learn how to
@@ -129,9 +125,9 @@ I moved <code>char_of_file</code> and <code>char_of_rank</code> and added two mo
 </div>
 </div>
 
-<div id="outline-container-org6c48b12" class="outline-3">
-<h3 id="org6c48b12">A static chessboard with pieces</h3>
-<div class="outline-text-3" id="text-org6c48b12">
+<div id="outline-container-org6c48b12" class="outline-2">
+<h2 id="org6c48b12">A static chessboard with pieces</h2>
+<div class="outline-text-2" id="text-org6c48b12">
 <p>
 Download the piece images from the <a href="https://github.com/oakmac/chessboardjs">Chessboard.js</a> project and put them into <code>release/img/pieces</code>.  We will use some nifty CSS to display them on the board:
 </p>
@@ -228,9 +224,9 @@ O'Chess represents the position as a record where the actual location of the pie
 </div>
 </div>
 
-<div id="outline-container-orgff4feb4" class="outline-3">
-<h3 id="orgff4feb4">Your first commands</h3>
-<div class="outline-text-3" id="text-orgff4feb4">
+<div id="outline-container-orgff4feb4" class="outline-2">
+<h2 id="orgff4feb4">Your first commands</h2>
+<div class="outline-text-2" id="text-orgff4feb4">
 <p>
 Let's now use a random generator to make random moves.  O'Chess will tell us what moves are legal moves according to the rules of chess in a given position.  Let's add a button to trigger a random move, and let's add a little informative line that tells us how many moves we can choose from in the current position:
 </p>
@@ -344,7 +340,6 @@ Try it out and see if you can play a full game before you get bored.  Most of th
 <p>
 This concludes day 2 of the Twelve Days of Christmas tutorial.  Tomorrow, we will refactor our code and learn how to compose views that manage their own submodels.
 </p>
-</div>
 </div>
 </div>
 </div>
