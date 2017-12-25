@@ -1,0 +1,328 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+<head>
+<!-- 2017-12-25 Mon 19:24 -->
+<meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>&lrm;</title>
+<meta name="generator" content="Org mode" />
+<meta name="author" content="Daniel Quernheim" />
+<link rel='stylesheet' href='/style.css' type='text/css'/><meta name="viewport" content="width=device-width"/>
+</head>
+<body>
+<div id="org-div-home-and-up">
+ <a accesskey="h" href=""> UP </a>
+ |
+ <a accesskey="H" href="/"> HOME </a>
+</div><div id="preamble" class="status">
+<nav><a href="/">home</a></nav>
+</div>
+<div id="content">
+<div id="outline-container-org437d519" class="outline-2">
+<h2 id="org437d519">Day 3</h2>
+<div class="outline-text-2" id="text-org437d519">
+<p>
+Yesterday, we learned about commands by implementing a chess board that makes random moves.  Today, we will refactor our code by putting the board-related code into its own module, managing its own state by composing views and models.
+</p>
+</div>
+
+<div id="outline-container-org7a9d45f" class="outline-3">
+<h3 id="org7a9d45f">Refactoring the board view</h3>
+<div class="outline-text-3" id="text-org7a9d45f">
+<p>
+Let's move the board view function into its own module <code>src/Board.ml</code>:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-ocaml"><span style="color: #000000; font-weight: bold;">open </span><span style="color: #6434A3;">Tea</span>
+<span style="color: #000000; font-weight: bold;">open </span><span style="color: #6434A3;">Tea.Html</span>
+
+
+<span style="color: #000000; font-weight: bold;">type</span> <span style="color: #6434A3;">model</span> <span style="color: #a52a2a;">=</span>
+  <span style="color: #a52a2a;">{</span> orientation <span style="color: #a52a2a;">:</span> <span style="color: #6434A3;">Chess.</span>color
+  <span style="color: #a52a2a;">}</span>
+
+<span style="color: #000000; font-weight: bold;">type</span> <span style="color: #6434A3;">msg</span> <span style="color: #a52a2a;">=</span>
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Flip</span>
+
+
+<span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">init</span><span style="color: #BA36A5;"> </span><span style="color: #a52a2a;">()</span> <span style="color: #a52a2a;">=</span>
+  <span style="color: #a52a2a;">{</span> orientation <span style="color: #a52a2a;">=</span> <span style="color: #6434A3;">Chess.</span><span style="color: #000000; background-color: #FFFFFF;">White</span>
+  <span style="color: #a52a2a;">}</span>
+
+
+<span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">update</span><span style="color: #BA36A5;"> model</span> <span style="color: #a52a2a;">=</span> <span style="color: #0000FF;">function</span>
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Flip</span> <span style="color: #a52a2a;">-&gt;</span>
+    <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">orientation'</span> <span style="color: #a52a2a;">=</span> <span style="color: #6434A3;">Chess.</span>opposite_color model.orientation <span style="color: #000000; font-weight: bold;">in</span>
+    <span style="color: #a52a2a;">{</span> orientation <span style="color: #a52a2a;">=</span> orientation'
+    <span style="color: #a52a2a;">},</span> <span style="color: #6434A3;">Cmd.</span>none
+
+<span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">result_view</span><span style="color: #BA36A5;"> result</span> <span style="color: #a52a2a;">=</span>
+  p <span style="color: #a52a2a;">[]</span>
+    <span style="color: #a52a2a;">[</span> <span style="color: #000000; font-weight: bold;">begin</span> <span style="color: #0000FF;">match</span> result <span style="color: #0000FF;">with</span>
+        <span style="color: #a52a2a;">|</span> <span style="color: #6434A3;">Chess.</span><span style="color: #000000; background-color: #FFFFFF;">Win</span> <span style="color: #000000; background-color: #FFFFFF;">White</span> <span style="color: #a52a2a;">-&gt;</span> <span style="color: #008000;">"White wins by checkmate!"</span> 
+        <span style="color: #a52a2a;">|</span> <span style="color: #6434A3;">Chess.</span><span style="color: #000000; background-color: #FFFFFF;">Win</span> <span style="color: #000000; background-color: #FFFFFF;">Black</span> <span style="color: #a52a2a;">-&gt;</span> <span style="color: #008000;">"Black wins by checkmate!"</span>
+        <span style="color: #a52a2a;">|</span> <span style="color: #6434A3;">Chess.</span><span style="color: #000000; background-color: #FFFFFF;">Draw</span> <span style="color: #a52a2a;">-&gt;</span> <span style="color: #008000;">"The game is a draw!"</span>
+        <span style="color: #a52a2a;">|</span> <span style="color: #6434A3;">Chess.</span><span style="color: #000000; background-color: #FFFFFF;">Play</span> move_list <span style="color: #a52a2a;">-&gt;</span>
+          <span style="color: #6434A3;">List.</span>length move_list
+          <span style="color: #a52a2a;">|&gt;</span> <span style="color: #6434A3;">Printf.</span>sprintf <span style="color: #008000;">"There are %d legal moves in this position!"</span>
+      <span style="color: #000000; font-weight: bold;">end</span> <span style="color: #a52a2a;">|&gt;</span> text
+    <span style="color: #a52a2a;">]</span>
+
+
+<span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">buttons_view</span> <span style="color: #a52a2a;">=</span>
+  <span style="color: #a52a2a;">[</span> button <span style="color: #a52a2a;">[</span>onClick <span style="color: #000000; background-color: #FFFFFF;">Flip</span><span style="color: #a52a2a;">]</span> <span style="color: #a52a2a;">[</span>text <span style="color: #008000;">"flip board"</span><span style="color: #a52a2a;">]</span>
+  <span style="color: #a52a2a;">]</span>
+
+
+<span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">view</span><span style="color: #BA36A5;"> pos_ar model</span> <span style="color: #a52a2a;">=</span>
+  <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">files</span><span style="color: #a52a2a;">,</span><span style="color: #BA36A5;"> ranks</span> <span style="color: #a52a2a;">=</span>
+    <span style="color: #0000FF;">match</span> model.orientation <span style="color: #0000FF;">with</span>
+    <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">White</span> <span style="color: #a52a2a;">-&gt;</span> <span style="color: #a52a2a;">[</span>0<span style="color: #a52a2a;">;</span> 1<span style="color: #a52a2a;">;</span> 2<span style="color: #a52a2a;">;</span> 3<span style="color: #a52a2a;">;</span> 4<span style="color: #a52a2a;">;</span> 5<span style="color: #a52a2a;">;</span> 6<span style="color: #a52a2a;">;</span> 7<span style="color: #a52a2a;">],</span> <span style="color: #a52a2a;">[</span>7<span style="color: #a52a2a;">;</span> 6<span style="color: #a52a2a;">;</span> 5<span style="color: #a52a2a;">;</span> 4<span style="color: #a52a2a;">;</span> 3<span style="color: #a52a2a;">;</span> 2<span style="color: #a52a2a;">;</span> 1<span style="color: #a52a2a;">;</span> 0<span style="color: #a52a2a;">]</span>
+    <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Black</span> <span style="color: #a52a2a;">-&gt;</span> <span style="color: #a52a2a;">[</span>7<span style="color: #a52a2a;">;</span> 6<span style="color: #a52a2a;">;</span> 5<span style="color: #a52a2a;">;</span> 4<span style="color: #a52a2a;">;</span> 3<span style="color: #a52a2a;">;</span> 2<span style="color: #a52a2a;">;</span> 1<span style="color: #a52a2a;">;</span> 0<span style="color: #a52a2a;">],</span> <span style="color: #a52a2a;">[</span>0<span style="color: #a52a2a;">;</span> 1<span style="color: #a52a2a;">;</span> 2<span style="color: #a52a2a;">;</span> 3<span style="color: #a52a2a;">;</span> 4<span style="color: #a52a2a;">;</span> 5<span style="color: #a52a2a;">;</span> 6<span style="color: #a52a2a;">;</span> 7<span style="color: #a52a2a;">]</span> <span style="color: #000000; font-weight: bold;">in</span>
+
+  <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">rank_view</span><span style="color: #BA36A5;"> rank</span> <span style="color: #a52a2a;">=</span>
+    <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">square_view</span><span style="color: #BA36A5;"> rank file</span> <span style="color: #a52a2a;">=</span>
+      node <span style="color: #008000;">"cb-square"</span> <span style="color: #a52a2a;">[]</span>
+        <span style="color: #a52a2a;">[</span> <span style="color: #0000FF;">match</span> pos_ar.<span style="color: #a52a2a;">(</span>file<span style="color: #a52a2a;">)</span>.<span style="color: #a52a2a;">(</span>rank<span style="color: #a52a2a;">)</span> <span style="color: #0000FF;">with</span>
+          <span style="color: #a52a2a;">|</span> <span style="color: #6434A3;">Chess.</span><span style="color: #000000; background-color: #FFFFFF;">Piece</span> <span style="color: #a52a2a;">(</span>piece_type<span style="color: #a52a2a;">,</span> color<span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">-&gt;</span>
+            node <span style="color: #008000;">"cb-piece"</span>
+              <span style="color: #a52a2a;">[</span> classList
+                  <span style="color: #a52a2a;">[</span> <span style="color: #6434A3;">Chess.</span>string_of_color color<span style="color: #a52a2a;">,</span> <span style="color: #D0372D;">true</span>
+                  <span style="color: #a52a2a;">;</span> <span style="color: #6434A3;">Chess.</span>string_of_piece_type piece_type<span style="color: #a52a2a;">,</span> <span style="color: #D0372D;">true</span>
+                  <span style="color: #a52a2a;">]</span>
+              <span style="color: #a52a2a;">]</span> <span style="color: #a52a2a;">[]</span>
+          <span style="color: #a52a2a;">|</span> <span style="color: #6434A3;">Chess.</span><span style="color: #000000; background-color: #FFFFFF;">Empty</span> <span style="color: #a52a2a;">-&gt;</span> noNode
+        <span style="color: #a52a2a;">]</span> <span style="color: #000000; font-weight: bold;">in</span>
+    <span style="color: #6434A3;">List.</span>map <span style="color: #a52a2a;">(</span>square_view rank<span style="color: #a52a2a;">)</span> files
+    <span style="color: #a52a2a;">|&gt;</span> node <span style="color: #008000;">"cb-row"</span> <span style="color: #a52a2a;">[]</span> <span style="color: #000000; font-weight: bold;">in</span>
+
+  <span style="color: #6434A3;">List.</span>map rank_view ranks
+  <span style="color: #a52a2a;">|&gt;</span> node <span style="color: #008000;">"cb-board"</span> <span style="color: #a52a2a;">[]</span>
+</pre>
+</div>
+
+<p>
+This code should look very familiar.  Its structure is the same as <code>src/Main.ml</code>.  We let the board define its own model, its own message type, its own update function and its own view.  I made a design choice here by letting the board manage its own orientation, but not the position, so that the board doesn't need to know about chess rules.
+</p>
+
+<p>
+Nowever, when we try to use the board view inside of <code>src/Main.ml</code>, we run into a problem.  Let's say we adjust our model, and we have the following <code>view</code> function (ignore <code>msg</code> and <code>update</code> for now):
+</p>
+
+<div class="org-src-container">
+<pre class="src src-ocaml"><span style="color: #000000; font-weight: bold;">type</span> <span style="color: #6434A3;">model</span> <span style="color: #a52a2a;">=</span>
+  <span style="color: #a52a2a;">{</span> position <span style="color: #a52a2a;">:</span> <span style="color: #6434A3;">Chess.</span>position
+  <span style="color: #a52a2a;">;</span> board <span style="color: #a52a2a;">:</span> <span style="color: #6434A3;">Board.</span>model
+  <span style="color: #a52a2a;">}</span>
+
+<span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">init</span><span style="color: #BA36A5;"> </span><span style="color: #a52a2a;">()</span> <span style="color: #a52a2a;">=</span>
+  <span style="color: #a52a2a;">{</span> position <span style="color: #a52a2a;">=</span> <span style="color: #6434A3;">Chess.</span>init_position
+  <span style="color: #a52a2a;">;</span> board <span style="color: #a52a2a;">=</span> <span style="color: #6434A3;">Board.</span>init <span style="color: #a52a2a;">()</span>
+  <span style="color: #a52a2a;">},</span> <span style="color: #6434A3;">Cmd.</span>none
+
+<span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">view</span><span style="color: #BA36A5;"> model</span> <span style="color: #a52a2a;">=</span>
+  div <span style="color: #a52a2a;">[]</span>
+    <span style="color: #a52a2a;">[</span> <span style="color: #6434A3;">Board.</span>view model.position.ar model.board
+    <span style="color: #a52a2a;">;</span> <span style="color: #6434A3;">Board.</span>buttons_view <span style="color: #a52a2a;">@</span>
+       <span style="color: #a52a2a;">[</span> button <span style="color: #a52a2a;">[</span>onClick <span style="color: #000000; background-color: #FFFFFF;">Random_button</span><span style="color: #a52a2a;">]</span> <span style="color: #a52a2a;">[</span>text <span style="color: #008000;">"random move"</span><span style="color: #a52a2a;">]</span>
+       <span style="color: #a52a2a;">]</span>
+       <span style="color: #a52a2a;">|&gt;</span> p <span style="color: #a52a2a;">[]</span>
+    <span style="color: #a52a2a;">;</span> <span style="color: #6434A3;">Chess.</span>game_status model.position <span style="color: #a52a2a;">|&gt;</span> <span style="color: #6434A3;">Board.</span>result_view 
+    <span style="color: #a52a2a;">]</span>
+</pre>
+</div>
+
+<p>
+The build script will complain along the lines of:
+</p>
+<pre class="example">
+We've found a bug for you!
+/Users/daniel/Playground/tea-chess/src/Main.ml 50:10-60
+
+48 ┆   |&gt; map board_msg
+49 ┆ ;  Board.buttons_view @
+50 ┆    [ button [onClick Random_button] [text "random move"]
+51 ┆    ]
+52 ┆    |&gt; p []
+
+This has type:
+  msg Vdom.t
+But somewhere wanted:
+  Board.msg Vdom.t
+
+The incompatible parts:
+  msg
+  vs
+  Board.msg
+</pre>
+
+<p>
+The cause of this error is that <code>Board.view</code> will trigger messages of a different type, namely <code>Board.msg</code>.  We can solve this problem by <i>tagging</i> messages from subviews, i.e. adding a variant to our <code>msg</code> type as follows:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-ocaml"><span style="color: #000000; font-weight: bold;">type</span> <span style="color: #6434A3;">msg</span> <span style="color: #a52a2a;">=</span>
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Board_msg</span> <span style="color: #0000FF;">of</span> <span style="color: #6434A3;">Board.</span>msg
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Random_button</span>
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Random_move</span> <span style="color: #0000FF;">of</span> <span style="color: #6434A3;">Chess.</span>move
+<span style="color: #808080;">[@@bs.deriving {accessors}]</span>
+</pre>
+</div>
+
+<p>
+Now we can tag the messages that view functions in <code>Board</code> will send by wrapping them in <code>Board_msg</code>.  This is achieved by using the function <code>map</code>, defined in <code>Tea.App</code>, so I put <code>open Tea.App</code> at the top of the file to save some keystrokes.   Its type is <code>('a -&gt; 'b) -&gt; 'a Vdom.t -&gt; 'b Vdom.t</code>, hence it takes a function that maps from message type <code>'a</code> to message type <code>'b</code> and returns a function that maps from a virtual DOM element triggering messages of type <code>'a</code> to a virtual DOM element triggering messages of type <code>'b</code>.  All this becomes clear if you remember that a view function returns message-triggering virtual DOM elements.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-ocaml"><span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">view</span><span style="color: #BA36A5;"> model</span> <span style="color: #a52a2a;">=</span>
+  div <span style="color: #a52a2a;">[]</span>
+    <span style="color: #a52a2a;">[</span> <span style="color: #6434A3;">Board.</span>view model.position.ar model.board
+      <span style="color: #a52a2a;">|&gt;</span> map board_msg
+    <span style="color: #a52a2a;">;</span> <span style="color: #6434A3;">List.</span>map <span style="color: #a52a2a;">(</span>map board_msg<span style="color: #a52a2a;">)</span> <span style="color: #6434A3;">Board.</span>buttons_view <span style="color: #a52a2a;">@</span>
+      <span style="color: #a52a2a;">[</span> button <span style="color: #a52a2a;">[</span>onClick <span style="color: #000000; background-color: #FFFFFF;">Random_button</span><span style="color: #a52a2a;">]</span> <span style="color: #a52a2a;">[</span>text <span style="color: #008000;">"random move"</span><span style="color: #a52a2a;">]</span>
+      <span style="color: #a52a2a;">]</span>
+      <span style="color: #a52a2a;">|&gt;</span> p <span style="color: #a52a2a;">[]</span>
+    <span style="color: #a52a2a;">;</span> <span style="color: #6434A3;">Chess.</span>game_status model.position <span style="color: #a52a2a;">|&gt;</span> <span style="color: #6434A3;">Board.</span>result_view 
+    <span style="color: #a52a2a;">]</span>
+</pre>
+</div>
+
+<p>
+Notice how we need to use <code>List.map</code> to map every single button from <code>Board.buttons_view</code>, and also notice how again the constructor functions come in handy.
+</p>
+
+<p>
+When a message from the board comes in, we need to relay the message back to <code>Board.update</code>.  Then we can update the model by replacing the old board model with the new board model.  In case the board issues any commands, we should also tag these by using <code>Cmd.map</code>.  This works in a very similar way to tagging messages.  The relevant part in our <code>update</code> function that needs to be changed is:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-ocaml"><span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">update</span><span style="color: #BA36A5;"> model</span> <span style="color: #a52a2a;">=</span> <span style="color: #0000FF;">function</span>
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Board_msg</span> msg <span style="color: #a52a2a;">-&gt;</span>
+    <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">board'</span><span style="color: #a52a2a;">,</span><span style="color: #BA36A5;"> cmd</span> <span style="color: #a52a2a;">=</span> <span style="color: #6434A3;">Board.</span>update model.board msg <span style="color: #000000; font-weight: bold;">in</span>
+    <span style="color: #a52a2a;">{</span> model <span style="color: #0000FF;">with</span>
+      board <span style="color: #a52a2a;">=</span> board'
+    <span style="color: #a52a2a;">},</span> <span style="color: #6434A3;">Cmd.</span>map board_msg cmd
+</pre>
+</div>
+
+<p>
+The rest can be left unchanged as it doesn't deal with the board.  If nothing went wrong, your program should be functional again and display the same board as before, with the difference that now the "flip board" button is handled inside <code>src/Board.ml</code>.
+</p>
+</div>
+</div>
+
+<div id="outline-container-org4ddd23b" class="outline-3">
+<h3 id="org4ddd23b">A list of independent board views</h3>
+<div class="outline-text-3" id="text-org4ddd23b">
+<p>
+Let's go a little crazy and replace our chessboard by a list of chessboard views, where every board can be fipped independently, but all share the same position and are updated when the "random move" button is clicked.  Let's change our model and add some messages:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-ocaml"><span style="color: #000000; font-weight: bold;">type</span> <span style="color: #6434A3;">model</span> <span style="color: #a52a2a;">=</span>
+  <span style="color: #a52a2a;">{</span> position <span style="color: #a52a2a;">:</span> <span style="color: #6434A3;">Chess.</span>position
+  <span style="color: #a52a2a;">;</span> boards <span style="color: #a52a2a;">:</span> <span style="color: #6434A3;">Board.</span>model list
+  <span style="color: #a52a2a;">}</span>
+
+<span style="color: #000000; font-weight: bold;">type</span> <span style="color: #6434A3;">msg</span> <span style="color: #a52a2a;">=</span>
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Board_msg</span> <span style="color: #0000FF;">of</span> int <span style="color: #a52a2a;">*</span> <span style="color: #6434A3;">Board.</span>msg
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Random_button</span>
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Random_move</span> <span style="color: #0000FF;">of</span> <span style="color: #6434A3;">Chess.</span>move
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Add_board</span>
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Delete_board</span> <span style="color: #0000FF;">of</span> int
+<span style="color: #808080;">[@@bs.deriving {accessors}]</span>
+
+<span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">init</span><span style="color: #BA36A5;"> </span><span style="color: #a52a2a;">()</span> <span style="color: #a52a2a;">=</span>
+  <span style="color: #a52a2a;">{</span> position <span style="color: #a52a2a;">=</span> <span style="color: #6434A3;">Chess.</span>init_position
+  <span style="color: #a52a2a;">;</span> boards <span style="color: #a52a2a;">=</span> <span style="color: #a52a2a;">[</span><span style="color: #6434A3;">Board.</span>init <span style="color: #a52a2a;">()]</span>
+  <span style="color: #a52a2a;">},</span> <span style="color: #6434A3;">Cmd.</span>none
+</pre>
+</div>
+
+<p>
+The view is easily adapted as follows:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-ocaml"><span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">view</span><span style="color: #BA36A5;"> model</span> <span style="color: #a52a2a;">=</span>
+  <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">board_view</span><span style="color: #BA36A5;"> i board</span> <span style="color: #a52a2a;">=</span>
+    div <span style="color: #a52a2a;">[]</span>
+      <span style="color: #a52a2a;">[</span> <span style="color: #6434A3;">Board.</span>view model.position.ar board <span style="color: #a52a2a;">|&gt;</span>
+        map <span style="color: #a52a2a;">(</span>board_msg i<span style="color: #a52a2a;">)</span>
+      <span style="color: #a52a2a;">;</span> <span style="color: #a52a2a;">(</span>button <span style="color: #a52a2a;">[</span>onClick <span style="color: #a52a2a;">(</span><span style="color: #000000; background-color: #FFFFFF;">Delete_board</span> i<span style="color: #a52a2a;">)]</span> <span style="color: #a52a2a;">[</span>text <span style="color: #008000;">"delete board"</span><span style="color: #a52a2a;">]</span>
+         <span style="color: #a52a2a;">::</span><span style="color: #6434A3;">List.</span>map <span style="color: #a52a2a;">(</span>map <span style="color: #a52a2a;">(</span>board_msg i<span style="color: #a52a2a;">))</span> <span style="color: #6434A3;">Board.</span>buttons_view<span style="color: #a52a2a;">)</span>
+        <span style="color: #a52a2a;">|&gt;</span> p <span style="color: #a52a2a;">[]</span>
+      <span style="color: #a52a2a;">]</span> <span style="color: #000000; font-weight: bold;">in</span>
+  <span style="color: #a52a2a;">([</span> button <span style="color: #a52a2a;">[</span>onClick <span style="color: #000000; background-color: #FFFFFF;">Random_button</span><span style="color: #a52a2a;">]</span> <span style="color: #a52a2a;">[</span>text <span style="color: #008000;">"random move"</span><span style="color: #a52a2a;">]</span>
+   <span style="color: #a52a2a;">;</span> button <span style="color: #a52a2a;">[</span>onClick <span style="color: #000000; background-color: #FFFFFF;">Add_board</span><span style="color: #a52a2a;">]</span> <span style="color: #a52a2a;">[</span>text <span style="color: #008000;">"add board"</span><span style="color: #a52a2a;">]</span>
+   <span style="color: #a52a2a;">]</span> <span style="color: #a52a2a;">|&gt;</span> p <span style="color: #a52a2a;">[]</span>
+  <span style="color: #a52a2a;">)::</span><span style="color: #6434A3;">List.</span>mapi board_view model.boards
+  <span style="color: #a52a2a;">|&gt;</span>  div <span style="color: #a52a2a;">[]</span>
+</pre>
+</div>
+
+<p>
+Notice that we use <code>List.mapi</code> to enumerate the boards as well as their indices so we are able to tag their messages properly.  We use <code>board_msg i</code> as a partially applied function here.
+</p>
+
+<p>
+Your program should compile like this, but the build script will complain that you didn't handle all the cases in the <code>update</code> function.  You can always put a "catch-all" case at the end of the <code>match</code> construct like this when you decide you will implement functionality later, like this:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-ocaml"><span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">update</span><span style="color: #BA36A5;"> model</span> <span style="color: #a52a2a;">=</span> <span style="color: #0000FF;">function</span>
+
+  <span style="color: #a52a2a;">...</span>
+
+  <span style="color: #a52a2a;">|</span> _ <span style="color: #a52a2a;">-&gt;</span> model<span style="color: #a52a2a;">,</span> <span style="color: #6434A3;">Cmd.</span>none
+</pre>
+</div>
+
+<p>
+But let's just handle the remaining cases right now.  
+For relaying of board messages and deletion of boards, we need some simple helper functions:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-ocaml"><span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">replace_nth</span><span style="color: #BA36A5;"> n item list</span> <span style="color: #a52a2a;">=</span>
+  <span style="color: #6434A3;">List.</span>mapi
+    <span style="color: #a52a2a;">(</span><span style="color: #0000FF;">fun</span> <span style="color: #BA36A5;">i x</span> <span style="color: #a52a2a;">-&gt;</span> <span style="color: #0000FF;">if</span> i <span style="color: #a52a2a;">=</span> n <span style="color: #0000FF;">then</span> item <span style="color: #0000FF;">else</span> x<span style="color: #a52a2a;">)</span> list
+
+<span style="color: #000000; font-weight: bold;">let</span> <span style="color: #000000; font-weight: bold;">rec</span> <span style="color: #006699;">delete_nth</span><span style="color: #BA36A5;"> n list</span> <span style="color: #a52a2a;">=</span>
+  <span style="color: #0000FF;">match</span> list <span style="color: #0000FF;">with</span>
+  <span style="color: #a52a2a;">|</span> <span style="color: #a52a2a;">[]</span> <span style="color: #a52a2a;">-&gt;</span> <span style="color: #a52a2a;">[]</span>
+  <span style="color: #a52a2a;">|</span> _hd<span style="color: #a52a2a;">::</span>tl <span style="color: #0000FF;">when</span> n <span style="color: #a52a2a;">=</span> 0 <span style="color: #a52a2a;">-&gt;</span> tl
+  <span style="color: #a52a2a;">|</span> hd<span style="color: #a52a2a;">::</span>tl <span style="color: #a52a2a;">-&gt;</span> hd<span style="color: #a52a2a;">::</span>delete_nth <span style="color: #a52a2a;">(</span>n <span style="color: #a52a2a;">-</span> 1<span style="color: #a52a2a;">)</span> tl
+
+<span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">update</span><span style="color: #BA36A5;"> model</span> <span style="color: #a52a2a;">=</span> <span style="color: #0000FF;">function</span>
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Board_msg</span> <span style="color: #a52a2a;">(</span>i<span style="color: #a52a2a;">,</span> msg<span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">-&gt;</span>
+    <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">board'</span><span style="color: #a52a2a;">,</span><span style="color: #BA36A5;"> cmd</span> <span style="color: #a52a2a;">=</span> <span style="color: #6434A3;">Board.</span>update <span style="color: #a52a2a;">(</span><span style="color: #6434A3;">List.</span>nth model.boards i<span style="color: #a52a2a;">)</span> msg <span style="color: #000000; font-weight: bold;">in</span>
+    <span style="color: #a52a2a;">{</span> model <span style="color: #0000FF;">with</span>
+      boards <span style="color: #a52a2a;">=</span> replace_nth i board' model.boards
+    <span style="color: #a52a2a;">},</span> <span style="color: #6434A3;">Cmd.</span>map <span style="color: #a52a2a;">(</span>board_msg i<span style="color: #a52a2a;">)</span> cmd
+
+  <span style="color: #a52a2a;">...</span>
+
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Add_board</span> <span style="color: #a52a2a;">-&gt;</span>
+    <span style="color: #a52a2a;">{</span> model <span style="color: #0000FF;">with</span>
+      boards <span style="color: #a52a2a;">=</span> <span style="color: #6434A3;">Board.</span>init <span style="color: #a52a2a;">()::</span>model.boards
+    <span style="color: #a52a2a;">},</span> <span style="color: #6434A3;">Cmd.</span>none
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Delete_board</span> i <span style="color: #a52a2a;">-&gt;</span>
+    <span style="color: #a52a2a;">{</span> model <span style="color: #0000FF;">with</span>
+      boards <span style="color: #a52a2a;">=</span> delete_nth i model.boards
+    <span style="color: #a52a2a;">},</span> <span style="color: #6434A3;">Cmd.</span>none
+</pre>
+</div>
+
+<p>
+Head to your browser and add some boards, flip their orientation around, make random moves and watch them appear on all boards simultaneously.  This concludes today's part of the tutorial.  I implemented the board list in its own branch in my repository, because tomorrow we will go back to only one board.  We will implement drag and drop so you can finally make moves yourself.
+</p>
+</div>
+</div>
+</div>
+</div>
+</body>
+</html>

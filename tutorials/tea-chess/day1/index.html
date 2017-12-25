@@ -1,0 +1,499 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+<head>
+<!-- 2017-12-25 Mon 19:24 -->
+<meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Twelve Days of Christmas #1</title>
+<meta name="generator" content="Org mode" />
+<meta name="author" content="Daniel Quernheim" />
+<link rel='stylesheet' href='/style.css' type='text/css'/><meta name="viewport" content="width=device-width"/>
+</head>
+<body>
+<div id="org-div-home-and-up">
+ <a accesskey="h" href=""> UP </a>
+ |
+ <a accesskey="H" href="/"> HOME </a>
+</div><div id="preamble" class="status">
+<nav><a href="/">home</a></nav>
+</div>
+<div id="content">
+<h1 class="title">Twelve Days of Christmas #1</h1>
+<p>
+This is the first part of <a href="../index.html">a chess-themed tutorial</a> on writing an SPA in
+<a href="https://github.com/OvermindDL1/bucklescript-tea">Bucklescript-TEA</a>.
+</p>
+
+<div id="outline-container-org3d9b73d" class="outline-2">
+<h2 id="org3d9b73d">First things first</h2>
+<div class="outline-text-2" id="text-org3d9b73d">
+<p>
+Before you can start, make sure you have the following installed:
+</p>
+
+<ul class="org-ul">
+<li><a href="https://nodejs.org/">Node.js</a> and optionally <a href="https://yarnpkg.com/">Yarn</a>. Bucklescript piggybacks on the <a href="https://www.npmjs.com/">NPM
+package database</a>, and I'm afraid I don't know how to do Bucklescript
+development without it. I prefer Yarn as an interface to NPM and use
+Yarn commands throughout this tutorial, but if you are already using
+NPM, it will work just as fine.</li>
+
+<li><a href="https://opam.ocaml.org/doc/Install.html">OPAM</a>, the OCaml package manager.  You can use Bucklescript without
+OPAM, but I strongly recommend you to use the excellent <a href="https://github.com/ocaml/merlin">Merlin</a> tool
+for an <a href="https://opam.ocaml.org/blog/turn-your-editor-into-an-ocaml-ide/">IDE-like experience in your editor</a>.  If you want to explore
+server-side OCaml as well, OPAM will allow you to switch between
+different versions of OCaml packages for server-side and client-side
+development seamlessly.</li>
+</ul>
+
+<p>
+Let's setup a project directory structure. Arguably the easiest way is
+to just clone the <a href="https://github.com/tcoopman/bucklescript-tea-starter-kit">Bucklescript-TEA starter kit</a>, copy the relevant
+files into a fresh repository, or just follow along with <a href="https://www.github.com/quernd/tea-chess">my
+repository</a>. (I actually used <a href="http://www.fossil-scm.org/">Fossil</a> for local version control, and I
+encourage you to use any version control system that you are
+comfortable with). If you follow along my code, start from the tag
+<code>initial</code> by typing <code>git checkout initial</code>.
+</p>
+
+<p>
+Take a look at the files in the starter kit. You will notice that
+<code>package.json</code> lists a few dependencies for local development and
+defines build and watch scripts. Furthermore, <code>bsconfig.json</code> contains
+instructions for the Bucklescript compiler. Your OCaml source code
+will go in the <code>src</code> directory, and the compiled Javascript will be
+put into <code>release</code> by the build script. Why don't you edit
+<code>package.json</code> and <code>bsconfig.json</code> for a better package name (e.g.
+<code>tea-chess</code>)?
+</p>
+
+<p>
+Now run <code>yarn install</code> (or <code>npm install</code>) to install the dependencies.
+The main Bucklescript package <code>bs-platform</code> is pretty hefty (it brings
+its own OCaml compiler) and takes a while to setup, so I installed it
+globally with <code>yarn global add install bs-platform --offline</code>. This
+way, I can just link it with <code>yarn link</code> (in its global location) and
+then <code>yarn link bs-platform</code> in your project directory whenever I
+start a Bucklescript project to save time and bandwidth.
+</p>
+
+<p>
+You are now ready to run <code>yarn run watch</code>. You should see the build
+script work to compile OCaml code into Javascript and eventually
+display something like the following:
+</p>
+
+<pre class="example">
+rollup v0.52.3
+bundles ./src/Main.bs.js → release/main.js...
+
+   ┌─────────────────────────────────────────────────┐
+   │                                                 │
+   │   Serving!                                      │
+   │                                                 │
+   │   - Local:            http://localhost:5000     │
+   │   - On Your Network:  http://192.168.1.5:5000   │
+   │                                                 │
+   │   Copied local address to clipboard!            │
+   │                                                 │
+   └─────────────────────────────────────────────────┘
+
+LiveReload enabled
+created release/main.js in 1.3s
+
+[2017-12-23 21:39:55] waiting for changes...
+</pre>
+
+<p>
+Congratulations! Visit the page in your web browser and play with the
+counters example a little. Whenever you make changes to your code, as
+soon as you save the file, the build script will notice and recompile
+your code, and the new javascript code will even be "hot-reloaded" in
+your browser! Whenever something goes wrong, you will find a helpful
+error message displayed.
+</p>
+
+<p>
+If you are extraordinarily attentive, you may have noticed that there
+is a new file <code>.merlin</code> in the root level of your project. This file
+will tell the extremely useful <a href="https://github.com/ocaml/merlin">Merlin</a> tool where to find your source
+code and intermediate files so it can help you with type annotations.
+I strongly encourage you to use an editor that integrates Merlin. I
+use <a href="https://github.com/ocaml/merlin/wiki/emacs-from-scratch">Emacs</a>, but you can also use other editors with Merlin, such as
+<a href="https://github.com/ocaml/merlin/wiki/vim-from-scratch">Vim</a>, <a href="https://github.com/ocaml/merlin/wiki/atom-from-scratch">Atom</a>, or <a href="https://github.com/hackwaly/vscode-ocaml">VS Code</a>. If you use OPAM to maintain different versions
+of the OCaml compiler, make sure that Merlin is setup to work with the
+Bucklescript version.
+</p>
+</div>
+
+<div id="outline-container-orgdcb8924" class="outline-3">
+<h3 id="orgdcb8924">The Elm architecture</h3>
+<div class="outline-text-3" id="text-orgdcb8924">
+<p>
+Open <code>src/Main.ml</code> and take a look at the code. Now, if you are
+familiar with the "Elm architecture", made popular by the Elm language
+of Evan Czaplicki, you will recognize the typical <i>msg</i>, <i>model</i>,
+<i>update</i>, and <i>view</i> definitions. Essentially, Bucklescript-TEA
+provides an API similar, if not almost compatible, to that of Elm's. I'm not going to provide a thorough
+discussion in case you haven't worked with the Elm architecture before.  There are lots of resources online that do a better job I
+ever could do.  For instance, check out the <a href="https://guide.elm-lang.org/architecture/">official tutorial</a>. However, the Elm architecture is pretty simple to
+grasp if all you remember is this:
+</p>
+
+<ol class="org-ol">
+<li>Your program state is represented by a <i>model</i>.</li>
+<li>Whenever stuff happens (user clicks a button, AJAX data comes in,
+etc.), the <i>update</i> function receives a <i>message</i> and the current
+<i>model</i> and returns a new <i>model</i>.</li>
+<li>The <i>view</i> function computes a
+virtual DOM tree from the model (which is rendered to the
+screen) and a recipe for any side effects that you would like to
+execute (called a <i>command</i>).</li>
+<li>Side effects are managed behind the scenes to ensure that your
+functions stay pure; when a side effect is actually executed, it
+gets boxed into a <i>message</i>.  In addition to commands, your program
+can listen to <i>subscriptions</i> to receive messages
+on events such as mouse and keyboard events, websockets, and time.</li>
+</ol>
+
+<p>
+If you installed Merlin, you can use it to examine the types of the
+functions involved in the Elm Architecture. For instance, if you're
+using Emacs, press <kbd>C-c C-t</kbd>, and Merlin will tell
+you the type of the function name at the point (cursor):
+</p>
+
+<ul class="org-ul">
+<li><code>init</code> has type <code>unit -&gt; int</code>, hence our model is of type <code>int</code>.</li>
+<li><code>update</code> is of type <code>int -&gt; msg -&gt; int</code>, meaning it takes a model
+(of type <code>int</code>) and a message from the variant type <code>msg</code>, and
+returns a new model of type <code>int</code></li>
+<li><code>view</code> has type <code>int -&gt; msg Vdom.t</code>.  This means it takes a model
+and returns a virtual DOM element that can trigger messages of type
+<code>msg</code>.  We say that <code>msg Vdom.t</code> is a <i>parameterized type</i>.</li>
+<li><code>view_button</code> is of type <code>string -&gt; 'a -&gt; 'a Vdom.t</code>.  This means it
+takes a string and another argument of an as-of-yet unknown type
+(<code>'a</code> is a <i>type variable</i>) and returns a <code>Vdom.t</code> that is
+parameterized by <code>'a</code>.  This may sound confusing, but it really just
+means that <code>view_button</code> is a very generic function.  It will work
+with any message type, not just with the type <code>msg</code> we defined
+earlier!</li>
+</ul>
+
+<p>
+Of course, OCaml will be extremely strict to enforce correct types, so
+whenever you make a type-related mistake, it will refuse to compile
+your code. This may sound painful, but I find that not only does it
+catch zillions of bugs before they hit the user, it also really helps
+with refactoring. Also, OCaml will infer almost every type
+automatically, leaving you without the need to explicitly annotate
+types.
+</p>
+</div>
+</div>
+</div>
+
+<div id="outline-container-org96ebc77" class="outline-2">
+<h2 id="org96ebc77">Starting from (almost) scratch</h2>
+<div class="outline-text-2" id="text-org96ebc77">
+<p>
+To see if hot reloading works, try changing the line 
+</p>
+<div class="org-src-container">
+<pre class="src src-ocaml"><span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">init</span><span style="color: #BA36A5;"> </span><span style="color: #a52a2a;">()</span> <span style="color: #a52a2a;">=</span> 4
+</pre>
+</div>
+<p>
+to any other number than 4.  This sets the initial model, which in
+this case is just an integer.  The counter should automatically update
+in your browser.  Play with the example or examine the code if you
+want to learn about the basics of the Elm architecture and Bucklescript-TEA.
+</p>
+
+<p>
+Now, let's get rid of the counter example because that doesn't have
+anything to do with chess, and start adding our own
+code.  I stripped down the <i>model-update-view</i> loop in <code>src/Main.ml</code>
+and added the basics of a chess-related model:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-ocaml"><span style="color: #000000; font-weight: bold;">open </span><span style="color: #6434A3;">Tea</span>
+<span style="color: #000000; font-weight: bold;">open </span><span style="color: #6434A3;">Tea.Html</span>
+
+<span style="color: #000000; font-weight: bold;">type</span> <span style="color: #6434A3;">color</span> <span style="color: #a52a2a;">=</span>
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Black</span>
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">White</span>
+
+<span style="color: #000000; font-weight: bold;">type</span> <span style="color: #6434A3;">model</span> <span style="color: #a52a2a;">=</span>
+  <span style="color: #a52a2a;">{</span> orientation <span style="color: #a52a2a;">:</span> color
+  <span style="color: #a52a2a;">}</span>
+
+<span style="color: #000000; font-weight: bold;">type</span> <span style="color: #6434A3;">msg</span> <span style="color: #a52a2a;">=</span>
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Flip</span>
+<span style="color: #808080;">[@@bs.deriving {accessors}]</span>
+
+<span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">init</span><span style="color: #BA36A5;"> </span><span style="color: #a52a2a;">()</span> <span style="color: #a52a2a;">=</span>
+  <span style="color: #a52a2a;">{</span> orientation <span style="color: #a52a2a;">=</span> <span style="color: #000000; background-color: #FFFFFF;">White</span>
+  <span style="color: #a52a2a;">},</span> <span style="color: #6434A3;">Cmd.</span>none
+
+<span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">update</span><span style="color: #BA36A5;"> model</span> <span style="color: #a52a2a;">=</span> <span style="color: #0000FF;">function</span>
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Flip</span> <span style="color: #a52a2a;">-&gt;</span>
+    <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">orientation'</span> <span style="color: #a52a2a;">=</span> <span style="color: #0000FF;">match</span> model.orientation <span style="color: #0000FF;">with</span>
+      <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Black</span> <span style="color: #a52a2a;">-&gt;</span> <span style="color: #000000; background-color: #FFFFFF;">White</span>
+      <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">White</span> <span style="color: #a52a2a;">-&gt;</span> <span style="color: #000000; background-color: #FFFFFF;">Black</span> <span style="color: #000000; font-weight: bold;">in</span>
+    <span style="color: #a52a2a;">{</span> orientation <span style="color: #a52a2a;">=</span> orientation'
+    <span style="color: #a52a2a;">},</span> <span style="color: #6434A3;">Cmd.</span>none
+
+<span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">view</span><span style="color: #BA36A5;"> _model</span> <span style="color: #a52a2a;">=</span>
+  noNode
+
+<span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">subscriptions</span><span style="color: #BA36A5;"> _model</span> <span style="color: #a52a2a;">=</span>
+  <span style="color: #6434A3;">Sub.</span>none
+
+<span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">main</span> <span style="color: #a52a2a;">=</span>
+  <span style="color: #6434A3;">App.</span>standardProgram
+    <span style="color: #a52a2a;">{</span> init
+    <span style="color: #a52a2a;">;</span> update
+    <span style="color: #a52a2a;">;</span> view
+    <span style="color: #a52a2a;">;</span> subscriptions
+    <span style="color: #a52a2a;">}</span>
+</pre>
+</div>
+
+<p>
+Our model is an OCaml record with one field
+<code>orientation</code>, taking its value from a variant type <code>color</code> to
+represent from which side we will see the chessboard.  We
+define one message called <code>Flip</code>, that when received, will flip the
+orientation of the chessboard around.
+</p>
+
+<p>
+Notice how we're now using <code>standardProgram</code> instead of beginner
+program.  Hooray, you're not a beginner anymore!  This means we will
+be able to listen for subscriptions such as mouse and keyboard events.  You will learn about them
+when we implement drag and drop to make moves on the chessboard.
+Right now, we choose <code>Sub.none</code> to express that we are not interested
+in any subscriptions yet, regardless of the model. Similarly, we don't
+want to issue any commands, so we return <code>Cmd.none</code> along with the
+model everytime.
+</p>
+
+<p>
+Also notice that
+</p>
+<div class="org-src-container">
+<pre class="src src-ocaml"><span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">update</span><span style="color: #BA36A5;"> model</span> <span style="color: #a52a2a;">=</span> <span style="color: #0000FF;">function</span>
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Flip</span> <span style="color: #a52a2a;">-&gt;</span>
+</pre>
+</div>
+<p>
+is a shorthand way of writing
+</p>
+<div class="org-src-container">
+<pre class="src src-ocaml"><span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">update</span><span style="color: #BA36A5;"> model msg</span> <span style="color: #a52a2a;">=</span>
+  <span style="color: #0000FF;">match</span> msg <span style="color: #0000FF;">with</span>
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Flip</span> <span style="color: #a52a2a;">-&gt;</span>
+</pre>
+</div>
+<p>
+because <code>function</code> has built-in pattern-matching.
+</p>
+</div>
+</div>
+
+<div id="outline-container-org63e9cba" class="outline-2">
+<h2 id="org63e9cba">Your first view function</h2>
+<div class="outline-text-2" id="text-org63e9cba">
+<p>
+We still need to write a meaningful <code>view</code> function, of course.  Right
+now it only returns <code>noNode</code>, which is a placeholder for when you
+don't want to display anything in the DOM.  Without further ado, here
+we go:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-ocaml"><span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">view</span><span style="color: #BA36A5;"> model</span> <span style="color: #a52a2a;">=</span>
+  <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">files</span><span style="color: #a52a2a;">,</span><span style="color: #BA36A5;"> ranks</span> <span style="color: #a52a2a;">=</span>
+    <span style="color: #0000FF;">match</span> model.orientation <span style="color: #0000FF;">with</span>
+    <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">White</span> <span style="color: #a52a2a;">-&gt;</span> <span style="color: #a52a2a;">[</span>0<span style="color: #a52a2a;">;</span> 1<span style="color: #a52a2a;">;</span> 2<span style="color: #a52a2a;">;</span> 3<span style="color: #a52a2a;">;</span> 4<span style="color: #a52a2a;">;</span> 5<span style="color: #a52a2a;">;</span> 6<span style="color: #a52a2a;">;</span> 7<span style="color: #a52a2a;">],</span> <span style="color: #a52a2a;">[</span>7<span style="color: #a52a2a;">;</span> 6<span style="color: #a52a2a;">;</span> 5<span style="color: #a52a2a;">;</span> 4<span style="color: #a52a2a;">;</span> 3<span style="color: #a52a2a;">;</span> 2<span style="color: #a52a2a;">;</span> 1<span style="color: #a52a2a;">;</span> 0<span style="color: #a52a2a;">]</span>
+    <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Black</span> <span style="color: #a52a2a;">-&gt;</span> <span style="color: #a52a2a;">[</span>7<span style="color: #a52a2a;">;</span> 6<span style="color: #a52a2a;">;</span> 5<span style="color: #a52a2a;">;</span> 4<span style="color: #a52a2a;">;</span> 3<span style="color: #a52a2a;">;</span> 2<span style="color: #a52a2a;">;</span> 1<span style="color: #a52a2a;">;</span> 0<span style="color: #a52a2a;">],</span> <span style="color: #a52a2a;">[</span>0<span style="color: #a52a2a;">;</span> 1<span style="color: #a52a2a;">;</span> 2<span style="color: #a52a2a;">;</span> 3<span style="color: #a52a2a;">;</span> 4<span style="color: #a52a2a;">;</span> 5<span style="color: #a52a2a;">;</span> 6<span style="color: #a52a2a;">;</span> 7<span style="color: #a52a2a;">]</span>
+  <span style="color: #000000; font-weight: bold;">and</span> <span style="color: #006699;">char_of_file</span><span style="color: #BA36A5;"> file</span> <span style="color: #a52a2a;">=</span> <span style="color: #008000;">"abcdefgh"</span>.<span style="color: #a52a2a;">[</span>file<span style="color: #a52a2a;">]</span>
+  <span style="color: #000000; font-weight: bold;">and</span> <span style="color: #006699;">char_of_rank</span><span style="color: #BA36A5;"> rank</span> <span style="color: #a52a2a;">=</span> <span style="color: #008000;">"12345678"</span>.<span style="color: #a52a2a;">[</span>rank<span style="color: #a52a2a;">]</span> <span style="color: #000000; font-weight: bold;">in</span>
+
+  <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">rank_view</span><span style="color: #BA36A5;"> rank</span> <span style="color: #a52a2a;">=</span>
+    <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">square_view</span><span style="color: #BA36A5;"> rank file</span> <span style="color: #a52a2a;">=</span>
+      td <span style="color: #a52a2a;">[]</span>
+        <span style="color: #a52a2a;">[</span> <span style="color: #6434A3;">Printf.</span>sprintf <span style="color: #008000;">"%c%c"</span> <span style="color: #a52a2a;">(</span>char_of_file file<span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">(</span>char_of_rank rank<span style="color: #a52a2a;">)</span> 
+          <span style="color: #a52a2a;">|&gt;</span> text
+        <span style="color: #a52a2a;">]</span> <span style="color: #000000; font-weight: bold;">in</span>
+    <span style="color: #6434A3;">List.</span>map <span style="color: #a52a2a;">(</span>square_view rank<span style="color: #a52a2a;">)</span> files
+    <span style="color: #a52a2a;">|&gt;</span> tr <span style="color: #a52a2a;">[]</span> <span style="color: #000000; font-weight: bold;">in</span>
+
+  div <span style="color: #a52a2a;">[]</span>
+    <span style="color: #a52a2a;">[</span> <span style="color: #6434A3;">List.</span>map rank_view ranks
+      <span style="color: #a52a2a;">|&gt;</span> table <span style="color: #a52a2a;">[]</span>
+    <span style="color: #a52a2a;">;</span> button <span style="color: #a52a2a;">[</span>onClick <span style="color: #000000; background-color: #FFFFFF;">Flip</span><span style="color: #a52a2a;">]</span> <span style="color: #a52a2a;">[</span>text <span style="color: #008000;">"flip board"</span><span style="color: #a52a2a;">]</span>
+    <span style="color: #a52a2a;">]</span>
+</pre>
+</div>
+
+<p>
+This might be a little hard to digest, so here's what happens:
+</p>
+
+<p>
+A chessboard has 8 rows called "ranks", and 8 columns called "files".
+Ranks are numbered, while files are referred to by a letter, so we
+define helper functions <code>char_of_file</code> and <code>char_of_rank</code>.  White's
+pieces start the game on ranks 1 and 2, while Black's pieces start on
+ranks 7 and 8.  Customarily, a chessboard from White's perspective
+will have ranks 1 and 2 at the bottom.  That's why we have to iterate
+through files and ranks a little differently according to the board
+orientation.
+</p>
+
+<p>
+The <code>view</code> function returns a <code>&lt;div&gt;</code> containing a
+table representing the chessboard as well as a button that will
+trigger the <code>Flip</code> message.  The table is constructed by iterating
+over the ranks, and every row is constructed by iterating over the
+files.  Each table cell contains a string representation of the square
+coordinates.  The functions <code>div</code>, <code>table</code>, <code>tr</code> and <code>td</code> are defined
+in <code>Tea.Html</code>.  Each of them takes two arguments: a list of attributes
+and a list of children.  Since we use these and other HTML-generating functions
+a lot, it makes sense to put <code>open Tea.Html</code> into our code.
+</p>
+
+<p>
+Click the button and see if the <code>Flip</code> message was wired correctly.
+You should see the coordinates changing according to the board's orientation.
+</p>
+
+<p>
+Now let's make this board look a little more like an actual chessboard
+by adding a checkerboard pattern.  We'll assign some CSS style to the
+individual squares.  Change the first argument to <code>td</code> as follows, and
+you should see black and white squares.  
+</p>
+
+<div class="org-src-container">
+<pre class="src src-ocaml">td
+  <span style="color: #a52a2a;">[</span> styles
+      <span style="color: #a52a2a;">(</span><span style="color: #0000FF;">if</span> <span style="color: #a52a2a;">(</span>file <span style="color: #a52a2a;">+</span> rank<span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">mod</span> 2 <span style="color: #a52a2a;">=</span> 0
+       <span style="color: #0000FF;">then</span> <span style="color: #a52a2a;">[</span> <span style="color: #008000;">"background-color"</span><span style="color: #a52a2a;">,</span> <span style="color: #008000;">"black"</span>
+            <span style="color: #a52a2a;">;</span> <span style="color: #008000;">"color"</span><span style="color: #a52a2a;">,</span> <span style="color: #008000;">"white"</span>
+            <span style="color: #a52a2a;">]</span>
+       <span style="color: #0000FF;">else</span> <span style="color: #a52a2a;">[])</span>
+  <span style="color: #a52a2a;">]</span>
+</pre>
+</div>
+
+<p>
+However, we can be a little more sophisticated and use CSS to color
+the squares for us.  I borrowed some CSS from <a href="https://github.com/oakmac/chessboardjs">a popular Javascript
+chessboard library</a> and tweaked it a little<sup><a id="fnr.1" class="footref" href="#fn.1">1</a></sup>.  Put the following in a
+file called <code>release/css/main.css</code> and make sure the stylesheet is
+also referenced in the header of <code>release/index.html</code>:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-css"><span style="color: #0000ff; font-weight: bold;">cb-board </span>{
+    <span style="color: #00AA00;">display</span>: inline-block;
+    <span style="color: #00AA00;">border</span>: 1px solid #404040;
+    <span style="color: #00AA00;">box-sizing</span>: content-box;
+    <span style="color: #00AA00;">width</span>: 480px;
+    <span style="color: #00AA00;">height</span>: 480px;
+}
+
+<span style="color: #0000ff; font-weight: bold;">cb-row:after </span>{
+    <span style="color: #00AA00;">display</span>: block;
+    <span style="color: #00AA00;">clear</span>: both;
+}
+<span style="color: #0000ff; font-weight: bold;">cb-row:nth-child(even) cb-square:nth-child(even) </span>{
+    <span style="color: #00AA00;">background-color</span>: #f0d9b5;
+    <span style="color: #00AA00;">color</span>: #b58863;
+}
+<span style="color: #0000ff; font-weight: bold;">cb-row:nth-child(even) cb-square:nth-child(odd) </span>{
+    <span style="color: #00AA00;">background-color</span>: #b58863;
+    <span style="color: #00AA00;">color</span>: #f0d9b5;
+}
+<span style="color: #0000ff; font-weight: bold;">cb-row:nth-child(odd) cb-square:nth-child(even) </span>{
+    <span style="color: #00AA00;">background-color</span>: #b58863;
+    <span style="color: #00AA00;">color</span>: #f0d9b5;
+}
+<span style="color: #0000ff; font-weight: bold;">cb-row:nth-child(odd) cb-square:nth-child(odd) </span>{
+    <span style="color: #00AA00;">background-color</span>: #f0d9b5;
+    <span style="color: #00AA00;">color</span>: #b58863;
+}
+
+<span style="color: #0000ff; font-weight: bold;">cb-square </span>{
+    <span style="color: #00AA00;">float</span>: left;
+    <span style="color: #00AA00;">position</span>: relative;
+    <span style="color: #00AA00;">display</span>: inline-block;
+    <span style="color: #00AA00;">user-select</span>: none;
+    <span style="color: #00AA00;">width</span>: 60px;
+    <span style="color: #00AA00;">height</span>: 60px;
+}
+</pre>
+</div>
+
+<p>
+Instead of a table, we will use custom HTML tags for our board, and
+the checkerboard pattern is achieved by using the odd and even child
+selectors.  Now the <code>view</code> function is a lot simpler:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-ocaml"><span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">view</span><span style="color: #BA36A5;"> model</span> <span style="color: #a52a2a;">=</span>
+  <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">files</span><span style="color: #a52a2a;">,</span><span style="color: #BA36A5;"> ranks</span> <span style="color: #a52a2a;">=</span>
+    <span style="color: #0000FF;">match</span> model.orientation <span style="color: #0000FF;">with</span>
+    <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">White</span> <span style="color: #a52a2a;">-&gt;</span> <span style="color: #a52a2a;">[</span>0<span style="color: #a52a2a;">;</span> 1<span style="color: #a52a2a;">;</span> 2<span style="color: #a52a2a;">;</span> 3<span style="color: #a52a2a;">;</span> 4<span style="color: #a52a2a;">;</span> 5<span style="color: #a52a2a;">;</span> 6<span style="color: #a52a2a;">;</span> 7<span style="color: #a52a2a;">],</span> <span style="color: #a52a2a;">[</span>7<span style="color: #a52a2a;">;</span> 6<span style="color: #a52a2a;">;</span> 5<span style="color: #a52a2a;">;</span> 4<span style="color: #a52a2a;">;</span> 3<span style="color: #a52a2a;">;</span> 2<span style="color: #a52a2a;">;</span> 1<span style="color: #a52a2a;">;</span> 0<span style="color: #a52a2a;">]</span>
+    <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Black</span> <span style="color: #a52a2a;">-&gt;</span> <span style="color: #a52a2a;">[</span>7<span style="color: #a52a2a;">;</span> 6<span style="color: #a52a2a;">;</span> 5<span style="color: #a52a2a;">;</span> 4<span style="color: #a52a2a;">;</span> 3<span style="color: #a52a2a;">;</span> 2<span style="color: #a52a2a;">;</span> 1<span style="color: #a52a2a;">;</span> 0<span style="color: #a52a2a;">],</span> <span style="color: #a52a2a;">[</span>0<span style="color: #a52a2a;">;</span> 1<span style="color: #a52a2a;">;</span> 2<span style="color: #a52a2a;">;</span> 3<span style="color: #a52a2a;">;</span> 4<span style="color: #a52a2a;">;</span> 5<span style="color: #a52a2a;">;</span> 6<span style="color: #a52a2a;">;</span> 7<span style="color: #a52a2a;">]</span>
+  <span style="color: #000000; font-weight: bold;">and</span> <span style="color: #006699;">char_of_file</span><span style="color: #BA36A5;"> file</span> <span style="color: #a52a2a;">=</span> <span style="color: #008000;">"abcdefgh"</span>.<span style="color: #a52a2a;">[</span>file<span style="color: #a52a2a;">]</span>
+  <span style="color: #000000; font-weight: bold;">and</span> <span style="color: #006699;">char_of_rank</span><span style="color: #BA36A5;"> rank</span> <span style="color: #a52a2a;">=</span> <span style="color: #008000;">"12345678"</span>.<span style="color: #a52a2a;">[</span>rank<span style="color: #a52a2a;">]</span> <span style="color: #000000; font-weight: bold;">in</span>
+
+  <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">rank_view</span><span style="color: #BA36A5;"> rank</span> <span style="color: #a52a2a;">=</span>
+    <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">square_view</span><span style="color: #BA36A5;"> rank file</span> <span style="color: #a52a2a;">=</span>
+      node <span style="color: #008000;">"cb-square"</span>
+        <span style="color: #a52a2a;">[</span> style <span style="color: #008000;">"text-align"</span> <span style="color: #008000;">"center"</span> <span style="color: #a52a2a;">]</span>
+        <span style="color: #a52a2a;">[</span> <span style="color: #6434A3;">Printf.</span>sprintf <span style="color: #008000;">"%c%c"</span> <span style="color: #a52a2a;">(</span>char_of_file file<span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">(</span>char_of_rank rank<span style="color: #a52a2a;">)</span> 
+          <span style="color: #a52a2a;">|&gt;</span> text
+        <span style="color: #a52a2a;">]</span> <span style="color: #000000; font-weight: bold;">in</span>
+    <span style="color: #6434A3;">List.</span>map <span style="color: #a52a2a;">(</span>square_view rank<span style="color: #a52a2a;">)</span> files
+    <span style="color: #a52a2a;">|&gt;</span> node <span style="color: #008000;">"cb-row"</span> <span style="color: #a52a2a;">[]</span> <span style="color: #000000; font-weight: bold;">in</span>
+
+  div <span style="color: #a52a2a;">[]</span>
+    <span style="color: #a52a2a;">[</span> <span style="color: #6434A3;">List.</span>map rank_view ranks
+      <span style="color: #a52a2a;">|&gt;</span> node <span style="color: #008000;">"cb-board"</span> <span style="color: #a52a2a;">[]</span>
+    <span style="color: #a52a2a;">;</span> p <span style="color: #a52a2a;">[]</span> <span style="color: #a52a2a;">[</span>button <span style="color: #a52a2a;">[</span>onClick <span style="color: #000000; background-color: #FFFFFF;">Flip</span><span style="color: #a52a2a;">]</span> <span style="color: #a52a2a;">[</span>text <span style="color: #008000;">"flip board"</span><span style="color: #a52a2a;">]]</span>
+    <span style="color: #a52a2a;">]</span>
+</pre>
+</div>
+
+<p>
+We use <code>node</code> (defined in <code>Tea.Html</code>) to define our custom tags.  You
+should now see a nice-looking chessboard.  Just a small problem: still
+no pieces!  Tomorrow, we will add pieces and teach our program to make
+random moves on the board.
+</p>
+</div>
+</div>
+<div id="footnotes">
+<h2 class="footnotes">Footnotes: </h2>
+<div id="text-footnotes">
+
+<div class="footdef"><sup><a id="fn.1" class="footnum" href="#fnr.1">1</a></sup> <div class="footpara"><p class="footpara">
+There is also <a href="https://github.com/ornicar/chessground">Chessground</a>, used by the famous open-source,
+donation-based <a href="https://en.lichess.org/">Lichess</a> online chess server, for inspiration on how to
+code a chessboard.
+</p></div></div>
+
+
+</div>
+</div></div>
+</body>
+</html>

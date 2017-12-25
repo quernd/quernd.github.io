@@ -1,0 +1,346 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+<head>
+<!-- 2017-12-25 Mon 19:24 -->
+<meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>&lrm;</title>
+<meta name="generator" content="Org mode" />
+<meta name="author" content="Daniel Quernheim" />
+<link rel='stylesheet' href='/style.css' type='text/css'/><meta name="viewport" content="width=device-width"/>
+</head>
+<body>
+<div id="org-div-home-and-up">
+ <a accesskey="h" href=""> UP </a>
+ |
+ <a accesskey="H" href="/"> HOME </a>
+</div><div id="preamble" class="status">
+<nav><a href="/">home</a></nav>
+</div>
+<div id="content">
+<div id="outline-container-org418d412" class="outline-2">
+<h2 id="org418d412">Day 2</h2>
+<div class="outline-text-2" id="text-org418d412">
+<p>
+Yesterday, we implemented a chessboard without pieces.  Today, we will add pieces and use a random number generator to play random moves.  We use an existing OCaml chess library to do the heavy lifting.
+</p>
+</div>
+
+<div id="outline-container-org9225916" class="outline-3">
+<h3 id="org9225916">Integrating existing OCaml code</h3>
+<div class="outline-text-3" id="text-org9225916">
+<p>
+Just like Google's recent success with AlphaZero, we will only need to
+spell out the rules of chess, and our program will learn how to
+display the chessboard and play against itself. That's it, folks! See
+you next time! Well&#x2026; that would be nice, but last time I checked, no
+neural network was able to write frontend code. That might change, but
+for now we still have to invest some human labour. At least we can
+save a few hours of work by pulling in a decent chess library.
+Bucklescript integrates with NPM as well as OPAM, but I didn't find
+any open-source implementation of chess that I liked on either, not
+even on Github for that matter, so I decided to use good old
+MIT-licensed <a href="http://www.olegtrott.com/chess/">O'Chess by Oleg Trott</a>. Just download the file
+<code>ochess.ml</code>, drop it into your <code>src</code> directory and add it to version
+control.  O'Chess is
+actually a full-fledged chess engine, but we are only interested in the rule logic.
+</p>
+
+<p>
+Let's make use of the fact that O'Chess defines a <code>color</code> type just like we did and replace our type definition by:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-ocaml"><span style="color: #000000; font-weight: bold;">type</span> <span style="color: #6434A3;">color</span> <span style="color: #a52a2a;">=</span> <span style="color: #6434A3;">Ochess.</span>color
+</pre>
+</div>
+
+<p>
+Save the file, and the build script will yell at you:
+</p>
+
+<pre class="example">
+We've found a bug for you!
+/Users/daniel/Playground/tea-chess/src/ochess.ml 43:6-8
+
+41 │ open Printf
+42 │ open Sys
+43 │ open Str
+44 │ 
+45 │ (* 
+
+The module or file Str can't be found.
+</pre>
+
+<p>
+This is because Bucklescript differs from the standard OCaml
+distribution in a few ways; it doesn't contain the <code>Str</code> module.
+Fortunately, this only affects a small portion of the code, and is easily remedied by providing our own function to split a string.  While I was at it, I got rid of all the warnings by prefixing all unused variables with <code>_</code> and by replacing <code>or</code>  with <code>||</code>.  I also disabled the <code>main</code> function of O'Chess to prevent it from being evaluated automatically.  You can get my updated <code>ochess.ml</code> from my repository.
+</p>
+
+<p>
+Let's add a file <code>src/Chess.ml</code> that wraps O'Chess and adds all chess-related helper functions that we may come up with:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-ocaml"><span style="color: #000000; font-weight: bold;">include</span> <span style="color: #6434A3;">Ochess</span>
+
+<span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">char_of_file</span><span style="color: #BA36A5;"> file</span> <span style="color: #a52a2a;">=</span> <span style="color: #008000;">"abcdefgh"</span>.<span style="color: #a52a2a;">[</span>file<span style="color: #a52a2a;">]</span>
+<span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">char_of_rank</span><span style="color: #BA36A5;"> rank</span> <span style="color: #a52a2a;">=</span> <span style="color: #008000;">"12345678"</span>.<span style="color: #a52a2a;">[</span>rank<span style="color: #a52a2a;">]</span>
+
+<span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">string_of_piece_type</span> <span style="color: #a52a2a;">=</span> <span style="color: #0000FF;">function</span>
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">King</span> <span style="color: #a52a2a;">-&gt;</span> <span style="color: #008000;">"king"</span>
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Queen</span> <span style="color: #a52a2a;">-&gt;</span> <span style="color: #008000;">"queen"</span>
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Rook</span> <span style="color: #a52a2a;">-&gt;</span> <span style="color: #008000;">"rook"</span>
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Bishop</span> <span style="color: #a52a2a;">-&gt;</span> <span style="color: #008000;">"bishop"</span>
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Knight</span> <span style="color: #a52a2a;">-&gt;</span> <span style="color: #008000;">"knight"</span>
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Pawn</span> <span style="color: #a52a2a;">-&gt;</span> <span style="color: #008000;">"pawn"</span>
+
+<span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">string_of_color</span> <span style="color: #a52a2a;">=</span> <span style="color: #0000FF;">function</span>
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">White</span> <span style="color: #a52a2a;">-&gt;</span> <span style="color: #008000;">"white"</span>
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Black</span> <span style="color: #a52a2a;">-&gt;</span> <span style="color: #008000;">"black"</span>
+</pre>
+</div>
+
+<p>
+I moved <code>char_of_file</code> and <code>char_of_rank</code> and added two more functions that will be useful later on.  Now we can access all these and all functionality of O'Chess through the <code>Chess</code> module.  Our model will now include a chess position, initially obtained from O'Chess:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-ocaml"><span style="color: #000000; font-weight: bold;">type</span> <span style="color: #6434A3;">model</span> <span style="color: #a52a2a;">=</span>
+  <span style="color: #a52a2a;">{</span> orientation <span style="color: #a52a2a;">:</span> color
+  <span style="color: #a52a2a;">;</span> position <span style="color: #a52a2a;">:</span> <span style="color: #6434A3;">Chess.</span>position
+  <span style="color: #a52a2a;">}</span>
+
+<span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">init</span><span style="color: #BA36A5;"> </span><span style="color: #a52a2a;">()</span> <span style="color: #a52a2a;">=</span>
+  <span style="color: #a52a2a;">{</span> orientation <span style="color: #a52a2a;">=</span> <span style="color: #000000; background-color: #FFFFFF;">White</span>
+  <span style="color: #a52a2a;">;</span> position <span style="color: #a52a2a;">=</span> <span style="color: #6434A3;">Chess.</span>init_position
+  <span style="color: #a52a2a;">},</span> <span style="color: #6434A3;">Cmd.</span>none
+</pre>
+</div>
+</div>
+</div>
+
+<div id="outline-container-org6c48b12" class="outline-3">
+<h3 id="org6c48b12">A static chessboard with pieces</h3>
+<div class="outline-text-3" id="text-org6c48b12">
+<p>
+Download the piece images from the <a href="https://github.com/oakmac/chessboardjs">Chessboard.js</a> project and put them into <code>release/img/pieces</code>.  We will use some nifty CSS to display them on the board:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-css"><span style="color: #0000ff; font-weight: bold;">cb-piece </span>{
+    <span style="color: #00AA00;">position</span>: absolute;
+    <span style="color: #00AA00;">bottom</span>: 0;
+    <span style="color: #00AA00;">left</span>: 0;
+    <span style="color: #00AA00;">width</span>: 100%;
+    <span style="color: #00AA00;">height</span>: 100%;
+    <span style="color: #00AA00;">background-size</span>: cover;
+    <span style="color: #00AA00;">cursor</span>: pointer;
+    <span style="color: #00AA00;">z-index</span>: 1;
+}
+
+<span style="color: #0000ff; font-weight: bold;">cb-piece.white.king </span>{
+    <span style="color: #00AA00;">background-image</span>: url(<span style="color: #008000;">"/img/pieces/wK.svg"</span>);
+}
+<span style="color: #0000ff; font-weight: bold;">cb-piece.white.queen </span>{
+    <span style="color: #00AA00;">background-image</span>: url(<span style="color: #008000;">"/img/pieces/wQ.svg"</span>);
+}
+<span style="color: #0000ff; font-weight: bold;">cb-piece.white.rook </span>{
+    <span style="color: #00AA00;">background-image</span>: url(<span style="color: #008000;">"/img/pieces/wR.svg"</span>);
+}
+<span style="color: #0000ff; font-weight: bold;">cb-piece.white.bishop </span>{
+    <span style="color: #00AA00;">background-image</span>: url(<span style="color: #008000;">"/img/pieces/wB.svg"</span>);
+}
+<span style="color: #0000ff; font-weight: bold;">cb-piece.white.knight </span>{
+    <span style="color: #00AA00;">background-image</span>: url(<span style="color: #008000;">"/img/pieces/wN.svg"</span>);
+}
+<span style="color: #0000ff; font-weight: bold;">cb-piece.white.pawn </span>{
+    <span style="color: #00AA00;">background-image</span>: url(<span style="color: #008000;">"/img/pieces/wP.svg"</span>);
+}
+<span style="color: #0000ff; font-weight: bold;">cb-piece.black.king </span>{
+    <span style="color: #00AA00;">background-image</span>: url(<span style="color: #008000;">"/img/pieces/bK.svg"</span>);
+}
+<span style="color: #0000ff; font-weight: bold;">cb-piece.black.queen </span>{
+    <span style="color: #00AA00;">background-image</span>: url(<span style="color: #008000;">"/img/pieces/bQ.svg"</span>);
+}
+<span style="color: #0000ff; font-weight: bold;">cb-piece.black.rook </span>{
+    <span style="color: #00AA00;">background-image</span>: url(<span style="color: #008000;">"/img/pieces/bR.svg"</span>);
+}
+<span style="color: #0000ff; font-weight: bold;">cb-piece.black.bishop </span>{
+    <span style="color: #00AA00;">background-image</span>: url(<span style="color: #008000;">"/img/pieces/bB.svg"</span>);
+}
+<span style="color: #0000ff; font-weight: bold;">cb-piece.black.knight </span>{
+    <span style="color: #00AA00;">background-image</span>: url(<span style="color: #008000;">"/img/pieces/bN.svg"</span>);
+}
+<span style="color: #0000ff; font-weight: bold;">cb-piece.black.pawn </span>{
+    <span style="color: #00AA00;">background-image</span>: url(<span style="color: #008000;">"/img/pieces/bP.svg"</span>);
+}
+</pre>
+</div>
+
+<p>
+Notice how the type and color of a piece are encoded in the classes.  Here's what the view function in <code>Main.ml</code> looks like now:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-ocaml"><span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">view</span><span style="color: #BA36A5;"> model</span> <span style="color: #a52a2a;">=</span>
+  <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">files</span><span style="color: #a52a2a;">,</span><span style="color: #BA36A5;"> ranks</span> <span style="color: #a52a2a;">=</span>
+    <span style="color: #0000FF;">match</span> model.orientation <span style="color: #0000FF;">with</span>
+    <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">White</span> <span style="color: #a52a2a;">-&gt;</span> <span style="color: #a52a2a;">[</span>0<span style="color: #a52a2a;">;</span> 1<span style="color: #a52a2a;">;</span> 2<span style="color: #a52a2a;">;</span> 3<span style="color: #a52a2a;">;</span> 4<span style="color: #a52a2a;">;</span> 5<span style="color: #a52a2a;">;</span> 6<span style="color: #a52a2a;">;</span> 7<span style="color: #a52a2a;">],</span> <span style="color: #a52a2a;">[</span>7<span style="color: #a52a2a;">;</span> 6<span style="color: #a52a2a;">;</span> 5<span style="color: #a52a2a;">;</span> 4<span style="color: #a52a2a;">;</span> 3<span style="color: #a52a2a;">;</span> 2<span style="color: #a52a2a;">;</span> 1<span style="color: #a52a2a;">;</span> 0<span style="color: #a52a2a;">]</span>
+    <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Black</span> <span style="color: #a52a2a;">-&gt;</span> <span style="color: #a52a2a;">[</span>7<span style="color: #a52a2a;">;</span> 6<span style="color: #a52a2a;">;</span> 5<span style="color: #a52a2a;">;</span> 4<span style="color: #a52a2a;">;</span> 3<span style="color: #a52a2a;">;</span> 2<span style="color: #a52a2a;">;</span> 1<span style="color: #a52a2a;">;</span> 0<span style="color: #a52a2a;">],</span> <span style="color: #a52a2a;">[</span>0<span style="color: #a52a2a;">;</span> 1<span style="color: #a52a2a;">;</span> 2<span style="color: #a52a2a;">;</span> 3<span style="color: #a52a2a;">;</span> 4<span style="color: #a52a2a;">;</span> 5<span style="color: #a52a2a;">;</span> 6<span style="color: #a52a2a;">;</span> 7<span style="color: #a52a2a;">]</span> <span style="color: #000000; font-weight: bold;">in</span>
+
+  <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">rank_view</span><span style="color: #BA36A5;"> rank</span> <span style="color: #a52a2a;">=</span>
+    <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">square_view</span><span style="color: #BA36A5;"> rank file</span> <span style="color: #a52a2a;">=</span>
+      node <span style="color: #008000;">"cb-square"</span> <span style="color: #a52a2a;">[]</span>
+        <span style="color: #a52a2a;">[</span> <span style="color: #0000FF;">match</span> model.position.ar.<span style="color: #a52a2a;">(</span>file<span style="color: #a52a2a;">)</span>.<span style="color: #a52a2a;">(</span>rank<span style="color: #a52a2a;">)</span> <span style="color: #0000FF;">with</span>
+          <span style="color: #a52a2a;">|</span> <span style="color: #6434A3;">Chess.</span><span style="color: #000000; background-color: #FFFFFF;">Piece</span> <span style="color: #a52a2a;">(</span>piece_type<span style="color: #a52a2a;">,</span> color<span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">-&gt;</span>
+            node <span style="color: #008000;">"cb-piece"</span>
+              <span style="color: #a52a2a;">[</span> classList
+                  <span style="color: #a52a2a;">[</span> <span style="color: #6434A3;">Chess.</span>string_of_color color<span style="color: #a52a2a;">,</span> <span style="color: #D0372D;">true</span>
+                  <span style="color: #a52a2a;">;</span> <span style="color: #6434A3;">Chess.</span>string_of_piece_type piece_type<span style="color: #a52a2a;">,</span> <span style="color: #D0372D;">true</span>
+                  <span style="color: #a52a2a;">]</span>
+              <span style="color: #a52a2a;">]</span> <span style="color: #a52a2a;">[]</span>
+          <span style="color: #a52a2a;">|</span> <span style="color: #6434A3;">Chess.</span><span style="color: #000000; background-color: #FFFFFF;">Empty</span> <span style="color: #a52a2a;">-&gt;</span> noNode
+        <span style="color: #a52a2a;">]</span> <span style="color: #000000; font-weight: bold;">in</span>
+    <span style="color: #6434A3;">List.</span>map <span style="color: #a52a2a;">(</span>square_view rank<span style="color: #a52a2a;">)</span> files
+    <span style="color: #a52a2a;">|&gt;</span> node <span style="color: #008000;">"cb-row"</span> <span style="color: #a52a2a;">[]</span> <span style="color: #000000; font-weight: bold;">in</span>
+
+  div <span style="color: #a52a2a;">[]</span>
+    <span style="color: #a52a2a;">[</span> <span style="color: #6434A3;">List.</span>map rank_view ranks
+      <span style="color: #a52a2a;">|&gt;</span> node <span style="color: #008000;">"cb-board"</span> <span style="color: #a52a2a;">[]</span>
+    <span style="color: #a52a2a;">;</span> p <span style="color: #a52a2a;">[]</span> <span style="color: #a52a2a;">[</span>button <span style="color: #a52a2a;">[</span>onClick <span style="color: #000000; background-color: #FFFFFF;">Flip</span><span style="color: #a52a2a;">]</span> <span style="color: #a52a2a;">[</span>text <span style="color: #008000;">"flip board"</span><span style="color: #a52a2a;">]]</span>
+    <span style="color: #a52a2a;">]</span>
+</pre>
+</div>
+
+<p>
+O'Chess represents the position as a record where the actual location of the pieces is stored in a 2-dimensional 8*8 array <code>ar</code>.  A square is either empty, or contains a piece of a certain type and color.  We use our helper functions to convert them into class names.  You should now see a nice chessboard with the pieces in their initial position!
+</p>
+</div>
+</div>
+
+<div id="outline-container-orgff4feb4" class="outline-3">
+<h3 id="orgff4feb4">Your first commands</h3>
+<div class="outline-text-3" id="text-orgff4feb4">
+<p>
+Let's now use a random generator to make random moves.  O'Chess will tell us what moves are legal moves according to the rules of chess in a given position.  Let's add a button to trigger a random move, and let's add a little informative line that tells us how many moves we can choose from in the current position:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-ocaml"><span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">result_view</span><span style="color: #BA36A5;"> result</span> <span style="color: #a52a2a;">=</span>
+  p <span style="color: #a52a2a;">[]</span>
+    <span style="color: #a52a2a;">[</span> <span style="color: #000000; font-weight: bold;">begin</span> <span style="color: #0000FF;">match</span> result <span style="color: #0000FF;">with</span>
+        <span style="color: #a52a2a;">|</span> <span style="color: #6434A3;">Chess.</span><span style="color: #000000; background-color: #FFFFFF;">Win</span> <span style="color: #000000; background-color: #FFFFFF;">White</span> <span style="color: #a52a2a;">-&gt;</span> <span style="color: #008000;">"White wins by checkmate!"</span> 
+        <span style="color: #a52a2a;">|</span> <span style="color: #6434A3;">Chess.</span><span style="color: #000000; background-color: #FFFFFF;">Win</span> <span style="color: #000000; background-color: #FFFFFF;">Black</span> <span style="color: #a52a2a;">-&gt;</span> <span style="color: #008000;">"Black wins by checkmate!"</span>
+        <span style="color: #a52a2a;">|</span> <span style="color: #6434A3;">Chess.</span><span style="color: #000000; background-color: #FFFFFF;">Draw</span> <span style="color: #a52a2a;">-&gt;</span> <span style="color: #008000;">"The game is a draw!"</span>
+        <span style="color: #a52a2a;">|</span> <span style="color: #6434A3;">Chess.</span><span style="color: #000000; background-color: #FFFFFF;">Play</span> move_list <span style="color: #a52a2a;">-&gt;</span>
+          <span style="color: #6434A3;">List.</span>length move_list
+          <span style="color: #a52a2a;">|&gt;</span> <span style="color: #6434A3;">Printf.</span>sprintf <span style="color: #008000;">"There are %d legal moves in this position!"</span>
+      <span style="color: #000000; font-weight: bold;">end</span> <span style="color: #a52a2a;">|&gt;</span> text
+    <span style="color: #a52a2a;">]</span>
+
+
+<span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">buttons_view</span> <span style="color: #a52a2a;">=</span>
+  p <span style="color: #a52a2a;">[]</span>
+    <span style="color: #a52a2a;">[</span> button <span style="color: #a52a2a;">[</span>onClick <span style="color: #000000; background-color: #FFFFFF;">Flip</span><span style="color: #a52a2a;">]</span> <span style="color: #a52a2a;">[</span>text <span style="color: #008000;">"flip board"</span><span style="color: #a52a2a;">]</span>
+    <span style="color: #a52a2a;">;</span> button <span style="color: #a52a2a;">[</span>onClick <span style="color: #000000; background-color: #FFFFFF;">Random_button</span><span style="color: #a52a2a;">]</span> <span style="color: #a52a2a;">[</span>text <span style="color: #008000;">"random move"</span><span style="color: #a52a2a;">]</span>
+    <span style="color: #a52a2a;">]</span>
+
+
+<span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">view</span><span style="color: #BA36A5;"> model</span> <span style="color: #a52a2a;">=</span>
+  <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">files</span><span style="color: #a52a2a;">,</span><span style="color: #BA36A5;"> ranks</span> <span style="color: #a52a2a;">=</span>
+    <span style="color: #0000FF;">match</span> model.orientation <span style="color: #0000FF;">with</span>
+    <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">White</span> <span style="color: #a52a2a;">-&gt;</span> <span style="color: #a52a2a;">[</span>0<span style="color: #a52a2a;">;</span> 1<span style="color: #a52a2a;">;</span> 2<span style="color: #a52a2a;">;</span> 3<span style="color: #a52a2a;">;</span> 4<span style="color: #a52a2a;">;</span> 5<span style="color: #a52a2a;">;</span> 6<span style="color: #a52a2a;">;</span> 7<span style="color: #a52a2a;">],</span> <span style="color: #a52a2a;">[</span>7<span style="color: #a52a2a;">;</span> 6<span style="color: #a52a2a;">;</span> 5<span style="color: #a52a2a;">;</span> 4<span style="color: #a52a2a;">;</span> 3<span style="color: #a52a2a;">;</span> 2<span style="color: #a52a2a;">;</span> 1<span style="color: #a52a2a;">;</span> 0<span style="color: #a52a2a;">]</span>
+    <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Black</span> <span style="color: #a52a2a;">-&gt;</span> <span style="color: #a52a2a;">[</span>7<span style="color: #a52a2a;">;</span> 6<span style="color: #a52a2a;">;</span> 5<span style="color: #a52a2a;">;</span> 4<span style="color: #a52a2a;">;</span> 3<span style="color: #a52a2a;">;</span> 2<span style="color: #a52a2a;">;</span> 1<span style="color: #a52a2a;">;</span> 0<span style="color: #a52a2a;">],</span> <span style="color: #a52a2a;">[</span>0<span style="color: #a52a2a;">;</span> 1<span style="color: #a52a2a;">;</span> 2<span style="color: #a52a2a;">;</span> 3<span style="color: #a52a2a;">;</span> 4<span style="color: #a52a2a;">;</span> 5<span style="color: #a52a2a;">;</span> 6<span style="color: #a52a2a;">;</span> 7<span style="color: #a52a2a;">]</span> <span style="color: #000000; font-weight: bold;">in</span>
+
+  <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">rank_view</span><span style="color: #BA36A5;"> rank</span> <span style="color: #a52a2a;">=</span>
+    <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">square_view</span><span style="color: #BA36A5;"> rank file</span> <span style="color: #a52a2a;">=</span>
+      node <span style="color: #008000;">"cb-square"</span> <span style="color: #a52a2a;">[]</span>
+        <span style="color: #a52a2a;">[</span> <span style="color: #0000FF;">match</span> model.position.ar.<span style="color: #a52a2a;">(</span>file<span style="color: #a52a2a;">)</span>.<span style="color: #a52a2a;">(</span>rank<span style="color: #a52a2a;">)</span> <span style="color: #0000FF;">with</span>
+          <span style="color: #a52a2a;">|</span> <span style="color: #6434A3;">Chess.</span><span style="color: #000000; background-color: #FFFFFF;">Piece</span> <span style="color: #a52a2a;">(</span>piece_type<span style="color: #a52a2a;">,</span> color<span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">-&gt;</span>
+            node <span style="color: #008000;">"cb-piece"</span>
+              <span style="color: #a52a2a;">[</span> classList
+                  <span style="color: #a52a2a;">[</span> <span style="color: #6434A3;">Chess.</span>string_of_color color<span style="color: #a52a2a;">,</span> <span style="color: #D0372D;">true</span>
+                  <span style="color: #a52a2a;">;</span> <span style="color: #6434A3;">Chess.</span>string_of_piece_type piece_type<span style="color: #a52a2a;">,</span> <span style="color: #D0372D;">true</span>
+                  <span style="color: #a52a2a;">]</span>
+              <span style="color: #a52a2a;">]</span> <span style="color: #a52a2a;">[]</span>
+          <span style="color: #a52a2a;">|</span> <span style="color: #6434A3;">Chess.</span><span style="color: #000000; background-color: #FFFFFF;">Empty</span> <span style="color: #a52a2a;">-&gt;</span> noNode
+        <span style="color: #a52a2a;">]</span> <span style="color: #000000; font-weight: bold;">in</span>
+    <span style="color: #6434A3;">List.</span>map <span style="color: #a52a2a;">(</span>square_view rank<span style="color: #a52a2a;">)</span> files
+    <span style="color: #a52a2a;">|&gt;</span> node <span style="color: #008000;">"cb-row"</span> <span style="color: #a52a2a;">[]</span> <span style="color: #000000; font-weight: bold;">in</span>
+
+  div <span style="color: #a52a2a;">[]</span>
+    <span style="color: #a52a2a;">[</span> <span style="color: #6434A3;">List.</span>map rank_view ranks
+      <span style="color: #a52a2a;">|&gt;</span> node <span style="color: #008000;">"cb-board"</span> <span style="color: #a52a2a;">[]</span>
+    <span style="color: #a52a2a;">;</span> buttons_view
+    <span style="color: #a52a2a;">;</span> <span style="color: #6434A3;">Chess.</span>game_status model.position <span style="color: #a52a2a;">|&gt;</span> result_view 
+    <span style="color: #a52a2a;">]</span>
+</pre>
+</div>
+
+<p>
+Notice how we split the view into subviews, and notice their different types.  <code>buttons_view</code> takes no arguments, but has a specific message type in its return type, while <code>results_view</code> takes an argument, but has a type variable in its return type.
+</p>
+
+<p>
+Of course, the message <code>Random_button</code> also needs to be defined in our <code>msg</code> type, and it also needs to be handled in <code>update</code>.  This pattern will come up again and again, and it will become second nature to you.
+</p>
+
+<p>
+When <code>Random_button</code> is received, we want to issue a command that asks for a random number and performs a side effect.  Eventually, the result will come in, wrapped in a message.  Let's define a message variant <code>Random_move of Chess.move</code> that has a chess move as its "payload".  On receiving this message, the move that it contains will be played on the board.  Here are the relevant parts of <code>Main.ml</code>:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-ocaml"><span style="color: #000000; font-weight: bold;">type</span> <span style="color: #6434A3;">msg</span> <span style="color: #a52a2a;">=</span>
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Flip</span>
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Random_button</span>
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Random_move</span> <span style="color: #0000FF;">of</span> <span style="color: #6434A3;">Chess.</span>move
+<span style="color: #808080;">[@@bs.deriving {accessors}]</span>
+
+<span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">update</span><span style="color: #BA36A5;"> model</span> <span style="color: #a52a2a;">=</span> <span style="color: #0000FF;">function</span>
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Flip</span> <span style="color: #a52a2a;">-&gt;</span>
+    <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">orientation'</span> <span style="color: #a52a2a;">=</span> <span style="color: #6434A3;">Chess.</span>opposite_color model.orientation <span style="color: #000000; font-weight: bold;">in</span>
+    <span style="color: #a52a2a;">{</span> model <span style="color: #0000FF;">with</span>
+      orientation <span style="color: #a52a2a;">=</span> orientation'
+    <span style="color: #a52a2a;">},</span> <span style="color: #6434A3;">Cmd.</span>none
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Random_button</span> <span style="color: #a52a2a;">-&gt;</span>
+    model<span style="color: #a52a2a;">,</span>
+    <span style="color: #000000; font-weight: bold;">begin</span> <span style="color: #0000FF;">match</span> <span style="color: #6434A3;">Chess.</span>game_status model.position <span style="color: #0000FF;">with</span>
+      <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Play</span> move_list <span style="color: #a52a2a;">-&gt;</span>
+        <span style="color: #6434A3;">List.</span>length move_list
+        <span style="color: #a52a2a;">|&gt;</span> <span style="color: #6434A3;">Random.</span>int 0
+        <span style="color: #a52a2a;">|&gt;</span> <span style="color: #6434A3;">Random.</span>generate
+          <span style="color: #a52a2a;">(</span><span style="color: #0000FF;">fun</span> <span style="color: #BA36A5;">random_number</span> <span style="color: #a52a2a;">-&gt;</span>
+             <span style="color: #6434A3;">List.</span>nth move_list random_number <span style="color: #a52a2a;">|&gt;</span> random_move<span style="color: #a52a2a;">)</span>
+      <span style="color: #a52a2a;">|</span> _ <span style="color: #a52a2a;">-&gt;</span> <span style="color: #6434A3;">Cmd.</span>none
+    <span style="color: #000000; font-weight: bold;">end</span>
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Random_move</span> move <span style="color: #a52a2a;">-&gt;</span>
+    <span style="color: #a52a2a;">{</span> model <span style="color: #0000FF;">with</span>
+      position <span style="color: #a52a2a;">=</span> <span style="color: #6434A3;">Chess.</span>make_move model.position move 0 <span style="color: #a52a2a;">},</span> <span style="color: #6434A3;">Cmd.</span>none
+</pre>
+</div>
+
+<p>
+When <code>Random_button</code> is received, we check whether there are legal moves in the current position by inquiring the game status from O'Chess.  If there aren't, no command is issued.  If there are legal moves, we initialize a random integer generator with the length of the list of legal moves and send a command that takes a function that is evaluated when the random number is computed.  In this case, the random number is used to choose a move from the list of legal moves and to wrap it in a <code>Random_move</code> message.  Have you already wondered about the strange line <code>[@@bs.deriving {accessors}]</code>?  It's there so you can write <code>random_move</code> instead of <code>(fun x -&gt; Random_move x)</code> by adding a function for every type constructor.
+</p>
+
+<p>
+Finally, when the <code>Random_move</code> message comes in, we update the position by using O'Chess to make the move (you can disregard the final <code>0</code> argument as it is only important when O'Chess is used as a chess engine).
+</p>
+
+<p>
+Try it out and see if you can play a full game before you get bored.  Most of the games will eventually end in a draw due to a rule that declares a draw after 50 moves of not making progress (no pawn move and no capture), but occasionally you will witness a checkmate.
+</p>
+
+<p>
+This concludes day 2 of the Twelve Days of Christmas tutorial.  Tomorrow, we will refactor our code and learn how to compose views that manage their own submodels.
+</p>
+</div>
+</div>
+</div>
+</div>
+</body>
+</html>

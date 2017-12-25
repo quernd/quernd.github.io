@@ -1,0 +1,339 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+<head>
+<!-- 2017-12-25 Mon 19:24 -->
+<meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Raspberry Pi Mobile Internet Router</title>
+<meta name="generator" content="Org mode" />
+<meta name="author" content="Daniel Quernheim" />
+<link rel='stylesheet' href='/style.css' type='text/css'/><meta name="viewport" content="width=device-width"/>
+</head>
+<body>
+<div id="org-div-home-and-up">
+ <a accesskey="h" href=""> UP </a>
+ |
+ <a accesskey="H" href="/"> HOME </a>
+</div><div id="preamble" class="status">
+<nav><a href="/">home</a></nav>
+</div>
+<div id="content">
+<h1 class="title">Raspberry Pi Mobile Internet Router</h1>
+
+<div id="outline-container-orgc597e58" class="outline-2">
+<h2 id="orgc597e58">Introduction</h2>
+<div class="outline-text-2" id="text-orgc597e58">
+<p>
+Living alternately in an off-grid home in the woods and a campervan, a reliable Internet connection is hard to come by.  For a while, my partner and I we got along by using a combination of public Wifi and the Hotspot functions of our smartphones.  However, this is tedious in the long run, so I decided to turn a <a href="https://www.raspberrypi.org/products/raspberry-pi-2-model-b/">Raspberry Pi 2 Model B</a> (that I already had) into a mobile router.  What I like about the Pi is that it draws its power through Micro-USB, which allows us to easily run it in our off-grid home as well as the van straight from the 12 V battery system with a simple car USB adapter.
+</p>
+
+<p>
+I mainly followed the Instructable tutorials by <a href="http://www.instructables.com/id/Raspberry-Pi-as-a-3g-Huawei-E303-wireless-Edima/">BigCowPi</a> and <a href="http://www.instructables.com/id/3G-Wireless-Router-Based-on-Raspberry-Pi2/">Deviprasath</a> with a few extra solutions here and there.
+</p>
+
+<p>
+I purchased a USB Wifi dongle (as the Raspberry Pi 2 Model B, unlike the Pi 3, doesn't have built-in Wifi) as well as a 3G GSM USB modem to hold a SIM card.  I made sure to buy device that were recommended as Raspbian-compatible.  The Wifi dongle is an <a href="http://www.edimax.com/edimax/merchandise/merchandise_detail/data/edimax/global/wireless_adapters_n150/ew-7811un/">Edimax EW-7811UN</a> ("ideal for Raspberry Pi"), and the 3G modem is a <a href="https://www.cnet.com/products/huawei-e173-wireless-cellular-modem/specs/">Huawei E173</a>.  
+</p>
+</div>
+</div>
+
+<div id="outline-container-orgb31be4b" class="outline-2">
+<h2 id="orgb31be4b">SSH like MacGyver</h2>
+<div class="outline-text-2" id="text-orgb31be4b">
+<p>
+You will probably be able to skip this step unless you're utterly unprepared as I was.  If you have either an ethernet cable (and your Pi has a working installation of <a href="https://www.raspbian.org/FrontPage">Raspbian</a> with SSH enabled) or a screen and a keyboard, you can go directly to the next section.
+</p>
+
+<p>
+The first problem I ran into was that while I had previously installed the Raspbian distribution on the Raspberry Pi, I was unable to log into the device.  I had a keyboard and an HDMI cable, but no screen.  Neither did I have an ethernet cable or even the adapter needed for my MacBook Air.  When trying to find out how to use a laptop as an external screen (impossible, apparently), I learned that fortunately, one can log into the Raspberry Pi via SSH over a USB connection from an Android phone with a terminal emulator by <a href="https://www.raspberrypi.org/forums/viewtopic.php?t=18916&amp;p=331361">turning one of the Pi's USB ports into an ethernet port and assigning a static IP to it</a>.  At least in theory &#x2013; in practice, this requires editing the file <code>/etc/network/interfaces</code>, which in turn requires access to the Raspberry Pi, right?  So it seems I was stuck.
+</p>
+
+<p>
+Then it hit me that I might be able to edit the filesystem on the Raspberry Pi directly on the laptop.  Not out of the box of course, since Apple doesn't provide drivers to access Linux filesystems, but with OSXFuse maybe?  There is a <a href="https://github.com/gpz500/fuse-ext2/releases">fork of the Fuse-ext2 project</a> that worked for me so I could edit <code>/etc/network/interfaces</code> as follows:
+</p>
+
+<pre class="example">
+allow-hotplug usb0
+auto usb0
+iface usb0 inet static
+        address 192.168.42.42
+        netmask 255.255.255.0
+        network 192.168.42.0
+        broadcast 192.168.42.255
+</pre>
+
+<p>
+After rebooting the Raspberry Pi and connecting my Android phone to it through this special USB port, I was able to log in via SSH (the default password of Raspbian, in case you never changed it, is <code>raspberry</code>, by the way):
+</p>
+
+<pre class="example">
+$ ssh pi@192.168.42.42
+</pre>
+
+<p>
+Now I was able to use my phone's Internet connection by adding a route as explained in the above link:
+</p>
+
+<pre class="example">
+$ sudo route add default gw 192.168.42.129 usb0
+</pre>
+
+<p>
+(If needed, find the phone's IP address using <code>arp -a</code>.)  From this point on, the Pi was connected to the Internet through the phone.  But we wanted to have it the other way around, so keep reading.
+</p>
+</div>
+</div>
+
+<div id="outline-container-org4a67a46" class="outline-2">
+<h2 id="org4a67a46">Setting up Wifi</h2>
+<div class="outline-text-2" id="text-org4a67a46">
+<p>
+The next challenge was to setup the Wifi.  I chose to get this running first in order to be able to log into the Pi from my laptop.  The idea is to use a USB Wifi dongle in Access Point mode.  It turned out that the Wifi dongle I picked worked out of the box &#x2013; when used "normally".  But to get Access Point mode to work, there was a little intricacy:  I had to compile patched drivers.
+</p>
+
+<p>
+Fortunately, the entire procedure is <a href="https://jenssegers.com/43/Realtek-RTL8188-based-access-point-on-Raspberry-Pi">rather straightforward</a>:
+</p>
+
+<pre class="example">
+$ wget https://github.com/jenssegers/RTL8188-hostapd/archive/v2.0.tar.gz
+tar -zxvf v2.0.tar.gz
+$ cd RTL8188-hostapd-2.0/hostapd
+$ make &amp;&amp; sudo make install
+</pre>
+
+<p>
+From then on, it worked like a charm.  I edited the configuration file <code>/etc/hostapd/hostapd.conf</code> as follows:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-conf"><span style="color: #8D8D84;"># </span><span style="color: #8D8D84; font-style: italic;">Basic configuration</span>
+
+<span style="color: #BA36A5;">interface</span>=wlan0
+<span style="color: #BA36A5;">ssid</span>=popcorn
+<span style="color: #BA36A5;">channel</span>=1
+<span style="color: #8D8D84;">#</span><span style="color: #8D8D84; font-style: italic;">bridge=br0</span>
+
+<span style="color: #8D8D84;"># </span><span style="color: #8D8D84; font-style: italic;">WPA and WPA2 configuration</span>
+
+<span style="color: #BA36A5;">macaddr_acl</span>=0
+<span style="color: #BA36A5;">auth_algs</span>=1
+<span style="color: #BA36A5;">ignore_broadcast_ssid</span>=0
+<span style="color: #BA36A5;">wpa</span>=3
+<span style="color: #BA36A5;">wpa_passphrase</span>=SUPERSECRETPASSWORD
+<span style="color: #BA36A5;">wpa_key_mgmt</span>=WPA-PSK
+<span style="color: #BA36A5;">wpa_pairwise</span>=TKIP
+<span style="color: #BA36A5;">rsn_pairwise</span>=CCMP
+
+<span style="color: #8D8D84;"># </span><span style="color: #8D8D84; font-style: italic;">Hardware configuration</span>
+
+<span style="color: #BA36A5;">driver</span>=rtl871xdrv
+<span style="color: #BA36A5;">ieee80211n</span>=1
+<span style="color: #BA36A5;">hw_mode</span>=g
+<span style="color: #BA36A5;">device_name</span>=RTL8192CU
+<span style="color: #BA36A5;">manufacturer</span>=Realtek
+</pre>
+</div>
+
+<p>
+I now edited back <code>/etc/network/interfaces</code> by undoing the changes made above and editing <code>eth0</code> and <code>wlan0</code>, as well as adding a <code>hostapd</code> entry.  The file now read as follows:
+</p>
+
+<pre class="example">
+auto lo
+iface lo inet loopback
+
+auto eth0
+iface eth0 inet static
+address 192.168.0.1
+netmask 255.255.255.0
+
+auto wlan0
+iface wlan0 inet static
+address 192.168.1.1
+netmask 255.255.255.0
+
+hostapd /etc/hostapd/hostapd.conf
+</pre>
+
+<p>
+I completed the configuration of the Wifi access point by adding DHCP, appending the following lines to <code>/etc/dnsmasq.conf</code>:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-conf"><span style="color: #8D8D84;"># </span><span style="color: #8D8D84; font-style: italic;">RPI ROUTER</span>
+domain-needed
+bogus-priv
+<span style="color: #BA36A5;">interface</span>=eth0
+<span style="color: #BA36A5;">dhcp-range</span>=192.168.0.1,192.168.0.100,12h
+<span style="color: #BA36A5;">interface</span>=wlan0
+<span style="color: #BA36A5;">dhcp-range</span>=192.168.1.1,192.168.1.100,24h
+</pre>
+</div>
+
+<p>
+At this point, I was able to disconnect the phone and connect to the Wifi served by the Raspbery Pi from my laptop by joining the network <code>popcorn</code> and issuing:
+</p>
+
+<pre class="example">
+$ ssh pi@192.168.1.1
+</pre>
+</div>
+</div>
+
+<div id="outline-container-org58d4c9d" class="outline-2">
+<h2 id="org58d4c9d">Setting up the 3G modem</h2>
+<div class="outline-text-2" id="text-org58d4c9d">
+<p>
+For the remaining part of this project, I needed a bunch of packages, so I went ahead and installed them right away:
+</p>
+
+<pre class="example">
+$ sudo apt-get install iptables dnsmasq ppp wvdial usb-modeswitch iw
+</pre>
+
+<p>
+I did, as expected run into problems with the modem's data partition which would prevent the modem from being recognized.  Different devices require different values in <code>/etc/usb_modeswitch.conf</code>; what worked for me was:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-conf"><span style="color: #BA36A5;">DefaultVendor</span>=0x12d1
+<span style="color: #BA36A5;">DefaultProduct</span>=0x14d1
+<span style="color: #BA36A5;">TargetVendor</span>=0x12d1
+<span style="color: #BA36A5;">TargetProductList</span>=14c9
+<span style="color: #BA36A5;">MessageContent</span>=<span style="color: #008000;">"55534243123456780000000000000011062000000100000000000000000000"</span>
+<span style="color: #BA36A5;">CheckSuccess</span>=20
+</pre>
+</div>
+
+<p>
+For the actual 3G connection, there are various options involving scripts to be found, but I chose a simple way using <code>wvdial</code>.  I edited <code>/etc/wvdial.conf</code> to match my carrier's requirements:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-conf">[<span style="color: #6434A3;">Dialer Defaults</span>]
+<span style="color: #BA36A5;">Modem</span> = /dev/ttyUSB0
+<span style="color: #BA36A5;">Phone</span> = *99<span style="color: #8D8D84;">#</span>
+<span style="color: #BA36A5;">Username</span> = eplus
+<span style="color: #BA36A5;">Password</span> = gprs
+<span style="color: #BA36A5;">Init3</span> = AT+CGDCONT=1,<span style="color: #008000;">"IP"</span>,<span style="color: #008000;">"internet.eplus.de"</span>,<span style="color: #008000;">"0.0.0.0"</span>
+<span style="color: #BA36A5;">ISDN</span> = 0
+<span style="color: #BA36A5;">Auto Reconnect</span> = on
+<span style="color: #BA36A5;">Stupid Mode</span>= 1
+<span style="color: #BA36A5;">Idle Seconds</span>= 0
+<span style="color: #BA36A5;">Auto DNS</span> = on
+</pre>
+</div>
+
+<p>
+and added the following to <code>/etc/network/interfaces</code>:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-conf">iface ppp0 inet wvdial
+</pre>
+</div>
+
+<p>
+(Unfortunately, <code>auto ppp0</code> didn't work here because it would cause <code>wvdial</code> to run on boot before the modem hardware was ready.  My workaround is explained below.)
+</p>
+
+<p>
+To set up NAT, I edited <code>/etc/sysctl.conf</code> by uncommenting the line
+</p>
+
+<div class="org-src-container">
+<pre class="src src-conf"><span style="color: #BA36A5;">net.ipv4.ip_forward</span>=1
+</pre>
+</div>
+
+<p>
+Then I ran
+</p>
+
+<pre class="example">
+$ sudo iptables -t nat -A POSTROUTING -o ppp0 -j MASQUERADE
+$ sudo iptables-save &gt; /etc/iptables.ipv4.nat
+</pre>
+
+<p>
+and added to the file <code>/etc/network/interfaces</code> the following line:
+</p>
+
+<pre class="example">
+pre-up iptables-restore &lt; /etc/iptables.ipv4.nat
+</pre>
+</div>
+</div>
+
+<div id="outline-container-org05544b3" class="outline-2">
+<h2 id="org05544b3">Getting it ready on boot</h2>
+<div class="outline-text-2" id="text-org05544b3">
+<p>
+Unfortunately, I needed to manually have the Pi establish the 3G connection, having to wait for the modem to be ready after boot.  (The network devices seem to be brought up before the USB hardware is ready.)  I experimented with <code>udev</code> to listen for the device to show up but ultimately didn't succeed.  Instead, I wrote a simple shell script <code>/usr/local/bin/ppp0up.sh</code> that just sleeps 20 seconds before bringing the device up:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-shell"><span style="color: #8D8D84;">#</span><span style="color: #8D8D84; font-style: italic;">!/bin/</span><span style="color: #0000FF;">sh</span><span style="color: #8D8D84; font-style: italic;"> -e</span>
+sleep 20
+/sbin/ifup ppp0
+</pre>
+</div>
+
+<p>
+and added a line to <code>/etc/rc.local</code> (run on boot):
+</p>
+<div class="org-src-container">
+<pre class="src src-shell">/usr/local/bin/ppp0up.sh &amp;
+</pre>
+</div>
+
+<p>
+This runs my above-mentioned script in the background, so it doesn't block the boot process.  When the internet comes up, the 3G modem will signal it by lighting up its LED in green (EDGE) or bright blue (3G).
+</p>
+</div>
+</div>
+
+<div id="outline-container-org2debf6c" class="outline-2">
+<h2 id="org2debf6c">The magical memory stick</h2>
+<div class="outline-text-2" id="text-org2debf6c">
+<p>
+Now that the system automatically goes online on boot, there is only one problem: How can I shut the Pi down, given there is no button?  I don't want to always open an SSH connection, and I can't afford to keep the Pi running 24/7 (even though its power consumption is little, it does strain the batteries).  People have added shutdown buttons to their Pi computers via the GPIO pins, but that was a little too much for me.  Instead, I repurposed an old memory stick by adding a <code>udev</code> rule that would cause the Pi to shut down as soon as the stick is plugged in!
+</p>
+
+<p>
+I used <code>lsusb</code> to find vendor and product IDs of the memory stick and added a file <code>/etc/udev/rules.d/11-shutdown.rules</code> with the following content 
+</p>
+
+<div class="org-src-container">
+<pre class="src src-conf"><span style="color: #BA36A5;">ACTION</span>==<span style="color: #008000;">"add"</span>, ATTR{idVendor}==<span style="color: #008000;">"13fe"</span>, ATTR{idProduct}==<span style="color: #008000;">"1f00"</span>, RUN+=<span style="color: #008000;">"/sbin/halt"</span>
+</pre>
+</div>
+
+<p>
+It usually only takes a few seconds for the system to come to a halt.
+Happy days!
+</p>
+</div>
+</div>
+
+<div id="outline-container-org5f1da25" class="outline-2">
+<h2 id="org5f1da25">Addendum: Solving the power problem</h2>
+<div class="outline-text-2" id="text-org5f1da25">
+<p>
+The tutorial by BigCowPi mentions the fact that the Raspberry Pi might struggle to provide the power for a 3G modem and a Wifi dongle.  I did in fact experience occasional problems where the Pi would (seemingly randomly) reboot.  It turned out that the devices were indeed drawing too much power.  Fortunately, this is a restriction that can be lifted by <a href="https://elinux.org/RPiconfig#USB_Power">changing a configuration setting</a>.  In the file <code>/boot/config.txt</code>, adding the line
+</p>
+<div class="org-src-container">
+<pre class="src src-conf"><span style="color: #BA36A5;">max_usb_current</span>=1
+</pre>
+</div>
+<p>
+will provide 1200mA to all USB ports combined, as opposed to the default 600mA.  I have not experienced a power shortage since. 
+</p>
+</div>
+</div>
+</div>
+</body>
+</html>
