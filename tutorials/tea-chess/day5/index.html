@@ -3,7 +3,7 @@
 "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
 <head>
-<!-- 2017-12-26 Tue 17:47 -->
+<!-- 2017-12-26 Tue 19:24 -->
 <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Twelve Days of Christmas #5</title>
@@ -22,7 +22,7 @@
 <div id="content">
 <h1 class="title">Twelve Days of Christmas #5</h1>
 <p>
-This is the fourth part of <a href="../index.html">a chess-themed tutorial</a> on writing an SPA in
+This is the fifth part of <a href="../index.html">a chess-themed tutorial</a> on writing an SPA in
 <a href="https://github.com/OvermindDL1/bucklescript-tea">Bucklescript-TEA</a>.  After this part, your app will look similar to <a href="demo.html">this demo</a>.
 </p>
 
@@ -278,7 +278,31 @@ that includes a promotion widget if needed:
 </div>
 
 <p>
-(to be continued)
+The pieces are laid out such that the most common piece, the queen,
+will be displayed on top of the promotion square, alongside knight, rook
+and bishop.  When a piece is selected, the
+message <code>Piece_promoted</code> will communicate the piece type.  When the user clicks anywhere in the promotion widget except on one of
+the pieces, promotion is cancelled and no move is made by sending the
+internal message <code>Promotion_canceled</code>.  
+</p>
+
+<p>
+In the <code>update</code> function, promotion is handled in the following way:
+</p>
+<div class="org-src-container">
+<pre class="src src-ocaml"><span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Promotion_canceled</span><span style="color: #a52a2a;">,</span> _ <span style="color: #a52a2a;">-&gt;</span> <span style="color: #a52a2a;">{</span>model <span style="color: #0000FF;">with</span> status <span style="color: #a52a2a;">=</span> <span style="color: #000000; background-color: #FFFFFF;">Nothing</span><span style="color: #a52a2a;">},</span> <span style="color: #6434A3;">Cmd.</span>none
+<span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Piece_promoted</span> piece_type<span style="color: #a52a2a;">,</span> <span style="color: #000000; background-color: #FFFFFF;">Promoting</span> promoting <span style="color: #a52a2a;">-&gt;</span>      
+  <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">move</span> <span style="color: #a52a2a;">=</span> <span style="color: #000000; background-color: #FFFFFF;">Promotion</span> <span style="color: #a52a2a;">(</span>piece_type<span style="color: #a52a2a;">,</span>
+                        promoting.source_file<span style="color: #a52a2a;">,</span>
+                        promoting.target_file<span style="color: #a52a2a;">)</span> <span style="color: #000000; font-weight: bold;">in</span>
+  <span style="color: #a52a2a;">{</span>model <span style="color: #0000FF;">with</span> status <span style="color: #a52a2a;">=</span> <span style="color: #000000; background-color: #FFFFFF;">Nothing</span><span style="color: #a52a2a;">},</span> <span style="color: #6434A3;">Cmd.</span>msg <span style="color: #a52a2a;">(</span><span style="color: #000000; background-color: #FFFFFF;">Move</span> move<span style="color: #a52a2a;">)</span>
+</pre>
+</div>
+
+<p>
+Congratulations, you should now be able to promote pawns! This is tag
+<code>day5</code> in my repository. Tomorrow, we
+will implement move logging and take-back functionality.
 </p>
 </div>
 </div>
