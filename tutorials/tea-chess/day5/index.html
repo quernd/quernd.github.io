@@ -3,7 +3,7 @@
 "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
 <head>
-<!-- 2017-12-26 Tue 19:24 -->
+<!-- 2017-12-26 Tue 19:30 -->
 <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Twelve Days of Christmas #5</title>
@@ -290,12 +290,32 @@ internal message <code>Promotion_canceled</code>.
 In the <code>update</code> function, promotion is handled in the following way:
 </p>
 <div class="org-src-container">
-<pre class="src src-ocaml"><span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Promotion_canceled</span><span style="color: #a52a2a;">,</span> _ <span style="color: #a52a2a;">-&gt;</span> <span style="color: #a52a2a;">{</span>model <span style="color: #0000FF;">with</span> status <span style="color: #a52a2a;">=</span> <span style="color: #000000; background-color: #FFFFFF;">Nothing</span><span style="color: #a52a2a;">},</span> <span style="color: #6434A3;">Cmd.</span>none
+<pre class="src src-ocaml"><span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Move_drop</span> _<span style="color: #a52a2a;">,</span> <span style="color: #000000; background-color: #FFFFFF;">Dragging</span> drag <span style="color: #a52a2a;">-&gt;</span>
+  <span style="color: #000000; font-weight: bold;">begin</span> <span style="color: #0000FF;">match</span> drag.target <span style="color: #0000FF;">with</span>
+    <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Some</span> target <span style="color: #a52a2a;">-&gt;</span>
+      <span style="color: #000000; font-weight: bold;">begin</span> <span style="color: #0000FF;">try</span> <span style="color: #0000FF;">match</span> <span style="color: #6434A3;">List.</span>assoc target drag.legal_targets <span style="color: #0000FF;">with</span>
+        <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Completed_move</span> move <span style="color: #a52a2a;">-&gt;</span>
+          <span style="color: #a52a2a;">{</span>model <span style="color: #0000FF;">with</span> status <span style="color: #a52a2a;">=</span> <span style="color: #000000; background-color: #FFFFFF;">Nothing</span><span style="color: #a52a2a;">},</span> <span style="color: #6434A3;">Cmd.</span>msg <span style="color: #a52a2a;">(</span><span style="color: #000000; background-color: #FFFFFF;">Move</span> move<span style="color: #a52a2a;">)</span>
+        <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Pawn_will_promote</span> <span style="color: #a52a2a;">-&gt;</span>
+          <span style="color: #a52a2a;">{</span>model <span style="color: #0000FF;">with</span>
+           status <span style="color: #a52a2a;">=</span> <span style="color: #000000; background-color: #FFFFFF;">Promoting</span>
+               <span style="color: #a52a2a;">{</span> turn <span style="color: #a52a2a;">=</span> drag.turn
+               <span style="color: #a52a2a;">;</span> source_file <span style="color: #a52a2a;">=</span> fst drag.source
+               <span style="color: #a52a2a;">;</span> target_file <span style="color: #a52a2a;">=</span> fst target
+               <span style="color: #a52a2a;">;</span> size <span style="color: #a52a2a;">=</span> drag.size
+               <span style="color: #a52a2a;">}},</span>
+          <span style="color: #6434A3;">Cmd.</span>none
+        <span style="color: #0000FF;">with</span> <span style="color: #006FE0;">Not_found</span> <span style="color: #a52a2a;">-&gt;</span> <span style="color: #a52a2a;">{</span>model <span style="color: #0000FF;">with</span> status <span style="color: #a52a2a;">=</span> <span style="color: #000000; background-color: #FFFFFF;">Nothing</span><span style="color: #a52a2a;">},</span> <span style="color: #6434A3;">Cmd.</span>none
+      <span style="color: #000000; font-weight: bold;">end</span>
+    <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">None</span> <span style="color: #a52a2a;">-&gt;</span> <span style="color: #a52a2a;">{</span>model <span style="color: #0000FF;">with</span> status <span style="color: #a52a2a;">=</span> <span style="color: #000000; background-color: #FFFFFF;">Nothing</span><span style="color: #a52a2a;">},</span> <span style="color: #6434A3;">Cmd.</span>none
+  <span style="color: #000000; font-weight: bold;">end</span>
+<span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Promotion_canceled</span><span style="color: #a52a2a;">,</span> _ <span style="color: #a52a2a;">-&gt;</span> <span style="color: #a52a2a;">{</span>model <span style="color: #0000FF;">with</span> status <span style="color: #a52a2a;">=</span> <span style="color: #000000; background-color: #FFFFFF;">Nothing</span><span style="color: #a52a2a;">},</span> <span style="color: #6434A3;">Cmd.</span>none
 <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Piece_promoted</span> piece_type<span style="color: #a52a2a;">,</span> <span style="color: #000000; background-color: #FFFFFF;">Promoting</span> promoting <span style="color: #a52a2a;">-&gt;</span>      
   <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">move</span> <span style="color: #a52a2a;">=</span> <span style="color: #000000; background-color: #FFFFFF;">Promotion</span> <span style="color: #a52a2a;">(</span>piece_type<span style="color: #a52a2a;">,</span>
                         promoting.source_file<span style="color: #a52a2a;">,</span>
                         promoting.target_file<span style="color: #a52a2a;">)</span> <span style="color: #000000; font-weight: bold;">in</span>
   <span style="color: #a52a2a;">{</span>model <span style="color: #0000FF;">with</span> status <span style="color: #a52a2a;">=</span> <span style="color: #000000; background-color: #FFFFFF;">Nothing</span><span style="color: #a52a2a;">},</span> <span style="color: #6434A3;">Cmd.</span>msg <span style="color: #a52a2a;">(</span><span style="color: #000000; background-color: #FFFFFF;">Move</span> move<span style="color: #a52a2a;">)</span>
+<span style="color: #a52a2a;">|</span> _ <span style="color: #a52a2a;">-&gt;</span> model<span style="color: #a52a2a;">,</span> <span style="color: #6434A3;">Cmd.</span>none
 </pre>
 </div>
 
