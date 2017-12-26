@@ -1,0 +1,596 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+<head>
+<!-- 2017-12-26 Tue 13:57 -->
+<meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Twelve Days of Christmas #4</title>
+<meta name="generator" content="Org mode" />
+<meta name="author" content="Daniel Quernheim" />
+<link rel='stylesheet' href='/style.css' type='text/css'/><meta name="viewport" content="width=device-width"/>
+</head>
+<body>
+<div id="org-div-home-and-up">
+ <a accesskey="h" href=""> UP </a>
+ |
+ <a accesskey="H" href="/"> HOME </a>
+</div><div id="preamble" class="status">
+<nav><a href="/">home</a></nav>
+</div>
+<div id="content">
+<h1 class="title">Twelve Days of Christmas #4</h1>
+<p>
+This is the fourth part of <a href="../index.html">a chess-themed tutorial</a> on writing an SPA in
+<a href="https://github.com/OvermindDL1/bucklescript-tea">Bucklescript-TEA</a>.  After this part, your app will look similar to <a href="demo.html">this demo</a>.
+</p>
+
+<p>
+Yesterday, we refactored our code by putting the board-related code
+into its own module, managing its own state by composing views and
+models.  Today, we will implement drag and drop to make moves on the
+board.  Start from tag <code>refactor</code> if you are following along with my
+repository.
+</p>
+
+<div id="outline-container-org94022df" class="outline-2">
+<h2 id="org94022df">Tracking drag and drop state</h2>
+<div class="outline-text-2" id="text-org94022df">
+<p>
+The first thing we will do is to enable the board to track the drag
+and drop state.  When a piece is picked up, the board needs to track
+the coordinates on the screen, and also the source and target squares.
+Let's first define a <code>square</code> type in <code>src/Chess.ml</code> to make our code
+more explicit:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-ocaml"><span style="color: #000000; font-weight: bold;">type</span> <span style="color: #6434A3;">file</span> <span style="color: #a52a2a;">=</span> int
+<span style="color: #000000; font-weight: bold;">type</span> <span style="color: #6434A3;">rank</span> <span style="color: #a52a2a;">=</span> int
+
+<span style="color: #000000; font-weight: bold;">type</span> <span style="color: #6434A3;">square</span> <span style="color: #a52a2a;">=</span> file <span style="color: #a52a2a;">*</span> rank
+</pre>
+</div>
+
+<p>
+Now we can define some appropriate types in <code>src/Board.ml</code>.  I
+introduced the notion <code>move'</code> because there is one case
+where a move is not completed by dropping a piece on its target
+square: pawn promotion.  Whenever a pawn reaches the opponent's back
+rank, it has to be promoted to a different piece.  Of course, we will
+take care of that.  The board will now be managing orientation and its
+status, which is either <code>Dragging</code> or <code>Nothing</code>.  When <code>Dragging</code>,
+information about the piece being dragged is tracked.  We track the
+color of the piece, its source square and possibly the target square
+that it is being dragged over, a list of legal targets, as well as the screen
+coordinates where the piece was picked up, the offset relative to the
+square, and the coordinates where the mouse pointer is currently
+located.  Together with the square size and the orientation, this
+allows us to convert the screen coordinates into board coordinates.
+</p>
+
+<p>
+The list of legal target squares as well as what pieces can be
+interacted with (type <code>interactable</code>) will be supplied from the
+outside to the <code>view</code> function together with the position.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-ocaml"><span style="color: #000000; font-weight: bold;">open </span><span style="color: #6434A3;">Chess</span>
+
+<span style="color: #000000; font-weight: bold;">type</span> <span style="color: #6434A3;">size</span> <span style="color: #a52a2a;">=</span> int
+
+<span style="color: #000000; font-weight: bold;">type</span> <span style="color: #6434A3;">move'</span> <span style="color: #a52a2a;">=</span>
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Completed_move</span> <span style="color: #0000FF;">of</span> move
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Pawn_will_promote</span>
+
+<span style="color: #000000; font-weight: bold;">type</span> <span style="color: #6434A3;">dragging</span> <span style="color: #a52a2a;">=</span> <span style="color: #a52a2a;">{</span> turn <span style="color: #a52a2a;">:</span> color
+                <span style="color: #a52a2a;">;</span> source <span style="color: #a52a2a;">:</span> square
+                <span style="color: #a52a2a;">;</span> target <span style="color: #a52a2a;">:</span> square option
+                <span style="color: #a52a2a;">;</span> legal_targets <span style="color: #a52a2a;">:</span> <span style="color: #a52a2a;">(</span>square <span style="color: #a52a2a;">*</span> move'<span style="color: #a52a2a;">)</span> list
+                <span style="color: #a52a2a;">;</span> initial <span style="color: #a52a2a;">:</span> <span style="color: #6434A3;">Mouse.</span>position
+                <span style="color: #a52a2a;">;</span> offset <span style="color: #a52a2a;">:</span> <span style="color: #6434A3;">Mouse.</span>position
+                <span style="color: #a52a2a;">;</span> coordinates <span style="color: #a52a2a;">:</span> <span style="color: #6434A3;">Mouse.</span>position
+                <span style="color: #a52a2a;">;</span> size <span style="color: #a52a2a;">:</span> size
+                <span style="color: #a52a2a;">}</span>
+
+<span style="color: #000000; font-weight: bold;">type</span> <span style="color: #6434A3;">status</span> <span style="color: #a52a2a;">=</span>
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Dragging</span> <span style="color: #0000FF;">of</span> dragging
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Nothing</span>
+<span style="color: #808080;">[@@bs.deriving {accessors}]</span>
+
+<span style="color: #000000; font-weight: bold;">type</span> <span style="color: #6434A3;">interactable</span> <span style="color: #a52a2a;">=</span>
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Not_interactable</span>
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Interactable</span> <span style="color: #0000FF;">of</span> color <span style="color: #a52a2a;">*</span> move list
+<span style="color: #808080;">[@@bs.deriving {accessors}]</span>
+
+<span style="color: #000000; font-weight: bold;">type</span> <span style="color: #6434A3;">model</span> <span style="color: #a52a2a;">=</span>
+  <span style="color: #a52a2a;">{</span> orientation <span style="color: #a52a2a;">:</span> color
+  <span style="color: #a52a2a;">;</span> status <span style="color: #a52a2a;">:</span> status
+  <span style="color: #a52a2a;">}</span>
+
+
+<span style="color: #000000; font-weight: bold;">type</span> <span style="color: #6434A3;">internal_msg</span> <span style="color: #a52a2a;">=</span>
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Flip</span>
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Move_start</span> <span style="color: #0000FF;">of</span> dragging
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Move_drag</span> <span style="color: #0000FF;">of</span> <span style="color: #6434A3;">Mouse.</span>position
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Move_drop</span> <span style="color: #0000FF;">of</span> <span style="color: #6434A3;">Mouse.</span>position
+<span style="color: #808080;">[@@bs.deriving {accessors}]</span>
+
+<span style="color: #000000; font-weight: bold;">type</span> <span style="color: #6434A3;">msg</span> <span style="color: #a52a2a;">=</span>
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Internal_msg</span> <span style="color: #0000FF;">of</span> internal_msg
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Move</span> <span style="color: #0000FF;">of</span> move
+<span style="color: #808080;">[@@bs.deriving {accessors}]</span>
+
+
+<span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">init</span><span style="color: #BA36A5;"> </span><span style="color: #a52a2a;">()</span> <span style="color: #a52a2a;">=</span>
+  <span style="color: #a52a2a;">{</span> orientation <span style="color: #a52a2a;">=</span> <span style="color: #6434A3;">Chess.</span><span style="color: #000000; background-color: #FFFFFF;">White</span>
+  <span style="color: #a52a2a;">;</span> status <span style="color: #a52a2a;">=</span> <span style="color: #000000; background-color: #FFFFFF;">Nothing</span>
+  <span style="color: #a52a2a;">}</span>
+
+
+<span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">update</span><span style="color: #BA36A5;"> model</span> <span style="color: #a52a2a;">=</span> <span style="color: #0000FF;">function</span>
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Internal_msg</span> <span style="color: #000000; background-color: #FFFFFF;">Flip</span> <span style="color: #a52a2a;">-&gt;</span>
+    <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">orientation'</span> <span style="color: #a52a2a;">=</span> <span style="color: #6434A3;">Chess.</span>opposite_color model.orientation <span style="color: #000000; font-weight: bold;">in</span>
+    <span style="color: #a52a2a;">{</span> model <span style="color: #0000FF;">with</span>
+      orientation <span style="color: #a52a2a;">=</span> orientation'
+    <span style="color: #a52a2a;">},</span> <span style="color: #6434A3;">Cmd.</span>none
+  <span style="color: #a52a2a;">|</span> _ <span style="color: #a52a2a;">-&gt;</span> model<span style="color: #a52a2a;">,</span> <span style="color: #6434A3;">Cmd.</span>none
+</pre>
+</div>
+
+<p>
+Also notice that we now tag our <code>Flip</code> message as well as
+drag-and-drop-related messages with <code>Internal_msg</code>.
+We do this because we will notify the main app by emitting a message
+<code>Move</code>.  This way, the parent <code>update</code> function can handle <code>Move</code>
+specifically and relay all board-internal messages without having to
+examine them.  Don't forget to update the button's <code>onClick</code>:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-ocaml"><span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">buttons_view</span> <span style="color: #a52a2a;">=</span>
+  <span style="color: #a52a2a;">[</span> button <span style="color: #a52a2a;">[</span>onClick <span style="color: #a52a2a;">(</span><span style="color: #000000; background-color: #FFFFFF;">Internal_msg</span> <span style="color: #000000; background-color: #FFFFFF;">Flip</span><span style="color: #a52a2a;">)]</span> <span style="color: #a52a2a;">[</span>text <span style="color: #008000;">"flip board"</span><span style="color: #a52a2a;">]</span>
+  <span style="color: #a52a2a;">]</span>
+</pre>
+</div>
+</div>
+</div>
+
+<div id="outline-container-org8f4162d" class="outline-2">
+<h2 id="org8f4162d">JSON decoders</h2>
+<div class="outline-text-2" id="text-org8f4162d">
+<p>
+Now let's try to wire the mouse events.  You might be tempted to use
+an <code>onMouseDown</code> attribute on the <code>cb-piece</code> node, but unfortunately,
+the resulting message will not contain the event that occurred &#x2013; it
+will only tell you that a mousedown event occurred, but we need the
+screen coordinates.  To accomplish this, we need to use the general
+<code>onCB</code>.  Merlin tells us <code>onCB</code> is of type:
+</p>
+<pre class="example">
+string -&gt; string -&gt; (Web.Node.event -&gt; 'a option) -&gt; 'a Vdom.property
+</pre>
+<p>
+&#x2013; meaning it takes three arguments: the name of the event to listen for, a string key
+(used for DOM diffing, we can disregard it for the moment), and a
+callback function that takes an event and returns an optional message.
+(We know <code>'a</code> is a message type because <code>'a Vdom.property</code> needs to be
+message-parameterized.)  Let's try to write a function that
+extracts the relevant information from the mousedown event.  We use
+<code>Tea.Json.Decoder</code> to turn Javascript objects into OCaml records:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-ocaml"><span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">cartesian_decoder</span><span style="color: #BA36A5;"> field_x field_y</span> <span style="color: #a52a2a;">=</span>
+  <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #000000; font-weight: bold;">open </span><span style="color: #6434A3;">Json.Decoder</span> <span style="color: #000000; font-weight: bold;">in</span>
+  <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #000000; font-weight: bold;">open </span><span style="color: #6434A3;">Mouse</span> <span style="color: #000000; font-weight: bold;">in</span>
+  map2 <span style="color: #a52a2a;">(</span><span style="color: #0000FF;">fun</span> <span style="color: #BA36A5;">x y</span> <span style="color: #a52a2a;">-&gt;</span> <span style="color: #a52a2a;">{</span>x<span style="color: #a52a2a;">;</span> y<span style="color: #a52a2a;">})</span>
+    <span style="color: #a52a2a;">(</span>field field_x int<span style="color: #a52a2a;">)</span>
+    <span style="color: #a52a2a;">(</span>field field_y int<span style="color: #a52a2a;">)</span>
+
+<span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">page</span> <span style="color: #a52a2a;">=</span>
+  cartesian_decoder <span style="color: #008000;">"pageX"</span> <span style="color: #008000;">"pageY"</span>
+  <span style="color: #a52a2a;">|&gt;</span> <span style="color: #6434A3;">Json.Decoder.</span>decodeEvent
+
+<span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">offset_page_size</span> <span style="color: #a52a2a;">=</span>
+  <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #000000; font-weight: bold;">open </span><span style="color: #6434A3;">Json.Decoder</span> <span style="color: #000000; font-weight: bold;">in</span>
+  <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">size</span> <span style="color: #a52a2a;">=</span> field <span style="color: #008000;">"clientWidth"</span> int <span style="color: #000000; font-weight: bold;">in</span>
+  map3
+    <span style="color: #a52a2a;">(</span><span style="color: #0000FF;">fun</span> <span style="color: #BA36A5;">a b c</span> <span style="color: #a52a2a;">-&gt;</span> a<span style="color: #a52a2a;">,</span> b<span style="color: #a52a2a;">,</span> c<span style="color: #a52a2a;">)</span>
+    <span style="color: #a52a2a;">(</span>cartesian_decoder <span style="color: #008000;">"offsetX"</span> <span style="color: #008000;">"offsetY"</span><span style="color: #a52a2a;">)</span>
+    <span style="color: #a52a2a;">(</span>cartesian_decoder <span style="color: #008000;">"pageX"</span> <span style="color: #008000;">"pageY"</span><span style="color: #a52a2a;">)</span>
+    <span style="color: #a52a2a;">(</span>field <span style="color: #008000;">"target"</span> size<span style="color: #a52a2a;">)</span>
+  <span style="color: #a52a2a;">|&gt;</span> decodeEvent
+
+<span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">handler</span><span style="color: #BA36A5;"> decoder msg event</span> <span style="color: #a52a2a;">=</span>
+  <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #000000; font-weight: bold;">open </span><span style="color: #6434A3;">Result</span> <span style="color: #000000; font-weight: bold;">in</span>
+  <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">result</span> <span style="color: #a52a2a;">=</span> decoder event <span style="color: #000000; font-weight: bold;">in</span>
+  <span style="color: #0000FF;">match</span> result <span style="color: #0000FF;">with</span>
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Ok</span> result <span style="color: #a52a2a;">-&gt;</span> <span style="color: #000000; background-color: #FFFFFF;">Some</span> <span style="color: #a52a2a;">(</span>msg result<span style="color: #a52a2a;">)</span>
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Error</span> _ <span style="color: #a52a2a;">-&gt;</span> <span style="color: #000000; background-color: #FFFFFF;">None</span> 
+</pre>
+</div>
+
+<p>
+Let's go through this code function by function.  The most important
+thing you need to know about JSON decoders is that they are either
+primitive decoders (such as the predefined <code>int</code> and <code>string</code>), or <code>field</code>
+decoders on JSON objects that need to know
+what to look for; what shape it needs to have; and
+what to do with the result.  The function
+<code>cartesian_decoder</code> is a helper function to extract Cartesian
+(2-dimensional) coordinates from events.  You supply two field names
+<code>field_x</code> and <code>field_y</code>, and it will return a JSON decoder that
+extracts these two fields as integers and wraps them in an OCaml record of type
+<code>Tea.Mouse.position</code> by applying the first argument to <code>map2</code>. 
+</p>
+
+<p>
+We use <code>cartesian_decoder</code> as a building block
+in <code>offset_page_size</code>, where we use it twice to get the screen
+coordinates and the offset coordinates.  We also nest decoders by
+applying the decoder size to the result of getting the field "target"
+from the event in order to know the board's current square size.  In
+order to find out what information to extract from the event, I
+consulted the <a href="https://developer.mozilla.org/en-US/docs/Web/API/MouseEvent">Mozilla Developer Network</a>.  I learned that a
+<code>MouseEvent</code> supplies the <code>pageX</code> and <code>pageY</code> as well as <code>offsetX</code> and
+<code>offsetY</code> fields, while it inherits <code>target</code> from <code>Event</code>.
+</p>
+
+<p>
+Finally, we have a handler function that takes a decoder, a message
+and an event, and tries to apply the decoder on the event.  Mind you,
+this might fail if the JSON structure doesn't match the expectations.
+In this case, <code>None</code> is returned.  The type constructors <code>Ok</code> and
+<code>Error</code> are defined in <code>Tea.Result</code>.  OCaml 4.03 actually has a
+built-in result type, but Bucklescript is still using 4.02.3.
+</p>
+</div>
+</div>
+
+<div id="outline-container-org436d0da" class="outline-2">
+<h2 id="org436d0da">Wiring event listeners</h2>
+<div class="outline-text-2" id="text-org436d0da">
+<p>
+Now we have a very generic handler that we can partially apply with
+the appropriate decoder and message and hand off as a callback
+function to <code>onCB</code> in our view.  I went one step further and defined
+an optional function <code>move_start</code> in the body of the <code>view</code> function
+as follows:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-ocaml"><span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">view</span><span style="color: #BA36A5;"> interactable pos_ar model</span> <span style="color: #a52a2a;">=</span>
+
+  <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">move_start</span> <span style="color: #a52a2a;">=</span>
+    <span style="color: #0000FF;">match</span> interactable <span style="color: #0000FF;">with</span>
+    <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Interactable</span> <span style="color: #a52a2a;">(</span>turn<span style="color: #a52a2a;">,</span> legal_moves<span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">-&gt;</span>
+      <span style="color: #000000; background-color: #FFFFFF;">Some</span> <span style="color: #a52a2a;">((</span><span style="color: #0000FF;">fun</span> <span style="color: #BA36A5;">file rank </span><span style="color: #a52a2a;">(</span><span style="color: #BA36A5;">offset</span><span style="color: #a52a2a;">,</span><span style="color: #BA36A5;"> coordinates</span><span style="color: #a52a2a;">,</span><span style="color: #BA36A5;"> size</span><span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">-&gt;</span>
+          <span style="color: #000000; background-color: #FFFFFF;">Internal_msg</span>
+            <span style="color: #a52a2a;">(</span><span style="color: #000000; background-color: #FFFFFF;">Move_start</span>
+               <span style="color: #a52a2a;">{</span> turn
+               <span style="color: #a52a2a;">;</span> source <span style="color: #a52a2a;">=</span> <span style="color: #a52a2a;">(</span>file<span style="color: #a52a2a;">,</span> rank<span style="color: #a52a2a;">)</span>
+               <span style="color: #a52a2a;">;</span> target <span style="color: #a52a2a;">=</span> <span style="color: #000000; background-color: #FFFFFF;">None</span>
+               <span style="color: #a52a2a;">;</span> legal_targets <span style="color: #a52a2a;">=</span>
+                   legal_moves
+                   <span style="color: #a52a2a;">|&gt;</span> <span style="color: #6434A3;">List.</span>map <span style="color: #a52a2a;">(</span>coordinate_pairs turn<span style="color: #a52a2a;">)</span>
+                   <span style="color: #a52a2a;">|&gt;</span> filter_targets <span style="color: #a52a2a;">(</span>file<span style="color: #a52a2a;">,</span> rank<span style="color: #a52a2a;">)</span> 
+               <span style="color: #a52a2a;">;</span> initial <span style="color: #a52a2a;">=</span> coordinates
+               <span style="color: #a52a2a;">;</span> offset
+               <span style="color: #a52a2a;">;</span> coordinates
+               <span style="color: #a52a2a;">;</span> size
+               <span style="color: #a52a2a;">}</span>
+            <span style="color: #a52a2a;">)</span>
+        <span style="color: #a52a2a;">),</span> turn<span style="color: #a52a2a;">)</span>
+    <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Not_interactable</span> <span style="color: #a52a2a;">-&gt;</span> <span style="color: #000000; background-color: #FFFFFF;">None</span>
+  <span style="color: #000000; font-weight: bold;">in</span>
+
+  <span style="color: #a52a2a;">...</span>
+</pre>
+</div>
+<p>
+The returned function sets up a <code>Move_start</code> message with an initial
+<code>dragging</code> record.  (We're using a shorthand technique called "field
+punning" here that allows us to just write the variable name if it
+coincides with the record field name.) Together with <code>filter_targets</code>, defined as:
+</p>
+<div class="org-src-container">
+<pre class="src src-ocaml"><span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">filter_targets</span><span style="color: #BA36A5;"> source moves</span> <span style="color: #a52a2a;">=</span>
+  <span style="color: #6434A3;">List.</span>filter <span style="color: #a52a2a;">(</span><span style="color: #0000FF;">fun</span> <span style="color: #a52a2a;">(</span><span style="color: #BA36A5;">s</span><span style="color: #a52a2a;">,</span><span style="color: #BA36A5;"> _t</span><span style="color: #a52a2a;">,</span><span style="color: #BA36A5;"> _m</span><span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">-&gt;</span> s <span style="color: #a52a2a;">=</span> source<span style="color: #a52a2a;">)</span> moves
+  <span style="color: #a52a2a;">|&gt;</span> <span style="color: #6434A3;">List.</span>map <span style="color: #a52a2a;">(</span><span style="color: #0000FF;">fun</span> <span style="color: #a52a2a;">(</span><span style="color: #BA36A5;">_s</span><span style="color: #a52a2a;">,</span><span style="color: #BA36A5;"> t</span><span style="color: #a52a2a;">,</span><span style="color: #BA36A5;"> m</span><span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">-&gt;</span> t<span style="color: #a52a2a;">,</span> m<span style="color: #a52a2a;">)</span>
+</pre>
+</div>
+<p>
+it will restrict the legal target squares to only those that match the
+source square.  Finally, the function <code>coordinate_pairs</code> is a "boring"
+function that just turns O'Chess moves into pairs of coordinates as
+well as information about the "completion" status of the moves:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-ocaml"><span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">coordinate_pairs</span><span style="color: #BA36A5;"> turn move</span> <span style="color: #a52a2a;">=</span>
+  <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">home_rank</span> <span style="color: #a52a2a;">=</span> <span style="color: #0000FF;">function</span> <span style="color: #000000; background-color: #FFFFFF;">White</span> <span style="color: #a52a2a;">-&gt;</span> 0 <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Black</span> <span style="color: #a52a2a;">-&gt;</span> 7 <span style="color: #000000; font-weight: bold;">in</span>
+  <span style="color: #0000FF;">match</span> move <span style="color: #0000FF;">with</span>
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Queenside_castle</span> <span style="color: #a52a2a;">-&gt;</span>
+    <span style="color: #a52a2a;">(</span>4<span style="color: #a52a2a;">,</span> home_rank turn<span style="color: #a52a2a;">),</span> <span style="color: #a52a2a;">(</span>2<span style="color: #a52a2a;">,</span> home_rank turn<span style="color: #a52a2a;">),</span>
+    <span style="color: #000000; background-color: #FFFFFF;">Completed_move</span> <span style="color: #000000; background-color: #FFFFFF;">Queenside_castle</span>
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Kingside_castle</span> <span style="color: #a52a2a;">-&gt;</span>
+    <span style="color: #a52a2a;">(</span>4<span style="color: #a52a2a;">,</span> home_rank turn<span style="color: #a52a2a;">),</span> <span style="color: #a52a2a;">(</span>6<span style="color: #a52a2a;">,</span> home_rank turn<span style="color: #a52a2a;">),</span>
+    <span style="color: #000000; background-color: #FFFFFF;">Completed_move</span> <span style="color: #000000; background-color: #FFFFFF;">Kingside_castle</span>
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Promotion</span> <span style="color: #a52a2a;">(</span>_piece_type<span style="color: #a52a2a;">,</span> s_file<span style="color: #a52a2a;">,</span> t_file<span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">-&gt;</span>
+    <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">promotion_rank</span> <span style="color: #a52a2a;">=</span> <span style="color: #0000FF;">function</span> <span style="color: #000000; background-color: #FFFFFF;">White</span> <span style="color: #a52a2a;">-&gt;</span> 7 <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Black</span> <span style="color: #a52a2a;">-&gt;</span> 0
+    <span style="color: #000000; font-weight: bold;">and</span> <span style="color: #006699;">pre_promotion_rank</span> <span style="color: #a52a2a;">=</span> <span style="color: #0000FF;">function</span> <span style="color: #000000; background-color: #FFFFFF;">White</span> <span style="color: #a52a2a;">-&gt;</span> 6 <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Black</span> <span style="color: #a52a2a;">-&gt;</span> 1 <span style="color: #000000; font-weight: bold;">in</span>
+    <span style="color: #a52a2a;">(</span>s_file<span style="color: #a52a2a;">,</span> pre_promotion_rank turn<span style="color: #a52a2a;">),</span> <span style="color: #a52a2a;">(</span>t_file<span style="color: #a52a2a;">,</span> promotion_rank turn<span style="color: #a52a2a;">),</span>
+    <span style="color: #000000; background-color: #FFFFFF;">Pawn_will_promote</span>
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Move</span> <span style="color: #a52a2a;">(</span>s_file<span style="color: #a52a2a;">,</span> s_rank<span style="color: #a52a2a;">,</span> t_file<span style="color: #a52a2a;">,</span> t_rank<span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">-&gt;</span> 
+    <span style="color: #a52a2a;">(</span>s_file<span style="color: #a52a2a;">,</span> s_rank<span style="color: #a52a2a;">),</span> <span style="color: #a52a2a;">(</span>t_file<span style="color: #a52a2a;">,</span> t_rank<span style="color: #a52a2a;">),</span>
+    <span style="color: #000000; background-color: #FFFFFF;">Completed_move</span> <span style="color: #a52a2a;">(</span><span style="color: #000000; background-color: #FFFFFF;">Move</span> <span style="color: #a52a2a;">(</span>s_file<span style="color: #a52a2a;">,</span> s_rank<span style="color: #a52a2a;">,</span> t_file<span style="color: #a52a2a;">,</span> t_rank<span style="color: #a52a2a;">))</span>
+</pre>
+</div>
+
+<p>
+We're now ready to emit <code>Move_start</code> messages when a piece is touched
+that belongs to the player whose turn it is, by injecting the event
+listener into the <code>cb-piece</code> node:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-ocaml"><span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">rank_view</span><span style="color: #BA36A5;"> rank</span> <span style="color: #a52a2a;">=</span>
+  <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">square_view</span><span style="color: #BA36A5;"> rank file</span> <span style="color: #a52a2a;">=</span>
+    node <span style="color: #008000;">"cb-square"</span> <span style="color: #a52a2a;">[]</span>
+      <span style="color: #a52a2a;">[</span> <span style="color: #0000FF;">match</span> pos_ar.<span style="color: #a52a2a;">(</span>file<span style="color: #a52a2a;">)</span>.<span style="color: #a52a2a;">(</span>rank<span style="color: #a52a2a;">)</span> <span style="color: #0000FF;">with</span>
+        <span style="color: #a52a2a;">|</span> <span style="color: #6434A3;">Chess.</span><span style="color: #000000; background-color: #FFFFFF;">Piece</span> <span style="color: #a52a2a;">(</span>piece_type<span style="color: #a52a2a;">,</span> color<span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">-&gt;</span>
+          <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">listener</span> <span style="color: #a52a2a;">=</span>
+            <span style="color: #000000; font-weight: bold;">begin</span> <span style="color: #0000FF;">match</span> move_start <span style="color: #0000FF;">with</span>
+              <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Some</span> <span style="color: #a52a2a;">(</span>f<span style="color: #a52a2a;">,</span> turn<span style="color: #a52a2a;">)</span> <span style="color: #0000FF;">when</span> color <span style="color: #a52a2a;">=</span> turn <span style="color: #a52a2a;">-&gt;</span> 
+                onCB <span style="color: #008000;">"mousedown"</span> <span style="color: #008000;">""</span>
+                  <span style="color: #a52a2a;">(</span>handler offset_page_size <span style="color: #a52a2a;">(</span>f file rank<span style="color: #a52a2a;">))</span>
+              <span style="color: #a52a2a;">|</span> _ <span style="color: #a52a2a;">-&gt;</span> noProp <span style="color: #000000; font-weight: bold;">end</span> <span style="color: #000000; font-weight: bold;">in</span>
+          node <span style="color: #008000;">"cb-piece"</span>
+            <span style="color: #a52a2a;">[</span> listener
+            <span style="color: #a52a2a;">;</span> classList
+                <span style="color: #a52a2a;">[</span> <span style="color: #6434A3;">Chess.</span>string_of_color color<span style="color: #a52a2a;">,</span> <span style="color: #D0372D;">true</span>
+                <span style="color: #a52a2a;">;</span> <span style="color: #6434A3;">Chess.</span>string_of_piece_type piece_type<span style="color: #a52a2a;">,</span> <span style="color: #D0372D;">true</span>
+                <span style="color: #a52a2a;">]</span>
+            <span style="color: #a52a2a;">]</span> <span style="color: #a52a2a;">[]</span>
+        <span style="color: #a52a2a;">|</span> <span style="color: #6434A3;">Chess.</span><span style="color: #000000; background-color: #FFFFFF;">Empty</span> <span style="color: #a52a2a;">-&gt;</span> noNode
+      <span style="color: #a52a2a;">]</span> <span style="color: #000000; font-weight: bold;">in</span>
+</pre>
+</div>
+
+<p>
+Switch to <code>src/Main.ml</code>, and make sure the board knows that it's
+interactable by changing the <code>view</code> function accordingly:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-ocaml"><span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">view</span><span style="color: #BA36A5;"> model</span> <span style="color: #a52a2a;">=</span>
+  <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">game_status</span> <span style="color: #a52a2a;">=</span> <span style="color: #6434A3;">Chess.</span>game_status model.position <span style="color: #000000; font-weight: bold;">in</span>
+  <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">interactable</span> <span style="color: #a52a2a;">=</span>
+    <span style="color: #0000FF;">match</span> game_status <span style="color: #0000FF;">with</span>
+    <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Play</span> move_list <span style="color: #a52a2a;">-&gt;</span> <span style="color: #6434A3;">Board.</span><span style="color: #000000; background-color: #FFFFFF;">Interactable</span> <span style="color: #a52a2a;">(</span>model.position.turn<span style="color: #a52a2a;">,</span> move_list<span style="color: #a52a2a;">)</span>
+    <span style="color: #a52a2a;">|</span> _ <span style="color: #a52a2a;">-&gt;</span> <span style="color: #6434A3;">Board.</span><span style="color: #000000; background-color: #FFFFFF;">Not_interactable</span>
+  <span style="color: #000000; font-weight: bold;">in</span>
+  div <span style="color: #a52a2a;">[]</span>
+    <span style="color: #a52a2a;">[</span> <span style="color: #6434A3;">Board.</span>view interactable model.position.ar model.board
+      <span style="color: #a52a2a;">|&gt;</span> map board_msg
+    <span style="color: #a52a2a;">;</span> <span style="color: #6434A3;">List.</span>map <span style="color: #a52a2a;">(</span>map board_msg<span style="color: #a52a2a;">)</span> <span style="color: #6434A3;">Board.</span>buttons_view <span style="color: #a52a2a;">@</span>
+      <span style="color: #a52a2a;">[</span> button <span style="color: #a52a2a;">[</span>onClick <span style="color: #000000; background-color: #FFFFFF;">Random_button</span><span style="color: #a52a2a;">]</span> <span style="color: #a52a2a;">[</span>text <span style="color: #008000;">"random move"</span><span style="color: #a52a2a;">]</span>
+      <span style="color: #a52a2a;">]</span>
+      <span style="color: #a52a2a;">|&gt;</span> p <span style="color: #a52a2a;">[]</span>
+    <span style="color: #a52a2a;">;</span> <span style="color: #6434A3;">Board.</span>result_view game_status
+    <span style="color: #a52a2a;">]</span>
+</pre>
+</div>
+
+<p>
+For kicks, let's see if we can log the <code>Move_start</code> message in the
+developer console.  Bucklescript defines <code>Js.log</code> for that purpose.
+It returns a unit value, so it should be used for its side effect
+only, followed by another expression.
+Change <code>update</code> in <code>src/Board.ml</code> as follows:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-ocaml"><span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">update</span><span style="color: #BA36A5;"> model</span> <span style="color: #a52a2a;">=</span> <span style="color: #0000FF;">function</span>
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Internal_msg</span> <span style="color: #000000; background-color: #FFFFFF;">Flip</span> <span style="color: #a52a2a;">-&gt;</span>
+    <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">orientation'</span> <span style="color: #a52a2a;">=</span> <span style="color: #6434A3;">Chess.</span>opposite_color model.orientation <span style="color: #000000; font-weight: bold;">in</span>
+    <span style="color: #a52a2a;">{</span> model <span style="color: #0000FF;">with</span>
+      orientation <span style="color: #a52a2a;">=</span> orientation'
+    <span style="color: #a52a2a;">},</span> <span style="color: #6434A3;">Cmd.</span>none
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Internal_msg</span> <span style="color: #a52a2a;">(</span><span style="color: #000000; background-color: #FFFFFF;">Move_start</span> info<span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">-&gt;</span> <span style="color: #6434A3;">Js.</span>log info<span style="color: #a52a2a;">;</span> model<span style="color: #a52a2a;">,</span> <span style="color: #6434A3;">Cmd.</span>none
+  <span style="color: #a52a2a;">|</span> _ <span style="color: #a52a2a;">-&gt;</span> model<span style="color: #a52a2a;">,</span> <span style="color: #6434A3;">Cmd.</span>none
+</pre>
+</div>
+
+<p>
+Now you can fire up a browser and click some white pieces.  In the
+developer console, you should see the <code>Move_start</code> message.  When you
+click a black piece, nothing happens unless you make a random move
+first.  Unfortunately, the output is the internal representation of
+the <code>dragging</code> record in Bucklescript, and it is optimized and not
+easily readable.  All variant types have been replaced by numbers, and
+the entire record is an array now!  Since this is not much help, let's
+do something actually useful when <code>Move_start</code> is received and track
+the status:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-ocaml"><span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">update</span><span style="color: #BA36A5;"> model</span> <span style="color: #a52a2a;">=</span> <span style="color: #0000FF;">function</span>
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Internal_msg</span> msg <span style="color: #a52a2a;">-&gt;</span>
+    <span style="color: #000000; font-weight: bold;">begin</span> <span style="color: #0000FF;">match</span> msg <span style="color: #0000FF;">with</span>
+      <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Flip</span> <span style="color: #a52a2a;">-&gt;</span>
+        <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">orientation'</span> <span style="color: #a52a2a;">=</span> <span style="color: #6434A3;">Chess.</span>opposite_color model.orientation <span style="color: #000000; font-weight: bold;">in</span>
+        <span style="color: #a52a2a;">{</span> model <span style="color: #0000FF;">with</span>
+          orientation <span style="color: #a52a2a;">=</span> orientation'
+        <span style="color: #a52a2a;">},</span> <span style="color: #6434A3;">Cmd.</span>none
+      <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Move_start</span> drag <span style="color: #a52a2a;">-&gt;</span>
+        <span style="color: #a52a2a;">{</span> model <span style="color: #0000FF;">with</span>
+          status <span style="color: #a52a2a;">=</span> <span style="color: #000000; background-color: #FFFFFF;">Dragging</span> drag
+        <span style="color: #a52a2a;">},</span> <span style="color: #6434A3;">Cmd.</span>none
+      <span style="color: #a52a2a;">|</span> _ <span style="color: #a52a2a;">-&gt;</span> model<span style="color: #a52a2a;">,</span> <span style="color: #6434A3;">Cmd.</span>none
+    <span style="color: #000000; font-weight: bold;">end</span>
+  <span style="color: #a52a2a;">|</span> _ <span style="color: #a52a2a;">-&gt;</span> model<span style="color: #a52a2a;">,</span> <span style="color: #6434A3;">Cmd.</span>none
+</pre>
+</div>
+</div>
+</div>
+
+<div id="outline-container-org5e7b2c3" class="outline-2">
+<h2 id="org5e7b2c3">Your first subscriptions</h2>
+<div class="outline-text-2" id="text-org5e7b2c3">
+<p>
+Now whenever the user moves the mouse, a global event is fired.
+Sadly, we cannot track mouse movement locally because the events are only
+available to the topmost DOM element under the cursor. We
+can intercept global events by setting up <i>subscriptions</i>.  Let's add
+subscriptions whenever our board model is in <code>Dragging</code> state:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-ocaml"><span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">subscriptions</span><span style="color: #BA36A5;"> model</span> <span style="color: #a52a2a;">=</span> <span style="color: #0000FF;">match</span> model.status <span style="color: #0000FF;">with</span>
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Dragging</span> _ <span style="color: #a52a2a;">-&gt;</span>
+    <span style="color: #6434A3;">Sub.</span>batch 
+      <span style="color: #a52a2a;">[</span> <span style="color: #6434A3;">Mouse.</span>moves <span style="color: #a52a2a;">(</span><span style="color: #0000FF;">fun</span> <span style="color: #BA36A5;">x</span> <span style="color: #a52a2a;">-&gt;</span> <span style="color: #000000; background-color: #FFFFFF;">Internal_msg</span> <span style="color: #a52a2a;">(</span><span style="color: #000000; background-color: #FFFFFF;">Move_drag</span> x<span style="color: #a52a2a;">))</span>
+      <span style="color: #a52a2a;">;</span> <span style="color: #6434A3;">Mouse.</span>ups  <span style="color: #a52a2a;">(</span><span style="color: #0000FF;">fun</span> <span style="color: #BA36A5;">x</span> <span style="color: #a52a2a;">-&gt;</span> <span style="color: #000000; background-color: #FFFFFF;">Internal_msg</span> <span style="color: #a52a2a;">(</span><span style="color: #000000; background-color: #FFFFFF;">Move_drop</span> x<span style="color: #a52a2a;">))</span>
+      <span style="color: #a52a2a;">]</span>
+  <span style="color: #a52a2a;">|</span> _ <span style="color: #a52a2a;">-&gt;</span> <span style="color: #6434A3;">Sub.</span>none
+</pre>
+</div>
+
+<p>
+The subscriptions need to be tagged in <code>src/Main.ml</code> appropriately.
+This works just like for messages and commands:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-ocaml"><span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">subscriptions</span><span style="color: #BA36A5;"> model</span> <span style="color: #a52a2a;">=</span>
+  <span style="color: #6434A3;">Board.</span>subscriptions model.board <span style="color: #a52a2a;">|&gt;</span> <span style="color: #6434A3;">Sub.</span>map board_msg
+</pre>
+</div>
+
+<p>
+Tracking the coordinates is a little tricky.  I will not go into the
+math here, but essentially we use the square size and the offset to
+compute how many square borders we crossed. Depending on the board
+orientation, this translates to a certain target square.  Since the
+cursor can be off the board, the target square is actually a <code>square option</code>.
+</p>
+<div class="org-src-container">
+<pre class="src src-ocaml"><span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">target</span><span style="color: #BA36A5;"> orientation drag</span> <span style="color: #a52a2a;">=</span>
+  <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">x'</span> <span style="color: #a52a2a;">=</span> drag.coordinates.x <span style="color: #a52a2a;">-</span> drag.initial.x <span style="color: #a52a2a;">+</span> drag.offset.x 
+  <span style="color: #000000; font-weight: bold;">and</span> <span style="color: #BA36A5;">y'</span> <span style="color: #a52a2a;">=</span> drag.coordinates.y <span style="color: #a52a2a;">-</span> drag.initial.y <span style="color: #a52a2a;">+</span> drag.offset.y <span style="color: #000000; font-weight: bold;">in</span>
+  <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">x</span> <span style="color: #a52a2a;">=</span> <span style="color: #0000FF;">if</span> x' <span style="color: #a52a2a;">&lt;</span> 0 <span style="color: #0000FF;">then</span> x' <span style="color: #a52a2a;">-</span> drag.size <span style="color: #0000FF;">else</span> x' 
+  <span style="color: #000000; font-weight: bold;">and</span> <span style="color: #BA36A5;">y</span> <span style="color: #a52a2a;">=</span> <span style="color: #0000FF;">if</span> y' <span style="color: #a52a2a;">&lt;</span> 0 <span style="color: #0000FF;">then</span> y' <span style="color: #a52a2a;">-</span> drag.size <span style="color: #0000FF;">else</span> y' <span style="color: #000000; font-weight: bold;">in</span>
+  <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">i</span><span style="color: #a52a2a;">,</span><span style="color: #BA36A5;"> ii</span> <span style="color: #a52a2a;">=</span> drag.source <span style="color: #000000; font-weight: bold;">in</span> 
+  <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">i'</span><span style="color: #a52a2a;">,</span><span style="color: #BA36A5;"> ii'</span> <span style="color: #a52a2a;">=</span> <span style="color: #0000FF;">match</span> orientation <span style="color: #0000FF;">with</span>
+    <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">White</span> <span style="color: #a52a2a;">-&gt;</span> i <span style="color: #a52a2a;">+</span> <span style="color: #a52a2a;">(</span>x <span style="color: #a52a2a;">/</span> drag.size<span style="color: #a52a2a;">),</span> ii <span style="color: #a52a2a;">-</span> <span style="color: #a52a2a;">(</span>y <span style="color: #a52a2a;">/</span> drag.size<span style="color: #a52a2a;">)</span>
+    <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Black</span> <span style="color: #a52a2a;">-&gt;</span> i <span style="color: #a52a2a;">-</span> <span style="color: #a52a2a;">(</span>x <span style="color: #a52a2a;">/</span> drag.size<span style="color: #a52a2a;">),</span> ii <span style="color: #a52a2a;">+</span> <span style="color: #a52a2a;">(</span>y <span style="color: #a52a2a;">/</span> drag.size<span style="color: #a52a2a;">)</span> <span style="color: #000000; font-weight: bold;">in</span>
+  <span style="color: #0000FF;">if</span> i' <span style="color: #a52a2a;">&gt;=</span> 0 <span style="color: #a52a2a;">&amp;&amp;</span> i' <span style="color: #a52a2a;">&lt;=</span> 7 <span style="color: #a52a2a;">&amp;&amp;</span> ii' <span style="color: #a52a2a;">&gt;=</span> 0 <span style="color: #a52a2a;">&amp;&amp;</span> ii' <span style="color: #a52a2a;">&lt;=</span> 7
+  <span style="color: #0000FF;">then</span> <span style="color: #000000; background-color: #FFFFFF;">Some</span> <span style="color: #a52a2a;">(</span>i'<span style="color: #a52a2a;">,</span> ii'<span style="color: #a52a2a;">)</span>
+  <span style="color: #0000FF;">else</span> <span style="color: #000000; background-color: #FFFFFF;">None</span>
+
+<span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">adjust_coordinates</span><span style="color: #BA36A5;"> orientation coordinates drag</span> <span style="color: #a52a2a;">=</span>
+  <span style="color: #a52a2a;">{</span> drag <span style="color: #0000FF;">with</span> 
+    coordinates
+  <span style="color: #a52a2a;">;</span> target <span style="color: #a52a2a;">=</span> target orientation drag <span style="color: #a52a2a;">}</span>
+</pre>
+</div>
+</div>
+</div>
+
+<div id="outline-container-org0b6d6a6" class="outline-2">
+<h2 id="org0b6d6a6">Sending messages programmatically</h2>
+<div class="outline-text-2" id="text-org0b6d6a6">
+<p>
+When a <code>Move_drag</code> message is received, the coordinates and the target
+square are updated.  When the <code>Move_drop</code> message is received, we
+match the target with the list of legal targets to find the intended
+move and use <code>Cmd.msg</code> to issue a command that sends back a message.
+This enables us to talk to the parent update function which will
+intercept this message.  This is <code>src/Board.ml</code>'s <code>update</code> function.
+We ignore the problem of pawn promotion for now and just make cancel
+the move whenever that happens!
+</p>
+
+<div class="org-src-container">
+<pre class="src src-ocaml"><span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">update</span><span style="color: #BA36A5;"> model</span> <span style="color: #a52a2a;">=</span> <span style="color: #0000FF;">function</span>
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Internal_msg</span> msg <span style="color: #a52a2a;">-&gt;</span>
+    <span style="color: #000000; font-weight: bold;">begin</span> <span style="color: #0000FF;">match</span> msg<span style="color: #a52a2a;">,</span> model.status <span style="color: #0000FF;">with</span>
+      <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Flip</span><span style="color: #a52a2a;">,</span> _ <span style="color: #a52a2a;">-&gt;</span>
+        <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">orientation'</span> <span style="color: #a52a2a;">=</span> <span style="color: #6434A3;">Chess.</span>opposite_color model.orientation <span style="color: #000000; font-weight: bold;">in</span>
+        <span style="color: #a52a2a;">{</span> model <span style="color: #0000FF;">with</span>
+          orientation <span style="color: #a52a2a;">=</span> orientation'
+        <span style="color: #a52a2a;">},</span> <span style="color: #6434A3;">Cmd.</span>none
+      <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Move_start</span> drag<span style="color: #a52a2a;">,</span> _ <span style="color: #a52a2a;">-&gt;</span>
+        <span style="color: #a52a2a;">{</span> model <span style="color: #0000FF;">with</span>
+          status <span style="color: #a52a2a;">=</span> <span style="color: #000000; background-color: #FFFFFF;">Dragging</span> drag
+        <span style="color: #a52a2a;">},</span> <span style="color: #6434A3;">Cmd.</span>none
+      <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Move_drag</span> coordinates<span style="color: #a52a2a;">,</span> <span style="color: #000000; background-color: #FFFFFF;">Dragging</span> drag <span style="color: #a52a2a;">-&gt;</span>
+        <span style="color: #a52a2a;">{</span> model <span style="color: #0000FF;">with</span>
+          status <span style="color: #a52a2a;">=</span>
+            adjust_coordinates model.orientation coordinates drag
+            <span style="color: #a52a2a;">|&gt;</span> dragging
+        <span style="color: #a52a2a;">},</span> <span style="color: #6434A3;">Cmd.</span>none
+      <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Move_drop</span> _<span style="color: #a52a2a;">,</span> <span style="color: #000000; background-color: #FFFFFF;">Dragging</span> drag <span style="color: #a52a2a;">-&gt;</span>
+        <span style="color: #000000; font-weight: bold;">begin</span> <span style="color: #0000FF;">match</span> drag.target <span style="color: #0000FF;">with</span>
+          <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Some</span> target <span style="color: #a52a2a;">-&gt;</span>
+            <span style="color: #000000; font-weight: bold;">begin</span> <span style="color: #0000FF;">try</span> <span style="color: #0000FF;">match</span> <span style="color: #6434A3;">List.</span>assoc target drag.legal_targets <span style="color: #0000FF;">with</span>
+              <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Completed_move</span> move <span style="color: #a52a2a;">-&gt;</span>
+                <span style="color: #a52a2a;">{</span>model <span style="color: #0000FF;">with</span> status <span style="color: #a52a2a;">=</span> <span style="color: #000000; background-color: #FFFFFF;">Nothing</span><span style="color: #a52a2a;">},</span> <span style="color: #6434A3;">Cmd.</span>msg <span style="color: #a52a2a;">(</span><span style="color: #000000; background-color: #FFFFFF;">Move</span> move<span style="color: #a52a2a;">)</span>
+              <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Pawn_will_promote</span> <span style="color: #a52a2a;">-&gt;</span>
+                <span style="color: #a52a2a;">{</span>model <span style="color: #0000FF;">with</span> status <span style="color: #a52a2a;">=</span> <span style="color: #000000; background-color: #FFFFFF;">Nothing</span><span style="color: #a52a2a;">},</span> <span style="color: #6434A3;">Cmd.</span>none
+              <span style="color: #0000FF;">with</span> <span style="color: #006FE0;">Not_found</span> <span style="color: #a52a2a;">-&gt;</span> <span style="color: #a52a2a;">{</span>model <span style="color: #0000FF;">with</span> status <span style="color: #a52a2a;">=</span> <span style="color: #000000; background-color: #FFFFFF;">Nothing</span><span style="color: #a52a2a;">},</span> <span style="color: #6434A3;">Cmd.</span>none
+            <span style="color: #000000; font-weight: bold;">end</span>
+          <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">None</span> <span style="color: #a52a2a;">-&gt;</span> <span style="color: #a52a2a;">{</span>model <span style="color: #0000FF;">with</span> status <span style="color: #a52a2a;">=</span> <span style="color: #000000; background-color: #FFFFFF;">Nothing</span><span style="color: #a52a2a;">},</span> <span style="color: #6434A3;">Cmd.</span>none
+        <span style="color: #000000; font-weight: bold;">end</span>
+      <span style="color: #a52a2a;">|</span> _ <span style="color: #a52a2a;">-&gt;</span> model<span style="color: #a52a2a;">,</span> <span style="color: #6434A3;">Cmd.</span>none
+    <span style="color: #000000; font-weight: bold;">end</span>
+  <span style="color: #a52a2a;">|</span> _ <span style="color: #a52a2a;">-&gt;</span> model<span style="color: #a52a2a;">,</span> <span style="color: #6434A3;">Cmd.</span>none
+</pre>
+</div>
+
+<p>
+In <code>src/Main.ml</code>, we need to listen to the <code>Move</code> message from the
+board. For simplicity, I lumped it together with <code>Random_move</code> because we don't expect
+any commands and we don't have to relay the message to the <code>Board</code> module.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-ocaml"><span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">update</span><span style="color: #BA36A5;"> model</span> <span style="color: #a52a2a;">=</span> <span style="color: #0000FF;">function</span>
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Board_msg</span> <span style="color: #a52a2a;">(</span><span style="color: #000000; background-color: #FFFFFF;">Internal_msg</span> msg<span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">-&gt;</span>
+    <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">board'</span><span style="color: #a52a2a;">,</span><span style="color: #BA36A5;"> cmd</span> <span style="color: #a52a2a;">=</span> <span style="color: #6434A3;">Board.</span>update model.board <span style="color: #a52a2a;">(</span><span style="color: #000000; background-color: #FFFFFF;">Internal_msg</span> msg<span style="color: #a52a2a;">)</span> <span style="color: #000000; font-weight: bold;">in</span>
+    <span style="color: #a52a2a;">{</span> model <span style="color: #0000FF;">with</span>
+      board <span style="color: #a52a2a;">=</span> board'
+    <span style="color: #a52a2a;">},</span> <span style="color: #6434A3;">Cmd.</span>map board_msg cmd
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Random_button</span> <span style="color: #a52a2a;">-&gt;</span>
+    model<span style="color: #a52a2a;">,</span>
+    <span style="color: #000000; font-weight: bold;">begin</span> <span style="color: #0000FF;">match</span> <span style="color: #6434A3;">Chess.</span>game_status model.position <span style="color: #0000FF;">with</span>
+      <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Play</span> move_list <span style="color: #a52a2a;">-&gt;</span>
+        <span style="color: #6434A3;">List.</span>length move_list
+        <span style="color: #a52a2a;">|&gt;</span> <span style="color: #6434A3;">Random.</span>int 0
+        <span style="color: #a52a2a;">|&gt;</span> <span style="color: #6434A3;">Random.</span>generate
+          <span style="color: #a52a2a;">(</span><span style="color: #0000FF;">fun</span> <span style="color: #BA36A5;">random_number</span> <span style="color: #a52a2a;">-&gt;</span>
+             <span style="color: #6434A3;">List.</span>nth move_list random_number <span style="color: #a52a2a;">|&gt;</span> random_move<span style="color: #a52a2a;">)</span>
+      <span style="color: #a52a2a;">|</span> _ <span style="color: #a52a2a;">-&gt;</span> <span style="color: #6434A3;">Cmd.</span>none
+    <span style="color: #000000; font-weight: bold;">end</span>
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Random_move</span> move <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Board_msg</span> <span style="color: #a52a2a;">(</span><span style="color: #000000; background-color: #FFFFFF;">Move</span> move<span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">-&gt;</span>
+    <span style="color: #a52a2a;">{</span> model <span style="color: #0000FF;">with</span>
+      position <span style="color: #a52a2a;">=</span> <span style="color: #6434A3;">Chess.</span>make_move model.position move 0 <span style="color: #a52a2a;">},</span> <span style="color: #6434A3;">Cmd.</span>none
+</pre>
+</div>
+
+<p>
+This is tag <code>day4</code> in my repository. Now try to make some moves on the chessboard.  It can be a little
+tricky if you don't know the rules because you don't get any feedback
+about what moves you can make!  Tomorrow, we will make the piece
+follow along with the mouse pointer and also highlight legal target
+squares.  Also, we will implement proper pawn promotion handling.
+</p>
+</div>
+</div>
+</div>
+</body>
+</html>
