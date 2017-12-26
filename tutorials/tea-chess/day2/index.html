@@ -3,7 +3,7 @@
 "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
 <head>
-<!-- 2017-12-25 Mon 23:46 -->
+<!-- 2017-12-26 Tue 00:11 -->
 <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Twelve Days of Christmas #2</title>
@@ -330,15 +330,25 @@ When <code>Random_button</code> is received, we check whether there are legal mo
 </p>
 
 <p>
-Finally, when the <code>Random_move</code> message comes in, we update the position by using O'Chess to make the move (you can disregard the final <code>0</code> argument as it is only important when O'Chess is used as a chess engine).
+Finally, when the <code>Random_move</code> message comes in, we update the
+position by using O'Chess to make the move (you can disregard the
+final <code>0</code> argument as it is only important when O'Chess is used as a
+chess engine).  Your app should now look like this:
 </p>
+
+
+<div class="figure">
+<p><img src="random.gif" alt="random.gif" />
+</p>
+</div>
 
 <p>
 Try it out and see if you can play a full game before you get bored.  Most of the games will eventually end in a draw due to a rule that declares a draw after 50 moves of not making progress (no pawn move and no capture), but occasionally you will witness a checkmate.
 </p>
 
 <p>
-This concludes day 2 of the Twelve Days of Christmas tutorial.  Tomorrow, we will refactor our code and learn how to compose views that manage their own submodels.
+This concludes day 2 of the Twelve Days of Christmas tutorial.  If you
+want to synchronize with my repository, check out tag <code>day2</code>.  Tomorrow, we will refactor our code and learn how to compose views that manage their own submodels.
 </p>
 </div>
 </div>
