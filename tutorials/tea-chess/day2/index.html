@@ -3,7 +3,7 @@
 "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
 <head>
-<!-- 2017-12-26 Tue 00:11 -->
+<!-- 2017-12-26 Tue 00:15 -->
 <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Twelve Days of Christmas #2</title>
@@ -292,7 +292,11 @@ Of course, the message <code>Random_button</code> also needs to be defined in ou
 </p>
 
 <p>
-When <code>Random_button</code> is received, we want to issue a command that asks for a random number and performs a side effect.  Eventually, the result will come in, wrapped in a message.  Let's define a message variant <code>Random_move of Chess.move</code> that has a chess move as its "payload".  On receiving this message, the move that it contains will be played on the board.  Here are the relevant parts of <code>Main.ml</code>:
+When <code>Random_button</code> is received, we want to issue a command that asks
+for a random number and performs a side effect.  Eventually, the
+result will come in, wrapped in a message.  Let's define another
+message <code>Random_move of Chess.move</code> that has a chess move as its
+"payload".  On receiving a <code>Random_move</code> message, the move that it contains will be played on the board.  Here are the relevant parts of <code>Main.ml</code>:
 </p>
 
 <div class="org-src-container">
@@ -326,7 +330,7 @@ When <code>Random_button</code> is received, we want to issue a command that ask
 </div>
 
 <p>
-When <code>Random_button</code> is received, we check whether there are legal moves in the current position by inquiring the game status from O'Chess.  If there aren't, no command is issued.  If there are legal moves, we initialize a random integer generator with the length of the list of legal moves and send a command that takes a function that is evaluated when the random number is computed.  In this case, the random number is used to choose a move from the list of legal moves and to wrap it in a <code>Random_move</code> message.  Have you already wondered about the strange line <code>[@@bs.deriving {accessors}]</code>?  It's there so you can write <code>random_move</code> instead of <code>(fun x -&gt; Random_move x)</code> by adding a function for every type constructor.
+To handle the <code>Random_button</code> message, we check whether there are legal moves in the current position by inquiring the game status from O'Chess.  If there aren't, no command is issued.  If there are legal moves, we initialize a random integer generator with the length of the list of legal moves and send a command that takes a function that is evaluated when the random number is computed.  In this case, the random number is used to choose a move from the list of legal moves and to wrap it in a <code>Random_move</code> message.  Have you already wondered about the strange line <code>[@@bs.deriving {accessors}]</code>?  It's there so you can write <code>random_move</code> instead of <code>(fun x -&gt; Random_move x)</code> by adding a function for every type constructor.
 </p>
 
 <p>
