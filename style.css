@@ -84,7 +84,11 @@ p {
 #postamble {
     font-size: .8em;
 }
-		
+
+table {
+    margin-left: auto;
+    margin-right: auto;
+}
 body {
 		margin: 1.5em 0;
 		background-color: #fff;
