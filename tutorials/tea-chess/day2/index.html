@@ -3,7 +3,7 @@
 "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
 <head>
-<!-- 2017-12-26 Tue 00:36 -->
+<!-- 2017-12-26 Tue 00:39 -->
 <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Twelve Days of Christmas #2</title>
@@ -27,14 +27,17 @@ This is the second part of <a href="../index.html">a chess-themed tutorial</a> o
 </p>
 
 <p>
-Yesterday, we implemented a chessboard without pieces.  Today, we will add pieces and use a random number generator to play random moves.  We use an existing OCaml chess library to do the heavy lifting.
+Yesterday, we implemented a chessboard without pieces.  Today, we will
+add pieces and use a random number generator to play random moves.  We
+use an existing OCaml chess library to do the heavy lifting.  If you
+want to use my repository as a starting point, we're currently at tag <code>day1</code>.
 </p>
 
 <div id="outline-container-org9225916" class="outline-2">
 <h2 id="org9225916">Integrating existing OCaml code</h2>
 <div class="outline-text-2" id="text-org9225916">
 <p>
-Just like Google's recent success with AlphaZero, we will only need to
+Just like <a href="https://chess24.com/en/read/news/deepmind-s-alphazero-crushes-chess">Google's recent success with AlphaZero</a>, we will only need to
 spell out the rules of chess, and our program will learn how to
 display the chessboard and play against itself. That's it, folks! See
 you next time! Well&#x2026; that would be nice, but last time I checked, no
