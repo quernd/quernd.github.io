@@ -3,7 +3,7 @@
 "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
 <head>
-<!-- 2017-12-26 Tue 13:57 -->
+<!-- 2017-12-26 Tue 17:42 -->
 <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Twelve Days of Christmas #4</title>
@@ -555,7 +555,10 @@ the move whenever that happens!
 <p>
 In <code>src/Main.ml</code>, we need to listen to the <code>Move</code> message from the
 board. For simplicity, I lumped it together with <code>Random_move</code> because we don't expect
-any commands and we don't have to relay the message to the <code>Board</code> module.
+any commands and we don't have to relay the message to the <code>Board</code>
+module.  But notice how we need to capture the commands issued by the
+board's internal messages and tag them, since we actually make use of
+a command when a move has been completed.
 </p>
 
 <div class="org-src-container">
