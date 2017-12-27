@@ -3,7 +3,7 @@
 "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
 <head>
-<!-- 2017-12-26 Tue 17:44 -->
+<!-- 2017-12-27 Wed 11:54 -->
 <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Twelve Days of Christmas</title>
@@ -80,7 +80,7 @@
 <tr>
 <td class="org-left">Day 6</td>
 <td class="org-left">move logging, takebacks</td>
-<td class="org-left">Printf.sprintf</td>
+<td class="org-left">catching keyboard events</td>
 <td class="org-left">Demo</td>
 </tr>
 
@@ -93,36 +93,36 @@
 
 <tr>
 <td class="org-left">Day 8</td>
-<td class="org-left">a variation tree (1)</td>
-<td class="org-left">tree zippers</td>
-<td class="org-left">Demo</td>
-</tr>
-
-<tr>
-<td class="org-left">Day 9</td>
-<td class="org-left">a variation tree (2)</td>
-<td class="org-left">mutually recursive views</td>
-<td class="org-left">Demo</td>
-</tr>
-
-<tr>
-<td class="org-left">Day 10</td>
-<td class="org-left">engine evaluation</td>
-<td class="org-left">integrate Javascript</td>
-<td class="org-left">Demo</td>
-</tr>
-
-<tr>
-<td class="org-left">Day 11</td>
 <td class="org-left">PGN format parsing</td>
 <td class="org-left">parser combinators</td>
 <td class="org-left">Demo</td>
 </tr>
 
 <tr>
-<td class="org-left">Day 12</td>
+<td class="org-left">Day 9</td>
 <td class="org-left">a full-fledged SPA</td>
 <td class="org-left">Tea.Http, Tea.Navigation</td>
+<td class="org-left">Demo</td>
+</tr>
+
+<tr>
+<td class="org-left">Day 10</td>
+<td class="org-left">a variation tree (1)</td>
+<td class="org-left">tree zippers</td>
+<td class="org-left">Demo</td>
+</tr>
+
+<tr>
+<td class="org-left">Day 11</td>
+<td class="org-left">a variation tree (2)</td>
+<td class="org-left">mutually recursive views</td>
+<td class="org-left">Demo</td>
+</tr>
+
+<tr>
+<td class="org-left">Day 12</td>
+<td class="org-left">engine evaluation</td>
+<td class="org-left">integrate Javascript</td>
 <td class="org-left">Demo</td>
 </tr>
 </tbody>
@@ -130,11 +130,12 @@
 </div>
 </div>
 
+
 <div id="outline-container-org109ca9f" class="outline-2">
 <h2 id="org109ca9f">About this tutorial</h2>
 <div class="outline-text-2" id="text-org109ca9f">
 <p>
-I recently started frontend web development in OCaml by using
+I recently started frontend web development in <a href="https://ocaml.org/">OCaml</a> by using
 <a href="https://bucklescript.github.io/">Bucklescript</a> to compile my code into Javascript. Naturally, a
 functional language like OCaml goes well together with the famous <a href="https://guide.elm-lang.org/architecture/">Elm
 architecture</a>, so I chose to explore the recent <a href="https://github.com/OvermindDL1/bucklescript-tea">Bucklescript-TEA</a>
@@ -154,8 +155,8 @@ app</a>, I decided to create an interactive chess board with move
 validation (supplied by an external library), drag and drop, move
 logging as well as take-backs. I also implemented a game tree
 representing alternative moves, by using a functional programming
-technique called the <a href="https://pavpanchekha.com/blog/zippers/huet.html">"zipper"</a>. Finally, I added a REST backend (also
-in OCaml) for the frontend to talk to.
+technique called the <a href="https://pavpanchekha.com/blog/zippers/huet.html">"zipper"</a>. Finally, I added functionality for
+talking to a REST backend.
 </p>
 
 <p>
