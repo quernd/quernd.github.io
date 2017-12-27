@@ -1,0 +1,520 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+<head>
+<!-- 2017-12-27 Wed 15:29 -->
+<meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Twelve Days of Christmas #6</title>
+<meta name="generator" content="Org mode" />
+<meta name="author" content="Daniel Quernheim" />
+<link rel='stylesheet' href='/style.css' type='text/css'/><meta name="viewport" content="width=device-width"/>
+</head>
+<body>
+<div id="org-div-home-and-up">
+ <a accesskey="h" href=""> UP </a>
+ |
+ <a accesskey="H" href="/"> HOME </a>
+</div><div id="preamble" class="status">
+<nav><a href="/">home</a></nav>
+</div>
+<div id="content">
+<h1 class="title">Twelve Days of Christmas #6</h1>
+<p>
+This is the sixth part of <a href="../index.html">a chess-themed tutorial</a> on writing an SPA in
+<a href="https://github.com/OvermindDL1/bucklescript-tea">Bucklescript-TEA</a>.  After this part, your app will look similar to <a href="demo.html">this demo</a>.
+</p>
+
+<p>
+Yesterday, we finished implementing drag and drop to make moves on the
+chessboard.  Today, we will start logging moves, implementing
+take-back and reset functionality, and catch keyboard events to allow
+the user to quickly go back and forth in the game using the arrow keys. Start from tag <code>day5</code> if you are following along with my
+repository.
+</p>
+
+<div id="outline-container-org32e75fa" class="outline-2">
+<h2 id="org32e75fa">Keeping a scoresheet like chess players do</h2>
+<div class="outline-text-2" id="text-org32e75fa">
+<p>
+Chess players have a shorthand way of keeping a scoresheet &#x2013; it's
+called <a href="https://en.wikipedia.org/wiki/Algebraic_notation_(chess)">Standard Algebraic Notation</a> (SAN).  Instead of writing down the
+coordinates of the source square and the target square, they just
+write down the type of piece that moved and its destination square,
+for instance <code>Qg7</code> for a queen's move to the <code>g7</code> square.  The standard
+abbreviations are <code>K, Q, R, B</code> and <code>N</code> (because <code>K</code> is already taken)
+for King, Queen, Rook, Bishop and Knight.  Pawn moves are indicated
+only by target square, and in the event of a capture, also by the
+source file (because pawns capture diagonally). 
+</p>
+
+<p>
+When a move needs to
+be disambiguated because more than one piece of the same type can move
+to the same square, the strategy is as follows:
+</p>
+
+<ul class="org-ul">
+<li>disambiguate by adding a hint for the file of origin: <code>Qg7</code></li>
+<li>if it is still ambiguous, try the rank of origin: <code>Qhg7</code></li>
+<li>if both strategies fail, add both file and rank: <code>Qh8g7</code>.</li>
+</ul>
+
+<p>
+The last disambiguation strategy is only needed when a player has
+promoted two pawns to queens. (Can you prove that statement?)
+</p>
+
+<p>
+Finally, if a move is a capture, an <code>x</code> is inserted after the piece
+type, if a move puts the opponent's king into check, <code>+</code> is added
+to the move, and if a move checkmates the opponent, <code>#</code> is added.  For
+pawn moves, <code>x</code> is inserted between original and destination file,
+and for pawn promotions, <code>=Q</code> (or type of other piece if not a queen)
+is added.  For instance, capturing with a pawn from <code>e7</code> to <code>f8</code>
+promoting to a rook and delivering checkmate, is written <code>exf8=R#</code>.
+</p>
+
+<p>
+There are two special moves, kingside and queenside castle (involving
+the king and a rook), written <code>O-O</code> and <code>O-O-O</code> respectively.  Phew, I
+think I covered all the little corner cases now, let's see if we can
+implement that.
+</p>
+
+<p>
+We'll be adding all our code to <code>src/Chess.ml</code>.  Let's start by
+defining a few useful types:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-ocaml"><span style="color: #000000; font-weight: bold;">type</span> <span style="color: #6434A3;">capture</span> <span style="color: #a52a2a;">=</span> bool
+<span style="color: #000000; font-weight: bold;">type</span> <span style="color: #6434A3;">promotion</span> <span style="color: #a52a2a;">=</span> piece_type option
+
+<span style="color: #000000; font-weight: bold;">type</span> <span style="color: #6434A3;">short_move</span> <span style="color: #a52a2a;">=</span>
+  piece_type <span style="color: #a52a2a;">*</span> file option <span style="color: #a52a2a;">*</span> rank option <span style="color: #a52a2a;">*</span> square <span style="color: #a52a2a;">*</span> capture
+
+<span style="color: #000000; font-weight: bold;">type</span> <span style="color: #6434A3;">long_move</span> <span style="color: #a52a2a;">=</span>
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Piece_move</span> <span style="color: #0000FF;">of</span> piece_type <span style="color: #a52a2a;">*</span> square <span style="color: #a52a2a;">*</span> square <span style="color: #a52a2a;">*</span> capture
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Pawn_move</span> <span style="color: #0000FF;">of</span> file <span style="color: #a52a2a;">*</span> square <span style="color: #a52a2a;">*</span> capture <span style="color: #a52a2a;">*</span> promotion
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Qside_castle</span>
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Kside_castle</span>
+
+<span style="color: #000000; font-weight: bold;">type</span> <span style="color: #6434A3;">check</span> <span style="color: #a52a2a;">=</span>
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Check</span> <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Checkmate</span> <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">No_check</span>
+
+<span style="color: #000000; font-weight: bold;">type</span> <span style="color: #6434A3;">annotated_move</span> <span style="color: #a52a2a;">=</span> long_move <span style="color: #a52a2a;">*</span> check
+</pre>
+</div>
+
+<p>
+We will use O'Chess to compute a list of <code>long_move</code> for a given
+position, and then use the disambiguation strategies listed above to
+compute a corresponding list of <code>short_move</code>.  File and rank
+disambiguation is represented by <code>option</code> types.  Pawn moves always
+have the file of origin associated to them in case we need to display
+it for a capturing move, and optionally a promotion piece.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-ocaml"><span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">make_move</span><span style="color: #BA36A5;"> position move</span> <span style="color: #a52a2a;">=</span>
+  make_move position move 0
+
+<span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">annotate_move</span><span style="color: #BA36A5;"> position move</span> <span style="color: #a52a2a;">=</span>
+  <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">position'</span> <span style="color: #a52a2a;">=</span> make_move position move <span style="color: #000000; font-weight: bold;">in</span>
+  <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">checked</span> <span style="color: #a52a2a;">=</span> king_checked position' position'.turn <span style="color: #000000; font-weight: bold;">in</span>
+  <span style="color: #0000FF;">if</span> checked <span style="color: #0000FF;">then</span>
+    <span style="color: #0000FF;">match</span> legal_moves position' <span style="color: #0000FF;">with</span>
+    <span style="color: #a52a2a;">|</span> <span style="color: #a52a2a;">[]</span> <span style="color: #a52a2a;">-&gt;</span> <span style="color: #000000; background-color: #FFFFFF;">Checkmate</span>
+    <span style="color: #a52a2a;">|</span> _ <span style="color: #a52a2a;">-&gt;</span> <span style="color: #000000; background-color: #FFFFFF;">Check</span>
+  <span style="color: #0000FF;">else</span> <span style="color: #000000; background-color: #FFFFFF;">No_check</span>
+
+
+<span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">long_move</span><span style="color: #BA36A5;"> position move</span> <span style="color: #a52a2a;">=</span>
+  <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">check</span> <span style="color: #a52a2a;">=</span> annotate_move position move
+  <span style="color: #000000; font-weight: bold;">and</span> <span style="color: #BA36A5;">move'</span> <span style="color: #a52a2a;">=</span> 
+    <span style="color: #0000FF;">match</span> move <span style="color: #0000FF;">with</span>
+    <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Move</span> <span style="color: #a52a2a;">(</span>s_file<span style="color: #a52a2a;">,</span> s_rank<span style="color: #a52a2a;">,</span> t_file<span style="color: #a52a2a;">,</span> t_rank<span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">-&gt;</span>
+      <span style="color: #000000; font-weight: bold;">begin</span> <span style="color: #0000FF;">match</span> position.ar.<span style="color: #a52a2a;">(</span>s_file<span style="color: #a52a2a;">)</span>.<span style="color: #a52a2a;">(</span>s_rank<span style="color: #a52a2a;">)</span> <span style="color: #0000FF;">with</span>
+        <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Piece</span> <span style="color: #a52a2a;">(</span><span style="color: #000000; background-color: #FFFFFF;">Pawn</span><span style="color: #a52a2a;">,</span> _<span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">-&gt;</span>
+          <span style="color: #8D8D84;">(* </span><span style="color: #8D8D84; font-style: italic;">a pawn move is a capture if and only if it changes files </span><span style="color: #8D8D84;">*)</span>
+          <span style="color: #000000; background-color: #FFFFFF;">Pawn_move</span> <span style="color: #a52a2a;">(</span>s_file<span style="color: #a52a2a;">,</span> <span style="color: #a52a2a;">(</span>t_file<span style="color: #a52a2a;">,</span> t_rank<span style="color: #a52a2a;">),</span> <span style="color: #a52a2a;">(</span>s_file <span style="color: #a52a2a;">&lt;&gt;</span> t_file<span style="color: #a52a2a;">),</span> <span style="color: #000000; background-color: #FFFFFF;">None</span><span style="color: #a52a2a;">)</span>
+        <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Piece</span> <span style="color: #a52a2a;">(</span>p_type<span style="color: #a52a2a;">,</span> _<span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">-&gt;</span>
+          <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">capture</span> <span style="color: #a52a2a;">=</span>
+            <span style="color: #0000FF;">match</span> position.ar.<span style="color: #a52a2a;">(</span>t_file<span style="color: #a52a2a;">)</span>.<span style="color: #a52a2a;">(</span>t_rank<span style="color: #a52a2a;">)</span> <span style="color: #0000FF;">with</span>
+            <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Piece</span> _ <span style="color: #a52a2a;">-&gt;</span> <span style="color: #D0372D;">true</span> <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Empty</span> <span style="color: #a52a2a;">-&gt;</span> <span style="color: #D0372D;">false</span> <span style="color: #000000; font-weight: bold;">in</span>
+          <span style="color: #000000; background-color: #FFFFFF;">Piece_move</span> <span style="color: #a52a2a;">(</span>p_type<span style="color: #a52a2a;">,</span> <span style="color: #a52a2a;">(</span>s_file<span style="color: #a52a2a;">,</span> s_rank<span style="color: #a52a2a;">),</span> <span style="color: #a52a2a;">(</span>t_file<span style="color: #a52a2a;">,</span> t_rank<span style="color: #a52a2a;">),</span> capture<span style="color: #a52a2a;">)</span>
+        <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Empty</span> <span style="color: #a52a2a;">-&gt;</span> <span style="color: #006FE0;">raise</span> <span style="color: #000000; background-color: #FFFFFF;">Illegal_move</span>
+      <span style="color: #000000; font-weight: bold;">end</span>
+    <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Queenside_castle</span> <span style="color: #a52a2a;">-&gt;</span> <span style="color: #000000; background-color: #FFFFFF;">Qside_castle</span>
+    <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Kingside_castle</span> <span style="color: #a52a2a;">-&gt;</span> <span style="color: #000000; background-color: #FFFFFF;">Kside_castle</span>
+    <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Promotion</span> <span style="color: #a52a2a;">(</span>p_type<span style="color: #a52a2a;">,</span> s_file<span style="color: #a52a2a;">,</span> t_file<span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">-&gt;</span>
+      <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">t_rank</span> <span style="color: #a52a2a;">=</span>
+        <span style="color: #0000FF;">match</span> position.turn <span style="color: #0000FF;">with</span>
+        <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">White</span> <span style="color: #a52a2a;">-&gt;</span> 7 <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Black</span> <span style="color: #a52a2a;">-&gt;</span> 0 <span style="color: #000000; font-weight: bold;">in</span>
+      <span style="color: #000000; background-color: #FFFFFF;">Pawn_move</span> <span style="color: #a52a2a;">(</span>s_file<span style="color: #a52a2a;">,</span> <span style="color: #a52a2a;">(</span>t_file<span style="color: #a52a2a;">,</span> t_rank<span style="color: #a52a2a;">),</span> <span style="color: #a52a2a;">(</span>s_file <span style="color: #a52a2a;">&lt;&gt;</span> t_file<span style="color: #a52a2a;">),</span> <span style="color: #000000; background-color: #FFFFFF;">Some</span> p_type<span style="color: #a52a2a;">)</span>
+  <span style="color: #000000; font-weight: bold;">in</span> move'<span style="color: #a52a2a;">,</span> check
+</pre>
+</div>
+
+<p>
+This function converts the O'Chess move representation into the
+<code>long_move</code> type by adding the <code>capture</code> flag and straightening out a
+few kinks.  In particular, it separates <code>Move</code> into <code>Pawn_move</code> and
+<code>Piece_move</code>, and groups the latter together with <code>Promotion</code>.  It
+also adds check/checkmate information. There is a case that should
+never happen (moving a piece from an empty square), so we raise an
+exception (from O'Chess) in that case.
+</p>
+
+<p>
+I changed the <code>make_move</code> function because I was fed up of
+supplying the final argument all the time.  Make sure to update
+<code>src/Main.ml</code> wherever needed.
+</p>
+
+<p>
+Now we need to compute the disambiguated SAN for a given move.  We
+achieve this by trying each disambiguation strategy in turn.
+Check/checkmate doesn't matter here:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-ocaml"><span style="color: #8D8D84;">(* </span><span style="color: #8D8D84; font-style: italic;">a short move is good if there is a unique long move that it matches </span><span style="color: #8D8D84;">*)</span>
+<span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">unique</span><span style="color: #BA36A5;"> move_list short_move</span> <span style="color: #a52a2a;">=</span>
+  <span style="color: #6434A3;">List.</span>filter <span style="color: #a52a2a;">(</span>unify_move short_move<span style="color: #a52a2a;">)</span> move_list <span style="color: #a52a2a;">|&gt;</span> <span style="color: #6434A3;">List.</span>length <span style="color: #a52a2a;">=</span> 1
+
+<span style="color: #8D8D84;">(* </span><span style="color: #8D8D84; font-style: italic;">return a short move for a piece move, else None </span><span style="color: #8D8D84;">*)</span>
+<span style="color: #8D8D84;">(* </span><span style="color: #8D8D84; font-style: italic;">following order of preference: Qg7, Qhg7, Q8g7, Qh8g7 </span><span style="color: #8D8D84;">*)</span>
+<span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">short_move_of_long_move</span><span style="color: #BA36A5;"> move_list </span><span style="color: #a52a2a;">(</span><span style="color: #BA36A5;">long_move</span><span style="color: #a52a2a;">,</span><span style="color: #BA36A5;"> _</span><span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">=</span>
+  <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">unique'</span> <span style="color: #a52a2a;">=</span> unique move_list <span style="color: #000000; font-weight: bold;">in</span>
+  <span style="color: #0000FF;">match</span> long_move <span style="color: #0000FF;">with</span>
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Piece_move</span> <span style="color: #a52a2a;">(</span>p_type<span style="color: #a52a2a;">,</span> <span style="color: #a52a2a;">(</span>s_file<span style="color: #a52a2a;">,</span> s_rank<span style="color: #a52a2a;">),</span> target<span style="color: #a52a2a;">,</span> capture<span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">-&gt;</span>
+    <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">qg7</span> <span style="color: #a52a2a;">=</span> <span style="color: #a52a2a;">(</span>p_type<span style="color: #a52a2a;">,</span> <span style="color: #000000; background-color: #FFFFFF;">None</span><span style="color: #a52a2a;">,</span> <span style="color: #000000; background-color: #FFFFFF;">None</span><span style="color: #a52a2a;">,</span> target<span style="color: #a52a2a;">,</span> capture<span style="color: #a52a2a;">)</span>
+    <span style="color: #000000; font-weight: bold;">in</span> <span style="color: #0000FF;">if</span> unique' qg7 <span style="color: #0000FF;">then</span> <span style="color: #000000; background-color: #FFFFFF;">Some</span> qg7 <span style="color: #0000FF;">else</span>
+      <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">qhg7</span> <span style="color: #a52a2a;">=</span> <span style="color: #a52a2a;">(</span>p_type<span style="color: #a52a2a;">,</span> <span style="color: #000000; background-color: #FFFFFF;">Some</span> s_file<span style="color: #a52a2a;">,</span> <span style="color: #000000; background-color: #FFFFFF;">None</span><span style="color: #a52a2a;">,</span> target<span style="color: #a52a2a;">,</span> capture<span style="color: #a52a2a;">)</span>
+      <span style="color: #000000; font-weight: bold;">in</span> <span style="color: #0000FF;">if</span> unique' qhg7 <span style="color: #0000FF;">then</span> <span style="color: #000000; background-color: #FFFFFF;">Some</span> qhg7 <span style="color: #0000FF;">else</span>
+        <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">q8g7</span> <span style="color: #a52a2a;">=</span> <span style="color: #a52a2a;">(</span>p_type<span style="color: #a52a2a;">,</span> <span style="color: #000000; background-color: #FFFFFF;">None</span><span style="color: #a52a2a;">,</span> <span style="color: #000000; background-color: #FFFFFF;">Some</span> s_rank<span style="color: #a52a2a;">,</span> target<span style="color: #a52a2a;">,</span> capture<span style="color: #a52a2a;">)</span>
+        <span style="color: #000000; font-weight: bold;">in</span> <span style="color: #0000FF;">if</span> unique' q8g7 <span style="color: #0000FF;">then</span> <span style="color: #000000; background-color: #FFFFFF;">Some</span> q8g7 <span style="color: #0000FF;">else</span> <span style="color: #8D8D84;">(* </span><span style="color: #8D8D84; font-style: italic;">Qh8g7 </span><span style="color: #8D8D84;">*)</span>
+          <span style="color: #000000; background-color: #FFFFFF;">Some</span> <span style="color: #a52a2a;">(</span>p_type<span style="color: #a52a2a;">,</span> <span style="color: #000000; background-color: #FFFFFF;">Some</span> s_file<span style="color: #a52a2a;">,</span> <span style="color: #000000; background-color: #FFFFFF;">Some</span> s_rank<span style="color: #a52a2a;">,</span> target<span style="color: #a52a2a;">,</span> capture<span style="color: #a52a2a;">)</span>
+  <span style="color: #a52a2a;">|</span> _ <span style="color: #a52a2a;">-&gt;</span> None
+</pre>
+</div>
+
+<p>
+We still have to write a function <code>unify_move</code> that determines if a <code>short_move</code>
+matches a given <code>long_move</code> though.  We just check if the destination
+square matches and if the optional disambiguation hints can be unified
+(everything can be unified with <code>None</code>).
+</p>
+
+<div class="org-src-container">
+<pre class="src src-ocaml"><span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">unify</span><span style="color: #BA36A5;"> value hint</span> <span style="color: #a52a2a;">=</span>
+  <span style="color: #0000FF;">match</span> value<span style="color: #a52a2a;">,</span> hint <span style="color: #0000FF;">with</span>
+  <span style="color: #a52a2a;">|</span> _<span style="color: #a52a2a;">,</span> <span style="color: #000000; background-color: #FFFFFF;">None</span> <span style="color: #a52a2a;">-&gt;</span> <span style="color: #D0372D;">true</span> <span style="color: #8D8D84;">(* </span><span style="color: #8D8D84; font-style: italic;">everything unifies with None </span><span style="color: #8D8D84;">*)</span>
+  <span style="color: #a52a2a;">|</span> x<span style="color: #a52a2a;">,</span> <span style="color: #000000; background-color: #FFFFFF;">Some</span> y <span style="color: #0000FF;">when</span> x <span style="color: #a52a2a;">=</span> y <span style="color: #a52a2a;">-&gt;</span> <span style="color: #D0372D;">true</span>
+  <span style="color: #a52a2a;">|</span> _ <span style="color: #a52a2a;">-&gt;</span> <span style="color: #D0372D;">false</span>
+
+<span style="color: #8D8D84;">(* </span><span style="color: #8D8D84; font-style: italic;">is the candidate a possible short form of a long move? </span><span style="color: #8D8D84;">*)</span>
+<span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">unify_move</span><span style="color: #BA36A5;"> short_move </span><span style="color: #a52a2a;">(</span><span style="color: #BA36A5;">long_move</span><span style="color: #a52a2a;">,</span><span style="color: #BA36A5;"> _</span><span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">=</span>
+  <span style="color: #0000FF;">match</span> long_move <span style="color: #0000FF;">with</span>
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Piece_move</span> <span style="color: #a52a2a;">(</span>long_p_type<span style="color: #a52a2a;">,</span> long_source<span style="color: #a52a2a;">,</span> long_target<span style="color: #a52a2a;">,</span> _<span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">-&gt;</span>
+    <span style="color: #8D8D84;">(* </span><span style="color: #8D8D84; font-style: italic;">capture irrelevant </span><span style="color: #8D8D84;">*)</span>
+    <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">long_file</span><span style="color: #a52a2a;">,</span><span style="color: #BA36A5;"> long_rank</span> <span style="color: #a52a2a;">=</span> long_source <span style="color: #000000; font-weight: bold;">in</span>
+    <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">short_p_type</span><span style="color: #a52a2a;">,</span> short_file_hint<span style="color: #a52a2a;">,</span> short_rank_hint<span style="color: #a52a2a;">,</span> short_target<span style="color: #a52a2a;">,</span> _
+      <span style="color: #a52a2a;">=</span> short_move <span style="color: #000000; font-weight: bold;">in</span>
+    short_target <span style="color: #a52a2a;">=</span> long_target <span style="color: #a52a2a;">&amp;&amp;</span>
+    short_p_type <span style="color: #a52a2a;">=</span> long_p_type <span style="color: #a52a2a;">&amp;&amp;</span>
+    unify long_file short_file_hint <span style="color: #a52a2a;">&amp;&amp;</span>
+    unify long_rank short_rank_hint
+  <span style="color: #a52a2a;">|</span> _ <span style="color: #a52a2a;">-&gt;</span> <span style="color: #D0372D;">false</span> <span style="color: #8D8D84;">(* </span><span style="color: #8D8D84; font-style: italic;">we can safely ignore pawn moves and castling </span><span style="color: #8D8D84;">*)</span>
+</pre>
+</div>
+
+<p>
+Next, we use O'Chess to enumerate the legal moves and generate an
+<i>association list</i> of SAN and O'Chess moves.  An association list is a
+list of (key, value) pairs, and the <code>List</code> module provides some useful
+functions for searching the list for a given key and the like.  If
+your association lists start getting big, you may want to use a
+hashmap or other container that has faster access than O(n), but lists
+of legal moves are typically not longer than 30, so it shouldn't be a
+problem. 
+</p>
+
+<div class="org-src-container">
+<pre class="src src-ocaml"><span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">moves_assoc_list</span><span style="color: #BA36A5;"> position moves</span> <span style="color: #a52a2a;">=</span>
+  <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">long_moves</span> <span style="color: #a52a2a;">=</span> moves <span style="color: #a52a2a;">|&gt;</span> <span style="color: #6434A3;">List.</span>map <span style="color: #a52a2a;">(</span>long_move position<span style="color: #a52a2a;">)</span> <span style="color: #000000; font-weight: bold;">in</span>
+  <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">san_moves</span> <span style="color: #a52a2a;">=</span> long_moves <span style="color: #a52a2a;">|&gt;</span> <span style="color: #6434A3;">List.</span>map <span style="color: #a52a2a;">(</span>san_of_move long_moves<span style="color: #a52a2a;">)</span> <span style="color: #000000; font-weight: bold;">in</span>
+  <span style="color: #6434A3;">List.</span>combine moves san_moves
+
+<span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">legal_moves_with_san</span><span style="color: #BA36A5;"> position</span> <span style="color: #a52a2a;">=</span>
+  legal_moves position <span style="color: #a52a2a;">|&gt;</span> moves_assoc_list position
+</pre>
+</div>
+
+<p>
+Finally, we're ready to calculate the SAN string for a given move from
+a <code>short_move</code> representation:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-ocaml"><span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">san_of_move</span><span style="color: #BA36A5;"> move_list annotated_move</span> <span style="color: #a52a2a;">=</span>
+  <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">long_move</span><span style="color: #a52a2a;">,</span><span style="color: #BA36A5;"> check</span> <span style="color: #a52a2a;">=</span> annotated_move <span style="color: #000000; font-weight: bold;">in</span>
+  <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">short_move_option</span> <span style="color: #a52a2a;">=</span> short_move_of_long_move move_list annotated_move <span style="color: #000000; font-weight: bold;">in</span>
+  <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">san</span> <span style="color: #a52a2a;">=</span>
+    <span style="color: #0000FF;">match</span> short_move_option<span style="color: #a52a2a;">,</span> long_move <span style="color: #0000FF;">with</span>
+    <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">None</span><span style="color: #a52a2a;">,</span> <span style="color: #000000; background-color: #FFFFFF;">Qside_castle</span> <span style="color: #a52a2a;">-&gt;</span> <span style="color: #008000;">"O-O-O"</span>
+    <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">None</span><span style="color: #a52a2a;">,</span> <span style="color: #000000; background-color: #FFFFFF;">Kside_castle</span> <span style="color: #a52a2a;">-&gt;</span> <span style="color: #008000;">"O-O"</span>
+    <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">None</span><span style="color: #a52a2a;">,</span> <span style="color: #000000; background-color: #FFFFFF;">Pawn_move</span> <span style="color: #a52a2a;">(</span>file<span style="color: #a52a2a;">,</span> <span style="color: #a52a2a;">(</span>t_file<span style="color: #a52a2a;">,</span> t_rank<span style="color: #a52a2a;">),</span> capture<span style="color: #a52a2a;">,</span> promotion<span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">-&gt;</span>
+      <span style="color: #6434A3;">Printf.</span>sprintf <span style="color: #008000;">"%s%c%c%s"</span> 
+        <span style="color: #a52a2a;">(</span><span style="color: #0000FF;">if</span> capture
+         <span style="color: #0000FF;">then</span> char_of_file file <span style="color: #a52a2a;">|&gt;</span> <span style="color: #6434A3;">Printf.</span>sprintf <span style="color: #008000;">"%cx"</span>
+         <span style="color: #0000FF;">else</span> <span style="color: #008000;">""</span><span style="color: #a52a2a;">)</span>
+        <span style="color: #a52a2a;">(</span>char_of_file t_file<span style="color: #a52a2a;">)</span>
+        <span style="color: #a52a2a;">(</span>char_of_rank t_rank<span style="color: #a52a2a;">)</span>
+        <span style="color: #000000; font-weight: bold;">begin</span> <span style="color: #0000FF;">match</span> promotion <span style="color: #0000FF;">with</span>
+          <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">None</span> <span style="color: #a52a2a;">-&gt;</span> <span style="color: #008000;">""</span>
+          <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Some</span> p_type <span style="color: #a52a2a;">-&gt;</span>
+            char_of_piece_type p_type <span style="color: #a52a2a;">|&gt;</span> <span style="color: #6434A3;">Printf.</span>sprintf <span style="color: #008000;">"=%c"</span> <span style="color: #000000; font-weight: bold;">end</span>
+    <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Some</span> <span style="color: #a52a2a;">(</span>p_type<span style="color: #a52a2a;">,</span> file_hint<span style="color: #a52a2a;">,</span> rank_hint<span style="color: #a52a2a;">,</span> <span style="color: #a52a2a;">(</span>t_file<span style="color: #a52a2a;">,</span> t_rank<span style="color: #a52a2a;">),</span> capture<span style="color: #a52a2a;">),</span> _ <span style="color: #a52a2a;">-&gt;</span>
+      <span style="color: #6434A3;">Printf.</span>sprintf <span style="color: #008000;">"%c%s%s%s%c%c"</span>
+        <span style="color: #a52a2a;">(</span>char_of_piece_type p_type<span style="color: #a52a2a;">)</span>
+        <span style="color: #000000; font-weight: bold;">begin</span> <span style="color: #0000FF;">match</span> file_hint <span style="color: #0000FF;">with</span>
+          <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">None</span> <span style="color: #a52a2a;">-&gt;</span> <span style="color: #008000;">""</span>
+          <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Some</span> file <span style="color: #a52a2a;">-&gt;</span> char_of_file file <span style="color: #a52a2a;">|&gt;</span> <span style="color: #6434A3;">Printf.</span>sprintf <span style="color: #008000;">"%c"</span> <span style="color: #000000; font-weight: bold;">end</span>
+        <span style="color: #000000; font-weight: bold;">begin</span> <span style="color: #0000FF;">match</span> rank_hint <span style="color: #0000FF;">with</span>
+          <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">None</span> <span style="color: #a52a2a;">-&gt;</span> <span style="color: #008000;">""</span>
+          <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Some</span> rank <span style="color: #a52a2a;">-&gt;</span> char_of_rank rank <span style="color: #a52a2a;">|&gt;</span> <span style="color: #6434A3;">Printf.</span>sprintf <span style="color: #008000;">"%c"</span> <span style="color: #000000; font-weight: bold;">end</span>
+        <span style="color: #a52a2a;">(</span><span style="color: #0000FF;">if</span> capture <span style="color: #0000FF;">then</span> <span style="color: #008000;">"x"</span> <span style="color: #0000FF;">else</span> <span style="color: #008000;">""</span><span style="color: #a52a2a;">)</span>
+        <span style="color: #a52a2a;">(</span>char_of_file t_file<span style="color: #a52a2a;">)</span>
+        <span style="color: #a52a2a;">(</span>char_of_rank t_rank<span style="color: #a52a2a;">)</span>
+    <span style="color: #a52a2a;">|</span> _ <span style="color: #a52a2a;">-&gt;</span> <span style="color: #006FE0;">raise</span> <span style="color: #000000; background-color: #FFFFFF;">Illegal_move</span>
+  <span style="color: #000000; font-weight: bold;">in</span>
+  san <span style="color: #a52a2a;">^</span> <span style="color: #0000FF;">match</span> check <span style="color: #0000FF;">with</span>
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Check</span> <span style="color: #a52a2a;">-&gt;</span> <span style="color: #008000;">"+"</span>
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Checkmate</span> <span style="color: #a52a2a;">-&gt;</span> <span style="color: #008000;">"#"</span>
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">No_check</span> <span style="color: #a52a2a;">-&gt;</span> <span style="color: #008000;">""</span>
+</pre>
+</div>
+
+<p>
+There's a lot of pattern matching going on here, but if you look
+closely, you will find that it is a very straightforward formulation
+of the SAN definition.  There is a case that should never happen
+because when <code>long_move</code> is a <code>Piece_move</code>, the <code>short_move_option</code>
+cannot be <code>None</code>, but that is impossible for the compiler to figure
+out.
+</p>
+</div>
+</div>
+
+<div id="outline-container-orgfd5f1ba" class="outline-2">
+<h2 id="orgfd5f1ba">Logging and takeback</h2>
+<div class="outline-text-2" id="text-orgfd5f1ba">
+<p>
+Let's add a log of moves to the main view, as well as a "take back"
+button.  First we define approprate types and messages:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-ocaml"><span style="color: #000000; font-weight: bold;">type</span> <span style="color: #6434A3;">model</span> <span style="color: #a52a2a;">=</span>
+  <span style="color: #a52a2a;">{</span> position <span style="color: #a52a2a;">:</span> <span style="color: #6434A3;">Chess.</span>position
+  <span style="color: #a52a2a;">;</span> board <span style="color: #a52a2a;">:</span> <span style="color: #6434A3;">Board.</span>model
+  <span style="color: #a52a2a;">;</span> moves <span style="color: #a52a2a;">:</span> <span style="color: #a52a2a;">(</span><span style="color: #6434A3;">Chess.</span>move <span style="color: #a52a2a;">*</span> string<span style="color: #a52a2a;">)</span> list
+  <span style="color: #a52a2a;">}</span>
+
+<span style="color: #000000; font-weight: bold;">type</span> <span style="color: #6434A3;">msg</span> <span style="color: #a52a2a;">=</span>
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Board_msg</span> <span style="color: #0000FF;">of</span> <span style="color: #6434A3;">Board.</span>msg
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Random_button</span>
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Takeback_button</span>
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Random_move</span> <span style="color: #0000FF;">of</span> <span style="color: #6434A3;">Chess.</span>move
+<span style="color: #808080;">[@@bs.deriving {accessors}]</span>
+
+
+<span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">init</span><span style="color: #BA36A5;"> </span><span style="color: #a52a2a;">()</span> <span style="color: #a52a2a;">=</span>
+  <span style="color: #a52a2a;">{</span> position <span style="color: #a52a2a;">=</span> <span style="color: #6434A3;">Chess.</span>init_position
+  <span style="color: #a52a2a;">;</span> board <span style="color: #a52a2a;">=</span> <span style="color: #6434A3;">Board.</span>init <span style="color: #a52a2a;">()</span>
+  <span style="color: #a52a2a;">;</span> moves <span style="color: #a52a2a;">=</span> <span style="color: #a52a2a;">[]</span>
+  <span style="color: #a52a2a;">},</span> <span style="color: #6434A3;">Cmd.</span>none
+</pre>
+</div>
+
+<p>
+Then we define how to render HTML for the moves.  Let's already assign
+classes to
+the <code>&lt;ul&gt;</code> and <code>&lt;li&gt;</code> tags so we can style them later.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-ocaml"><span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">move_view</span><span style="color: #BA36A5;"> </span><span style="color: #a52a2a;">(</span><span style="color: #BA36A5;">_move</span><span style="color: #a52a2a;">,</span><span style="color: #BA36A5;"> san</span><span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">=</span>
+  li <span style="color: #a52a2a;">[</span>class' <span style="color: #008000;">"move"</span><span style="color: #a52a2a;">]</span> <span style="color: #a52a2a;">[</span>text san<span style="color: #a52a2a;">]</span>
+
+<span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">view</span><span style="color: #BA36A5;"> model</span> <span style="color: #a52a2a;">=</span>
+  <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">game_status</span> <span style="color: #a52a2a;">=</span> <span style="color: #6434A3;">Chess.</span>game_status model.position <span style="color: #000000; font-weight: bold;">in</span>
+  <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">interactable</span> <span style="color: #a52a2a;">=</span>
+    <span style="color: #0000FF;">match</span> game_status <span style="color: #0000FF;">with</span>
+    <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Play</span> move_list <span style="color: #a52a2a;">-&gt;</span> <span style="color: #6434A3;">Board.</span><span style="color: #000000; background-color: #FFFFFF;">Interactable</span> <span style="color: #a52a2a;">(</span>model.position.turn<span style="color: #a52a2a;">,</span> move_list<span style="color: #a52a2a;">)</span>
+    <span style="color: #a52a2a;">|</span> _ <span style="color: #a52a2a;">-&gt;</span> <span style="color: #6434A3;">Board.</span><span style="color: #000000; background-color: #FFFFFF;">Not_interactable</span>
+  <span style="color: #000000; font-weight: bold;">in</span>
+  div <span style="color: #a52a2a;">[]</span>
+    <span style="color: #a52a2a;">[</span> <span style="color: #6434A3;">Board.</span>view interactable model.position.ar model.board
+      <span style="color: #a52a2a;">|&gt;</span> map board_msg
+    <span style="color: #a52a2a;">;</span> <span style="color: #6434A3;">List.</span>map <span style="color: #a52a2a;">(</span>map board_msg<span style="color: #a52a2a;">)</span> <span style="color: #6434A3;">Board.</span>buttons_view <span style="color: #a52a2a;">@</span>
+      <span style="color: #a52a2a;">[</span> button <span style="color: #a52a2a;">[</span>onClick <span style="color: #000000; background-color: #FFFFFF;">Random_button</span><span style="color: #a52a2a;">]</span> <span style="color: #a52a2a;">[</span>text <span style="color: #008000;">"random move"</span><span style="color: #a52a2a;">]</span>
+      <span style="color: #a52a2a;">;</span> button <span style="color: #a52a2a;">[</span>onClick <span style="color: #000000; background-color: #FFFFFF;">Takeback_button</span><span style="color: #a52a2a;">]</span> <span style="color: #a52a2a;">[</span>text <span style="color: #008000;">"take back"</span><span style="color: #a52a2a;">]</span>
+      <span style="color: #a52a2a;">]</span>
+      <span style="color: #a52a2a;">|&gt;</span> p <span style="color: #a52a2a;">[]</span>
+    <span style="color: #a52a2a;">;</span> <span style="color: #6434A3;">Board.</span>result_view game_status
+    <span style="color: #a52a2a;">;</span> <span style="color: #6434A3;">List.</span>rev_map move_view model.moves <span style="color: #a52a2a;">|&gt;</span> ul <span style="color: #a52a2a;">[</span>class' <span style="color: #008000;">"moves"</span><span style="color: #a52a2a;">]</span>
+    <span style="color: #a52a2a;">]</span>
+</pre>
+</div>
+
+<p>
+The reason we use <code>List.rev_map</code> to display the moves is that we store
+them in reverse order to allow for more efficient adding of new moves
+when they come in.  Here's the relevant part of the <code>update</code> function:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-ocaml"><span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Random_move</span> move <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Board_msg</span> <span style="color: #a52a2a;">(</span><span style="color: #000000; background-color: #FFFFFF;">Move</span> move<span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">-&gt;</span>
+  <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">san</span> <span style="color: #a52a2a;">=</span> <span style="color: #6434A3;">Chess.</span>legal_moves_with_san model.position <span style="color: #a52a2a;">|&gt;</span> <span style="color: #6434A3;">List.</span>assoc move <span style="color: #000000; font-weight: bold;">in</span>
+  <span style="color: #a52a2a;">{</span> model <span style="color: #0000FF;">with</span>
+    position <span style="color: #a52a2a;">=</span> <span style="color: #6434A3;">Chess.</span>make_move model.position move
+  <span style="color: #a52a2a;">;</span> moves <span style="color: #a52a2a;">=</span> <span style="color: #a52a2a;">(</span>move<span style="color: #a52a2a;">,</span> san<span style="color: #a52a2a;">)::</span>model.moves
+  <span style="color: #a52a2a;">},</span> <span style="color: #6434A3;">Cmd.</span>none
+<span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Takeback_button</span> <span style="color: #a52a2a;">-&gt;</span>
+  <span style="color: #000000; font-weight: bold;">begin</span> <span style="color: #0000FF;">match</span> model.moves<span style="color: #a52a2a;">,</span> model.position.prev <span style="color: #0000FF;">with</span>
+    <span style="color: #a52a2a;">|</span> _<span style="color: #a52a2a;">::</span>moves<span style="color: #a52a2a;">,</span> <span style="color: #000000; background-color: #FFFFFF;">Some</span> position <span style="color: #a52a2a;">-&gt;</span> <span style="color: #a52a2a;">{</span>model <span style="color: #0000FF;">with</span> moves<span style="color: #a52a2a;">;</span> position<span style="color: #a52a2a;">}</span>
+    <span style="color: #a52a2a;">|</span> _ <span style="color: #a52a2a;">-&gt;</span> model
+  <span style="color: #000000; font-weight: bold;">end</span><span style="color: #a52a2a;">,</span> <span style="color: #6434A3;">Cmd.</span>none
+</pre>
+</div>
+
+<p>
+Try making a few moves and use the takeback button now.  The list of
+moves should automatically update.
+</p>
+</div>
+</div>
+
+<div id="outline-container-org2597d82" class="outline-2">
+<h2 id="org2597d82">Capturing keyboard events</h2>
+<div class="outline-text-2" id="text-org2597d82">
+<p>
+As a cherry on the top, let's assign keyboard shortcuts to the "random
+move" and "take back" events.  Bucklescript-TEA doesn't yet come
+with a <code>Keyboard</code> module built-in, so why don't we just create our
+own?  Take a look at the <code>Tea.Mouse</code> module to see how it's done.
+We'll adapt the function <code>registerGlobal</code> in order to listen to the
+<code>keydown</code> event.  Unfortunately, the decoder is hardcoded, so we'll
+just copy the function and change it.  Put the following code in
+<code>src/Keyboard.ml</code>:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-ocaml"><span style="color: #000000; font-weight: bold;">type</span> <span style="color: #6434A3;">key_event</span> <span style="color: #a52a2a;">=</span> <span style="color: #a52a2a;">{</span> key_code <span style="color: #a52a2a;">:</span> int
+                 <span style="color: #a52a2a;">;</span> shift <span style="color: #a52a2a;">:</span> bool
+                 <span style="color: #a52a2a;">;</span> ctrl <span style="color: #a52a2a;">:</span> bool
+                 <span style="color: #a52a2a;">;</span> alt <span style="color: #a52a2a;">:</span> bool
+                 <span style="color: #a52a2a;">;</span> meta <span style="color: #a52a2a;">:</span> bool
+                 <span style="color: #a52a2a;">}</span>
+
+<span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">key_event</span> <span style="color: #a52a2a;">=</span>
+  <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #000000; font-weight: bold;">open </span><span style="color: #6434A3;">Tea.Json.Decoder</span> <span style="color: #000000; font-weight: bold;">in</span>
+  map5
+    <span style="color: #a52a2a;">(</span><span style="color: #0000FF;">fun</span> <span style="color: #BA36A5;">key_code shift ctrl alt meta</span> <span style="color: #a52a2a;">-&gt;</span>
+       <span style="color: #a52a2a;">{</span>key_code<span style="color: #a52a2a;">;</span> shift<span style="color: #a52a2a;">;</span> ctrl<span style="color: #a52a2a;">;</span> alt<span style="color: #a52a2a;">;</span> meta<span style="color: #a52a2a;">})</span>
+    <span style="color: #a52a2a;">(</span>field <span style="color: #008000;">"keyCode"</span> int<span style="color: #a52a2a;">)</span>
+    <span style="color: #a52a2a;">(</span>field <span style="color: #008000;">"shiftKey"</span> bool<span style="color: #a52a2a;">)</span>
+    <span style="color: #a52a2a;">(</span>field <span style="color: #008000;">"ctrlKey"</span> bool<span style="color: #a52a2a;">)</span>
+    <span style="color: #a52a2a;">(</span>field <span style="color: #008000;">"altKey"</span> bool<span style="color: #a52a2a;">)</span>
+    <span style="color: #a52a2a;">(</span>field <span style="color: #008000;">"metaKey"</span> bool<span style="color: #a52a2a;">)</span>
+
+<span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">registerGlobal</span><span style="color: #BA36A5;"> name key tagger</span> <span style="color: #a52a2a;">=</span>
+  <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #000000; font-weight: bold;">open </span><span style="color: #6434A3;">Vdom</span> <span style="color: #000000; font-weight: bold;">in</span>
+  <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">enableCall</span><span style="color: #BA36A5;"> callbacks_base</span> <span style="color: #a52a2a;">=</span>
+    <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">callbacks</span> <span style="color: #a52a2a;">=</span> <span style="color: #006FE0;">ref</span> callbacks_base <span style="color: #000000; font-weight: bold;">in</span>
+    <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">fn</span> <span style="color: #a52a2a;">=</span> <span style="color: #0000FF;">fun</span> <span style="color: #BA36A5;">ev</span> <span style="color: #a52a2a;">-&gt;</span>
+      <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #000000; font-weight: bold;">open </span><span style="color: #6434A3;">Tea_json.Decoder</span> <span style="color: #000000; font-weight: bold;">in</span>
+      <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #000000; font-weight: bold;">open </span><span style="color: #6434A3;">Tea_result</span> <span style="color: #000000; font-weight: bold;">in</span>
+      <span style="color: #0000FF;">match</span> decodeEvent key_event ev <span style="color: #0000FF;">with</span>
+      <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Error</span> _ <span style="color: #a52a2a;">-&gt;</span> <span style="color: #000000; background-color: #FFFFFF;">None</span>
+      <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Ok</span> pos <span style="color: #a52a2a;">-&gt;</span> <span style="color: #000000; background-color: #FFFFFF;">Some</span> <span style="color: #a52a2a;">(</span>tagger pos<span style="color: #a52a2a;">)</span> <span style="color: #000000; font-weight: bold;">in</span>
+    <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">handler</span> <span style="color: #a52a2a;">=</span> <span style="color: #000000; background-color: #FFFFFF;">EventHandlerCallback</span> <span style="color: #a52a2a;">(</span>key<span style="color: #a52a2a;">,</span> fn<span style="color: #a52a2a;">)</span> <span style="color: #000000; font-weight: bold;">in</span>
+    <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">elem</span> <span style="color: #a52a2a;">=</span> <span style="color: #6434A3;">Web_node.</span>document_node <span style="color: #000000; font-weight: bold;">in</span>
+    <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">cache</span> <span style="color: #a52a2a;">=</span> eventHandler_Register callbacks elem name handler <span style="color: #000000; font-weight: bold;">in</span>
+    <span style="color: #0000FF;">fun</span> <span style="color: #a52a2a;">()</span> <span style="color: #a52a2a;">-&gt;</span>
+      <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">_</span> <span style="color: #a52a2a;">=</span> eventHandler_Unregister elem name cache <span style="color: #000000; font-weight: bold;">in</span>
+      <span style="color: #a52a2a;">()</span>
+  <span style="color: #000000; font-weight: bold;">in</span> <span style="color: #6434A3;">Tea_sub.</span>registration key enableCall
+
+<span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">downs</span><span style="color: #BA36A5;"> </span><span style="color: #a52a2a;">?(</span><span style="color: #BA36A5;">key</span><span style="color: #a52a2a;">=</span><span style="color: #008000;">""</span><span style="color: #a52a2a;">)</span><span style="color: #BA36A5;"> tagger</span> <span style="color: #a52a2a;">=</span>
+  registerGlobal <span style="color: #008000;">"keydown"</span> key tagger
+</pre>
+</div>
+
+<p>
+Whenever a key is pressed, the key code and flags for all the modifier
+keys are extracted from the key event and put into a record of type
+<code>key_event</code>.  Let's add a subscription to our app and handle some key
+presses.  First, the message:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-ocaml"><span style="color: #000000; font-weight: bold;">type</span> <span style="color: #6434A3;">msg</span> <span style="color: #a52a2a;">=</span>
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Board_msg</span> <span style="color: #0000FF;">of</span> <span style="color: #6434A3;">Board.</span>msg
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Random_button</span>
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Takeback_button</span>
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Random_move</span> <span style="color: #0000FF;">of</span> <span style="color: #6434A3;">Chess.</span>move
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Key_pressed</span> <span style="color: #0000FF;">of</span> <span style="color: #6434A3;">Keyboard.</span>key_event
+<span style="color: #808080;">[@@bs.deriving {accessors}]</span>
+</pre>
+</div>
+
+<p>
+For the subscriptions, we need to use <code>Sub.batch</code> to be able to listen
+for two different subscriptions at the same time:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-ocaml"><span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">subscriptions</span><span style="color: #BA36A5;"> model</span> <span style="color: #a52a2a;">=</span>
+  <span style="color: #6434A3;">Sub.</span>batch
+    <span style="color: #a52a2a;">[</span> <span style="color: #6434A3;">Board.</span>subscriptions model.board <span style="color: #a52a2a;">|&gt;</span> <span style="color: #6434A3;">Sub.</span>map board_msg
+    <span style="color: #a52a2a;">;</span> <span style="color: #6434A3;">Keyboard.</span>downs key_pressed <span style="color: #a52a2a;">]</span>
+</pre>
+</div>
+
+<p>
+Now we need to handle the interesting keyboard events in the <code>update</code> function. I use a Mac, so I use <kbd>Ctrl-r</kbd> for "random
+move" and <kbd>Ctrl-t</kbd> for "take back".  If you need the
+<kbd>Ctrl</kbd> key, just adapt the code.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-ocaml"><span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Key_pressed</span> key_event <span style="color: #a52a2a;">-&gt;</span> <span style="color: #6434A3;">Js.</span>log key_event<span style="color: #a52a2a;">;</span>
+  model<span style="color: #a52a2a;">,</span>
+  <span style="color: #000000; font-weight: bold;">begin</span> <span style="color: #0000FF;">match</span> key_event.ctrl<span style="color: #a52a2a;">,</span> key_event.key_code <span style="color: #0000FF;">with</span>
+    <span style="color: #a52a2a;">|</span> <span style="color: #D0372D;">true</span><span style="color: #a52a2a;">,</span> 82 <span style="color: #8D8D84;">(* </span><span style="color: #8D8D84; font-style: italic;">Ctrl-r </span><span style="color: #8D8D84;">*)</span> <span style="color: #a52a2a;">-&gt;</span> <span style="color: #6434A3;">Cmd.</span>msg <span style="color: #000000; background-color: #FFFFFF;">Random_button</span>
+    <span style="color: #a52a2a;">|</span> <span style="color: #D0372D;">true</span><span style="color: #a52a2a;">,</span> 84 <span style="color: #8D8D84;">(* </span><span style="color: #8D8D84; font-style: italic;">Ctrl-t </span><span style="color: #8D8D84;">*)</span> <span style="color: #a52a2a;">-&gt;</span> <span style="color: #6434A3;">Cmd.</span>msg <span style="color: #000000; background-color: #FFFFFF;">Takeback_button</span>
+    <span style="color: #a52a2a;">|</span> _ <span style="color: #a52a2a;">-&gt;</span> <span style="color: #6434A3;">Cmd.</span>none
+  <span style="color: #000000; font-weight: bold;">end</span>
+</pre>
+</div>
+
+<p>
+(Exercise: Add a keyboard shortcut for flipping the board.)
+</p>
+
+<p>
+This concludes Day 6 of this tutorial.  We're now at tag <code>day6</code> in my
+repository.  <a href="../day7/index.html">Tomorrow, we will improve the looks of the move list, and
+allow non-destructive stepping back and forward in the list.</a>
+</p>
+</div>
+</div>
+</div>
+</body>
+</html>
