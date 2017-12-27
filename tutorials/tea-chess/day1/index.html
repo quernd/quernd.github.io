@@ -3,7 +3,7 @@
 "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
 <head>
-<!-- 2017-12-27 Wed 18:27 -->
+<!-- 2017-12-27 Wed 19:46 -->
 <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Twelve Days of Christmas #1</title>
@@ -147,28 +147,37 @@ grasp if all you remember is this:
 <li>Your program state is represented by a <i>model</i>.</li>
 <li>Whenever stuff happens (user clicks a button, AJAX data comes in,
 etc.), the <i>update</i> function receives a <i>message</i> and the current
-<i>model</i> and returns a new <i>model</i>  and a recipe for any side effects that you would like to
-execute (called a <i>command</i>).</li>
+model and returns a new model.</li>
 <li>The <i>view</i> function computes a
 virtual DOM tree from the model (which is rendered to the
 screen).</li>
-<li>Side effects are managed behind the scenes to ensure that your
-functions stay pure; when a side effect is actually executed, it
-gets boxed into a <i>message</i>.  In addition to commands, your program
-can listen to <i>subscriptions</i> to receive messages
-on events such as mouse and keyboard events, websockets, and time.</li>
 </ol>
 
 <p>
 Here's an adorable illustration by <a href="https://twitter.com/01k">Kolja Wilcke</a> from his and <a href="https://twitter.com/unsoundscapes">Andrey
-Kuzmin</a>'s talk on <a href="https://github.com/w0rm/creating-a-fun-game-with-elm">Creating a Fun Game With Elm</a>:
+Kuzmin</a>'s <a href="https://www.youtube.com/watch?v=En2BKs8unnQ">talk</a> on <a href="https://github.com/w0rm/creating-a-fun-game-with-elm">Creating a Fun Game With Elm</a>:
 </p>
 
-
-<div class="figure">
-<p><img src="https://pbs.twimg.com/media/CnpRAoaXYAEF7Dz.jpg" alt="CnpRAoaXYAEF7Dz.jpg" />
+<p>
+<blockquote class="twitter-tweet" data-lang="en"><p lang="en" dir="ltr">Elm Architecture <a href="https://twitter.com/hashtag/illustration?src=hash&amp;ref_src=twsrc%5Etfw">#illustration</a> from our talk with <a href="https://twitter.com/unsoundscapes?ref_src=twsrc%5Etfw">@unsoundscapes</a> <a href="https://twitter.com/curry_on_conf?ref_src=twsrc%5Etfw">@curry_on_conf</a> <a href="https://t.co/yTE5iivne7">pic.twitter.com/yTE5iivne7</a></p>&mdash; Kolja Wilcke (@01k) <a href="https://twitter.com/01k/status/755005168933011456?ref_src=twsrc%5Etfw">July 18, 2016</a></blockquote>
+<script async src="https://platform.twitter.com/widgets.js"
+charset="utf-8"></script>
 </p>
-</div>
+
+<p>
+Side effects are managed behind the scenes to ensure that your
+functions stay pure. (A function is <a href="https://en.wikipedia.org/wiki/Pure_function">pure</a> when it will always return
+the same output value when called with the same input arguments, and
+doesn't cause any side effect.)  Therefore, in the Elm architecture,
+you only deal with <i>recipes</i> for side effects, called <i>commands</i>.
+When you need to ask for a side effect to be
+performed, you can issue a command together with the new model in
+the <i>update</i> function. Your program can also listen to <i>subscriptions</i>
+to receive messages on events such as mouse and keyboard events,
+websockets, and time. Both commands and subscriptions will feed
+messages into your update function.  In order to use commands and
+subscriptions, you need to "upgrade" from <code>beginnerProgram</code> to <code>standardProgram</code>.
+</p>
 
 <p>
 If you installed Merlin, you can use it to examine the types of the
