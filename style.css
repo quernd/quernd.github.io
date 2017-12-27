@@ -107,6 +107,12 @@ body {
 		font-size: 1em;
 			}
 
+
+h1 {
+    font-size: 1.5em;
+    color: #3b3b3b;
+} 
+
 h1.title, h2, h3, h4, h5, h6, h7, h8  {
 		font-family: Georgia, "Times New Roman", serif;
 		text-transform: uppercase;
@@ -127,13 +133,9 @@ h1.name {
 		margin: 0.5em 0 0.25em 0;
 		padding: 0;
 		color: #3b3b3b;
-
 	}
 
-h1.title {
-    font-size: 1.5em;
-    color: #3b3b3b;
-}
+
 
 h2 {
 	font-size: 1.2em;
@@ -150,9 +152,10 @@ h3 {
 
 
 		@media screen and (min-width: 700px) {
-			h1 {
-				font-size: 2.5em;
+			h1.title {
+				font-size: 1.7em;
 			}
+                        h1.name { font-size: 2.4em; }
 		}
 
 
@@ -169,15 +172,6 @@ a:hover {
 		color: #ff7a00;
 		border-bottom: solid 1px #ff7a00;
 			}
-
-.title a {
-		border-bottom: 0px;
-		color: #3b3b3b;
-			}
-
-.title a:hover {
-		border-bottom: 0px;
-}
 
 
 a.img   {

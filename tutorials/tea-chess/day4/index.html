@@ -3,7 +3,7 @@
 "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
 <head>
-<!-- 2017-12-26 Tue 19:24 -->
+<!-- 2017-12-27 Wed 20:35 -->
 <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Twelve Days of Christmas #4</title>
@@ -232,7 +232,13 @@ We use <code>cartesian_decoder</code> as a building block
 in <code>offset_page_size</code>, where we use it twice to get the screen
 coordinates and the offset coordinates.  We also nest decoders by
 applying the decoder size to the result of getting the field "target"
-from the event in order to know the board's current square size.  In
+from the event in order to know the board's current square size.  (I
+prefer that to hardcoding the square size or keeping it in the board's
+model so that we can use CSS to make the website responsive.)
+</p>
+
+<p>
+In
 order to find out what information to extract from the event, I
 consulted the <a href="https://developer.mozilla.org/en-US/docs/Web/API/MouseEvent">Mozilla Developer Network</a>.  I learned that a
 <code>MouseEvent</code> supplies the <code>pageX</code> and <code>pageY</code> as well as <code>offsetX</code> and
