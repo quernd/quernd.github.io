@@ -3,7 +3,7 @@
 "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
 <head>
-<!-- 2017-12-28 Thu 17:12 -->
+<!-- 2017-12-28 Thu 18:58 -->
 <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Twelve Days of Christmas #7</title>
@@ -68,6 +68,9 @@ for move numbers:
 }
 <span style="color: #0000ff; font-weight: bold;">li.move.highlight &gt; span.move </span>{
   <span style="color: #00AA00;">background</span>: #ff0;
+}
+<span style="color: #0000ff; font-weight: bold;">span.move </span>{
+  <span style="color: #00AA00;">cursor</span>: pointer;
 }
 <span style="color: #0000ff; font-weight: bold;">span.number </span>{
     <span style="color: #00AA00;">color</span>: #808080;
@@ -308,9 +311,9 @@ passing, while <code>move_list_view</code> uses an accumulator.
 <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">move_list_view</span><span style="color: #BA36A5;"> ply </span><span style="color: #a52a2a;">(</span><span style="color: #BA36A5;">past</span><span style="color: #a52a2a;">,</span><span style="color: #BA36A5;"> future</span><span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">=</span>
   <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #000000; font-weight: bold;">rec</span> <span style="color: #006699;">loop</span><span style="color: #BA36A5;"> offset acc</span> <span style="color: #a52a2a;">=</span> <span style="color: #0000FF;">function</span>
     <span style="color: #a52a2a;">|</span> <span style="color: #a52a2a;">[]</span> <span style="color: #a52a2a;">-&gt;</span> acc
-    <span style="color: #a52a2a;">|</span> hd<span style="color: #a52a2a;">::</span>tl <span style="color: #a52a2a;">-&gt;</span> loop <span style="color: #a52a2a;">(</span>offset <span style="color: #a52a2a;">+</span> 1<span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">(</span>move_view <span style="color: #a52a2a;">(</span>ply <span style="color: #a52a2a;">-</span> offset<span style="color: #a52a2a;">)</span> hd<span style="color: #a52a2a;">::</span>acc<span style="color: #a52a2a;">)</span> tl
+    <span style="color: #a52a2a;">|</span> hd<span style="color: #a52a2a;">::</span>tl <span style="color: #a52a2a;">-&gt;</span> loop <span style="color: #a52a2a;">(</span>offset <span style="color: #a52a2a;">-</span> 1<span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">(</span>move_view <span style="color: #a52a2a;">(</span>ply <span style="color: #a52a2a;">+</span> offset<span style="color: #a52a2a;">)</span> hd<span style="color: #a52a2a;">::</span>acc<span style="color: #a52a2a;">)</span> tl
   <span style="color: #000000; font-weight: bold;">in</span>
-  loop 1 <span style="color: #a52a2a;">(</span>move_list_future_view ply future<span style="color: #a52a2a;">)</span> past
+  loop <span style="color: #a52a2a;">(-</span>1<span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">(</span>move_list_future_view ply future<span style="color: #a52a2a;">)</span> past
   <span style="color: #a52a2a;">|&gt;</span> ul <span style="color: #a52a2a;">[</span>class' <span style="color: #008000;">"moves"</span><span style="color: #a52a2a;">]</span>
 </pre>
 </div>
@@ -349,9 +352,9 @@ past list:
 <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">move_list_view</span><span style="color: #BA36A5;"> ply </span><span style="color: #a52a2a;">(</span><span style="color: #BA36A5;">past</span><span style="color: #a52a2a;">,</span><span style="color: #BA36A5;"> future</span><span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">=</span>
   <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #000000; font-weight: bold;">rec</span> <span style="color: #006699;">loop</span><span style="color: #BA36A5;"> offset acc</span> <span style="color: #a52a2a;">=</span> <span style="color: #0000FF;">function</span>
     <span style="color: #a52a2a;">|</span> <span style="color: #a52a2a;">[]</span> <span style="color: #a52a2a;">-&gt;</span> acc
-    <span style="color: #a52a2a;">|</span> hd<span style="color: #a52a2a;">::</span>tl <span style="color: #a52a2a;">-&gt;</span> loop <span style="color: #a52a2a;">(</span>offset <span style="color: #a52a2a;">+</span> 1<span style="color: #a52a2a;">)</span>
-                  <span style="color: #a52a2a;">(</span>move_view <span style="color: #D0372D;">~highlight</span><span style="color: #a52a2a;">:(</span>offset <span style="color: #a52a2a;">=</span> 1<span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">(</span>ply <span style="color: #a52a2a;">-</span> offset<span style="color: #a52a2a;">)</span> hd<span style="color: #a52a2a;">::</span>acc<span style="color: #a52a2a;">)</span> tl
-  <span style="color: #000000; font-weight: bold;">in</span> loop 1 <span style="color: #a52a2a;">(</span>move_list_future_view ply future<span style="color: #a52a2a;">)</span> past
+    <span style="color: #a52a2a;">|</span> hd<span style="color: #a52a2a;">::</span>tl <span style="color: #a52a2a;">-&gt;</span> loop <span style="color: #a52a2a;">(</span>offset <span style="color: #a52a2a;">-</span> 1<span style="color: #a52a2a;">)</span>
+                  <span style="color: #a52a2a;">(</span>move_view <span style="color: #D0372D;">~highlight</span><span style="color: #a52a2a;">:(</span>offset <span style="color: #a52a2a;">=</span> <span style="color: #a52a2a;">-</span>1<span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">(</span>ply <span style="color: #a52a2a;">+</span> offset<span style="color: #a52a2a;">)</span> hd<span style="color: #a52a2a;">::</span>acc<span style="color: #a52a2a;">)</span> tl
+  <span style="color: #000000; font-weight: bold;">in</span> loop <span style="color: #a52a2a;">(-</span>1<span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">(</span>move_list_future_view ply future<span style="color: #a52a2a;">)</span> past
      <span style="color: #a52a2a;">|&gt;</span> ul <span style="color: #a52a2a;">[</span>class' <span style="color: #008000;">"moves"</span><span style="color: #a52a2a;">]</span>
 </pre>
 </div>
@@ -373,10 +376,11 @@ OCaml with <code>{js| |js}</code> strings:
 <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">move_list_view</span><span style="color: #BA36A5;"> ply </span><span style="color: #a52a2a;">(</span><span style="color: #BA36A5;">past</span><span style="color: #a52a2a;">,</span><span style="color: #BA36A5;"> future</span><span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">=</span>
   <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #000000; font-weight: bold;">rec</span> <span style="color: #006699;">loop</span><span style="color: #BA36A5;"> offset acc</span> <span style="color: #a52a2a;">=</span> <span style="color: #0000FF;">function</span>
     <span style="color: #a52a2a;">|</span> <span style="color: #a52a2a;">[]</span> <span style="color: #a52a2a;">-&gt;</span> acc
-    <span style="color: #a52a2a;">|</span> hd<span style="color: #a52a2a;">::</span>tl <span style="color: #a52a2a;">-&gt;</span> loop <span style="color: #a52a2a;">(</span>offset <span style="color: #a52a2a;">+</span> 1<span style="color: #a52a2a;">)</span>
-                  <span style="color: #a52a2a;">(</span>move_view <span style="color: #D0372D;">~highlight</span><span style="color: #a52a2a;">:(</span>offset <span style="color: #a52a2a;">=</span> 1<span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">(</span>ply <span style="color: #a52a2a;">-</span> offset<span style="color: #a52a2a;">)</span> hd<span style="color: #a52a2a;">::</span>acc<span style="color: #a52a2a;">)</span> tl
+    <span style="color: #a52a2a;">|</span> hd<span style="color: #a52a2a;">::</span>tl <span style="color: #a52a2a;">-&gt;</span>
+      loop <span style="color: #a52a2a;">(</span>offset <span style="color: #a52a2a;">-</span> 1<span style="color: #a52a2a;">)</span>
+        <span style="color: #a52a2a;">(</span>move_view <span style="color: #D0372D;">~highlight</span><span style="color: #a52a2a;">:(</span>offset <span style="color: #a52a2a;">=</span> <span style="color: #a52a2a;">-</span>1<span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">(</span>ply <span style="color: #a52a2a;">+</span> offset<span style="color: #a52a2a;">)</span> hd<span style="color: #a52a2a;">::</span>acc<span style="color: #a52a2a;">)</span> tl
   <span style="color: #000000; font-weight: bold;">in</span> home_view <span style="color: #D0372D;">~highlight</span><span style="color: #a52a2a;">:(</span>ply <span style="color: #a52a2a;">=</span> 0<span style="color: #a52a2a;">)::</span>
-     loop 1 <span style="color: #a52a2a;">(</span>move_list_future_view ply future<span style="color: #a52a2a;">)</span> past
+     loop <span style="color: #a52a2a;">(-</span>1<span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">(</span>move_list_future_view ply future<span style="color: #a52a2a;">)</span> past
      <span style="color: #a52a2a;">|&gt;</span> ul <span style="color: #a52a2a;">[</span>class' <span style="color: #008000;">"moves"</span><span style="color: #a52a2a;">]</span>
 </pre>
 </div>
@@ -420,7 +424,93 @@ the keyboard :-)
 <p>
 Now let's implement a "random access" functionality: whenever the user
 clicks on a move, the game will jump to the position after this move.
+Let's define a message <code>Jump</code> with an
+integer argument:
 </p>
+
+<div class="org-src-container">
+<pre class="src src-ocaml"><span style="color: #000000; font-weight: bold;">type</span> <span style="color: #6434A3;">msg</span> <span style="color: #a52a2a;">=</span>
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Board_msg</span> <span style="color: #0000FF;">of</span> <span style="color: #6434A3;">Board.</span>msg
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Random_button</span>
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Back_button</span>
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Fwd_button</span>
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Random_move</span> <span style="color: #0000FF;">of</span> <span style="color: #6434A3;">Chess.</span>move
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Key_pressed</span> <span style="color: #0000FF;">of</span> <span style="color: #6434A3;">Keyboard.</span>key_event
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Jump</span> <span style="color: #0000FF;">of</span> int
+<span style="color: #808080;">[@@bs.deriving {accessors}]</span>
+</pre>
+</div>
+</div>
+
+<div id="outline-container-org73e7730" class="outline-3">
+<h3 id="org73e7730"><span class="todo TODO">TODO</span> explain the jumps</h3>
+<div class="outline-text-3" id="text-org73e7730">
+<p>
+We realize that it fits our story better to start counting the past
+from 0 instead of the future.  This means we have to adapt <code>move_view</code>
+to calculate the move number slightly differently.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-ocaml"><span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">update</span><span style="color: #BA36A5;"> model</span> <span style="color: #a52a2a;">=</span> <span style="color: #0000FF;">function</span>
+
+  <span style="color: #a52a2a;">...</span>
+
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Jump</span> how_many <span style="color: #a52a2a;">-&gt;</span>
+    <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #000000; font-weight: bold;">rec</span> <span style="color: #006699;">jump_fwd</span><span style="color: #BA36A5;"> position zipper n</span> <span style="color: #a52a2a;">=</span>
+      <span style="color: #0000FF;">if</span> n <span style="color: #a52a2a;">&lt;=</span> 0 <span style="color: #0000FF;">then</span> position<span style="color: #a52a2a;">,</span> zipper
+      <span style="color: #0000FF;">else</span> <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #a52a2a;">(</span><span style="color: #BA36A5;">move</span><span style="color: #a52a2a;">,</span><span style="color: #BA36A5;"> _san</span><span style="color: #a52a2a;">),</span><span style="color: #BA36A5;"> zipper'</span> <span style="color: #a52a2a;">=</span> <span style="color: #6434A3;">Zipper.</span>fwd zipper <span style="color: #000000; font-weight: bold;">in</span>
+        jump_fwd <span style="color: #a52a2a;">(</span><span style="color: #6434A3;">Chess.</span>make_move position move<span style="color: #a52a2a;">)</span> zipper' <span style="color: #a52a2a;">(</span>n <span style="color: #a52a2a;">-</span> 1<span style="color: #a52a2a;">)</span> <span style="color: #000000; font-weight: bold;">in</span>
+    <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #000000; font-weight: bold;">rec</span> <span style="color: #006699;">jump_back</span><span style="color: #BA36A5;"> </span><span style="color: #a52a2a;">(</span><span style="color: #BA36A5;">position</span><span style="color: #a52a2a;">:</span><span style="color: #6434A3;">Chess.</span><span style="color: #6434A3;">position</span><span style="color: #a52a2a;">)</span><span style="color: #BA36A5;"> zipper n</span> <span style="color: #a52a2a;">=</span>
+      <span style="color: #0000FF;">match</span> position.prev<span style="color: #a52a2a;">,</span> n <span style="color: #0000FF;">with</span>
+      <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Some</span> position'<span style="color: #a52a2a;">,</span> n <span style="color: #0000FF;">when</span> n <span style="color: #a52a2a;">&lt;</span> 0 <span style="color: #a52a2a;">-&gt;</span>
+        jump_back position' <span style="color: #a52a2a;">(</span><span style="color: #6434A3;">Zipper.</span>back zipper<span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">(</span>n <span style="color: #a52a2a;">+</span> 1<span style="color: #a52a2a;">)</span>
+      <span style="color: #a52a2a;">|</span> _ <span style="color: #a52a2a;">-&gt;</span> position<span style="color: #a52a2a;">,</span> zipper <span style="color: #000000; font-weight: bold;">in</span>
+    <span style="color: #000000; font-weight: bold;">begin</span> <span style="color: #0000FF;">match</span> how_many <span style="color: #0000FF;">with</span>
+      <span style="color: #a52a2a;">|</span> 0 <span style="color: #a52a2a;">-&gt;</span> model<span style="color: #a52a2a;">,</span> <span style="color: #6434A3;">Cmd.</span>none
+      <span style="color: #a52a2a;">|</span> n <span style="color: #a52a2a;">-&gt;</span> <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">position</span><span style="color: #a52a2a;">,</span><span style="color: #BA36A5;"> moves</span> <span style="color: #a52a2a;">=</span>
+               <span style="color: #0000FF;">if</span> n <span style="color: #a52a2a;">&gt;</span> 0 <span style="color: #0000FF;">then</span> jump_fwd model.position model.moves n
+               <span style="color: #0000FF;">else</span> jump_back model.position model.moves n <span style="color: #000000; font-weight: bold;">in</span>
+        <span style="color: #a52a2a;">{</span>model <span style="color: #0000FF;">with</span> position<span style="color: #a52a2a;">;</span> moves<span style="color: #a52a2a;">;</span> ply <span style="color: #a52a2a;">=</span> model.ply <span style="color: #a52a2a;">+</span> n<span style="color: #a52a2a;">},</span> <span style="color: #6434A3;">Cmd.</span>none
+    <span style="color: #000000; font-weight: bold;">end</span>
+
+<span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">move_view</span><span style="color: #BA36A5;"> </span><span style="color: #a52a2a;">?(</span><span style="color: #BA36A5;">highlight</span><span style="color: #a52a2a;">=</span><span style="color: #D0372D;">false</span><span style="color: #a52a2a;">)</span><span style="color: #BA36A5;"> current_ply offset </span><span style="color: #a52a2a;">(</span><span style="color: #BA36A5;">_move</span><span style="color: #a52a2a;">,</span><span style="color: #BA36A5;"> san</span><span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">=</span>
+  <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">ply</span> <span style="color: #a52a2a;">=</span> current_ply <span style="color: #a52a2a;">+</span> offset <span style="color: #a52a2a;">+</span> 1 <span style="color: #000000; font-weight: bold;">in</span>
+  <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">number</span> <span style="color: #a52a2a;">=</span> ply <span style="color: #a52a2a;">/</span> 2
+  <span style="color: #000000; font-weight: bold;">and</span> <span style="color: #BA36A5;">w_move</span> <span style="color: #a52a2a;">=</span> ply <span style="color: #a52a2a;">mod</span> 2 <span style="color: #a52a2a;">=</span> 0 <span style="color: #000000; font-weight: bold;">in</span>
+  li <span style="color: #a52a2a;">[</span> classList <span style="color: #a52a2a;">[</span> <span style="color: #008000;">"move"</span><span style="color: #a52a2a;">,</span> <span style="color: #D0372D;">true</span>
+                 <span style="color: #a52a2a;">;</span> <span style="color: #008000;">"numbered"</span><span style="color: #a52a2a;">,</span> w_move
+                 <span style="color: #a52a2a;">;</span> <span style="color: #008000;">"highlight"</span><span style="color: #a52a2a;">,</span> highlight
+                 <span style="color: #a52a2a;">]</span> <span style="color: #a52a2a;">]</span>
+    <span style="color: #a52a2a;">[</span> span <span style="color: #a52a2a;">[</span>class' <span style="color: #008000;">"number"</span><span style="color: #a52a2a;">]</span> <span style="color: #a52a2a;">[</span>string_of_int number <span style="color: #a52a2a;">|&gt;</span> text<span style="color: #a52a2a;">]</span>
+    <span style="color: #a52a2a;">;</span> span
+        <span style="color: #a52a2a;">[</span> class' <span style="color: #008000;">"move"</span>
+        <span style="color: #a52a2a;">;</span> <span style="color: #0000FF;">if</span> offset <span style="color: #a52a2a;">&lt;&gt;</span> 0 <span style="color: #0000FF;">then</span> onClick <span style="color: #a52a2a;">(</span><span style="color: #000000; background-color: #FFFFFF;">Jump</span> offset<span style="color: #a52a2a;">)</span> <span style="color: #0000FF;">else</span> noProp
+        <span style="color: #a52a2a;">]</span> <span style="color: #a52a2a;">[</span>text san<span style="color: #a52a2a;">]</span>
+    <span style="color: #a52a2a;">]</span>
+
+<span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">home_view</span><span style="color: #BA36A5;"> </span><span style="color: #a52a2a;">~</span><span style="color: #BA36A5;">highlight current_ply</span> <span style="color: #a52a2a;">=</span>
+  li <span style="color: #a52a2a;">[</span> classList
+         <span style="color: #a52a2a;">[</span> <span style="color: #008000;">"move"</span><span style="color: #a52a2a;">,</span> <span style="color: #D0372D;">true</span>
+         <span style="color: #a52a2a;">;</span> <span style="color: #008000;">"highlight"</span><span style="color: #a52a2a;">,</span> highlight <span style="color: #a52a2a;">]</span> <span style="color: #a52a2a;">]</span>
+    <span style="color: #a52a2a;">[</span> span
+        <span style="color: #a52a2a;">[</span> class' <span style="color: #008000;">"move"</span>
+        <span style="color: #a52a2a;">;</span> onClick <span style="color: #a52a2a;">(</span><span style="color: #000000; background-color: #FFFFFF;">Jump</span> <span style="color: #a52a2a;">(-</span>current_ply<span style="color: #a52a2a;">))</span>
+        <span style="color: #a52a2a;">]</span> <span style="color: #a52a2a;">[</span>text <span style="color: #008000;">{js|\u2302|js}</span><span style="color: #a52a2a;">]</span>
+    <span style="color: #a52a2a;">]</span>
+
+<span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">move_list_view</span><span style="color: #BA36A5;"> ply </span><span style="color: #a52a2a;">(</span><span style="color: #BA36A5;">past</span><span style="color: #a52a2a;">,</span><span style="color: #BA36A5;"> future</span><span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">=</span>
+  <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #000000; font-weight: bold;">rec</span> <span style="color: #006699;">loop</span><span style="color: #BA36A5;"> offset acc</span> <span style="color: #a52a2a;">=</span> <span style="color: #0000FF;">function</span>
+    <span style="color: #a52a2a;">|</span> <span style="color: #a52a2a;">[]</span> <span style="color: #a52a2a;">-&gt;</span> acc
+    <span style="color: #a52a2a;">|</span> hd<span style="color: #a52a2a;">::</span>tl <span style="color: #a52a2a;">-&gt;</span>
+      loop <span style="color: #a52a2a;">(</span>offset <span style="color: #a52a2a;">-</span> 1<span style="color: #a52a2a;">)</span>
+        <span style="color: #a52a2a;">(</span>move_view <span style="color: #D0372D;">~highlight</span><span style="color: #a52a2a;">:(</span>offset <span style="color: #a52a2a;">=</span> 0<span style="color: #a52a2a;">)</span> ply offset hd<span style="color: #a52a2a;">::</span>acc<span style="color: #a52a2a;">)</span> tl
+  <span style="color: #000000; font-weight: bold;">in</span> home_view <span style="color: #D0372D;">~highlight</span><span style="color: #a52a2a;">:(</span>ply <span style="color: #a52a2a;">=</span> 0<span style="color: #a52a2a;">)</span> ply<span style="color: #a52a2a;">::</span>
+     loop 0 <span style="color: #a52a2a;">(</span>move_list_future_view ply future<span style="color: #a52a2a;">)</span> past
+     <span style="color: #a52a2a;">|&gt;</span> ul <span style="color: #a52a2a;">[</span>class' <span style="color: #008000;">"moves"</span><span style="color: #a52a2a;">]</span>
+</pre>
+</div>
+</div>
 </div>
 </div>
 </div>
