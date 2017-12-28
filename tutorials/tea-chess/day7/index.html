@@ -3,13 +3,13 @@
 "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
 <head>
-<!-- 2017-12-27 Wed 22:41 -->
+<!-- 2017-12-28 Thu 14:44 -->
 <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Twelve Days of Christmas #7</title>
 <meta name="generator" content="Org mode" />
 <meta name="author" content="Daniel Quernheim" />
-<link rel='stylesheet' href='/style.css' type='text/css'/><link rel='stylesheet' href='/style/commento.css' type='text/css'/><meta name="viewport" content="width=device-width"/><script src='/js/commento.min.js'></script>
+<link rel='stylesheet' href='/style.css' type='text/css'/><meta name="viewport" content="width=device-width"/></script>
 </head>
 <body>
 <div id="org-div-home-and-up">
@@ -36,6 +36,99 @@ repository.
 
 <div id="outline-container-org830c7f9" class="outline-2">
 <h2 id="org830c7f9">Making the move list look better</h2>
+<div class="outline-text-2" id="text-org830c7f9">
+<p>
+So far, we're listing all moves in an unordered list.  That's not how
+you find chess game records printed in magazines.  The most common
+formats are: grouped by pairs of white/black move, or an inline list.
+In any case, moves are numbered in pairs, with the first white move
+labeled <code>1.</code>, the second white move <code>2.</code> etc. Black's moves are
+usually not numbered unless they are the first move in a variation or
+after the move list was interrupted by a comment.  In that case, they
+are labeled with the move number followed by <code>...</code>, e.g. <code>3...</code>.
+Chess players typically make the distinction of <i>number of plies</i> (a
+ply is either one of White's and Black's moves) and <i>number of moves</i>
+(pairs of plies).
+</p>
+
+<p>
+Let's add some CSS to tweak our list so it looks better, and allows
+for move numbers:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-css"><span style="color: #0000ff; font-weight: bold;">li.move </span>{
+  <span style="color: #00AA00;">display</span>: inline;
+}
+<span style="color: #0000ff; font-weight: bold;">ul.moves </span>{
+  <span style="color: #00AA00;">list-style-type</span>: none;
+}
+<span style="color: #0000ff; font-weight: bold;">li.move:after </span>{
+  <span style="color: #00AA00;">content</span>: <span style="color: #008000;">" "</span>;
+}
+<span style="color: #0000ff; font-weight: bold;">span.number </span>{
+    <span style="color: #00AA00;">color</span>: #808080;
+    <span style="color: #00AA00;">display</span>: none;
+}
+<span style="color: #0000ff; font-weight: bold;">span.number:after </span>{
+  <span style="color: #00AA00;">content</span>: <span style="color: #008000;">".\00a0"</span>;
+}
+<span style="color: #0000ff; font-weight: bold;">li.move.numbered &gt; span.number </span>{
+    <span style="color: #00AA00;">display</span>: inline;
+}
+</pre>
+</div>
+
+<p>
+We define the move list to have no bullet points (<code>list-style-type:
+none;</code>), and list items to be displayed inline.  To separate them, we
+use the CSS pseudo selector <code>:after</code> to insert a space.  Move numbers
+will be grey, and by default not shown unless we "switch them on" by
+assigning the <code>numbered</code> class to the move.  We use the <code>:after</code>
+pseudo selector to insert a full stop and a non-breaking space.
+</p>
+
+<p>
+Now let's refactor <code>src/Main.ml</code> so that the move list view gets its
+own function:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-ocaml"><span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">move_view</span><span style="color: #BA36A5;"> ply </span><span style="color: #a52a2a;">(</span><span style="color: #BA36A5;">_move</span><span style="color: #a52a2a;">,</span><span style="color: #BA36A5;"> san</span><span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">=</span>
+  <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">number</span> <span style="color: #a52a2a;">=</span> ply <span style="color: #a52a2a;">/</span> 2 <span style="color: #a52a2a;">+</span> 1
+  <span style="color: #000000; font-weight: bold;">and</span> <span style="color: #BA36A5;">w_move</span> <span style="color: #a52a2a;">=</span> ply <span style="color: #a52a2a;">mod</span> 2 <span style="color: #a52a2a;">=</span> 0 <span style="color: #000000; font-weight: bold;">in</span>
+  li <span style="color: #a52a2a;">[</span> classList <span style="color: #a52a2a;">[</span> <span style="color: #008000;">"move"</span><span style="color: #a52a2a;">,</span> <span style="color: #D0372D;">true</span>
+                 <span style="color: #a52a2a;">;</span> <span style="color: #008000;">"numbered"</span><span style="color: #a52a2a;">,</span> w_move
+                 <span style="color: #a52a2a;">]</span> <span style="color: #a52a2a;">]</span>
+    <span style="color: #a52a2a;">[</span> span <span style="color: #a52a2a;">[</span>class' <span style="color: #008000;">"number"</span><span style="color: #a52a2a;">]</span> <span style="color: #a52a2a;">[</span>string_of_int number <span style="color: #a52a2a;">|&gt;</span> text<span style="color: #a52a2a;">]</span>
+    <span style="color: #a52a2a;">;</span> span <span style="color: #a52a2a;">[</span>class' <span style="color: #008000;">"move"</span><span style="color: #a52a2a;">]</span> <span style="color: #a52a2a;">[</span>text san<span style="color: #a52a2a;">]</span>
+    <span style="color: #a52a2a;">]</span>
+
+<span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">move_list_view</span><span style="color: #BA36A5;"> moves</span> <span style="color: #a52a2a;">=</span>
+  <span style="color: #6434A3;">List.</span>rev moves <span style="color: #a52a2a;">|&gt;</span> <span style="color: #6434A3;">List.</span>mapi move_view <span style="color: #a52a2a;">|&gt;</span> ul <span style="color: #a52a2a;">[</span>class' <span style="color: #008000;">"moves"</span><span style="color: #a52a2a;">]</span>
+</pre>
+</div>
+
+<p>
+We call <code>move_list_view model.moves</code> from the main <code>view</code> function.
+Notice how we check whether it's White's or Black's move by using the
+modulus operation.  It seems there should be an operation to return
+<code>ply / 2</code> (the integer part of the division) and <code>ply mod 2</code> (the
+remainder of the division) in one go, but I couldn't find one.  Not
+performance-critical though :-)
+</p>
+
+<p>
+Unfortunately, there is <code>List.mapi</code> and <code>List.rev_map</code>, but no
+<code>List.rev_mapi</code>, so we have to reverse the list first, and then map
+over it.  Again, not so nice, but we will now change our move list
+structure anyway&#x2026;
+</p>
+</div>
+</div>
+
+<div id="outline-container-org30f8632" class="outline-2">
+<h2 id="org30f8632">List zippers</h2>
 </div>
 </div>
 </body>
