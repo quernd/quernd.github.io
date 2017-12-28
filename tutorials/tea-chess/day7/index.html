@@ -3,7 +3,7 @@
 "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
 <head>
-<!-- 2017-12-28 Thu 14:44 -->
+<!-- 2017-12-28 Thu 16:24 -->
 <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Twelve Days of Christmas #7</title>
@@ -119,16 +119,199 @@ performance-critical though :-)
 </p>
 
 <p>
-Unfortunately, there is <code>List.mapi</code> and <code>List.rev_map</code>, but no
+Unfortunately, there is <code>List.mapi</code> (like <code>List.map</code>, but also passes
+the index of the list item to the function) and <code>List.rev_map</code>, but no
 <code>List.rev_mapi</code>, so we have to reverse the list first, and then map
 over it.  Again, not so nice, but we will now change our move list
 structure anyway&#x2026;
+</p>
+
+<p>
+(Excercise: If you like functional programming, then just for fun, implement <code>rev_mapi</code>. Hint: Use an inner
+loop function and an accumulator.)
 </p>
 </div>
 </div>
 
 <div id="outline-container-org30f8632" class="outline-2">
 <h2 id="org30f8632">List zippers</h2>
+<div class="outline-text-2" id="text-org30f8632">
+<p>
+Let's add a "move back" and "move forward" functionality to the move
+list view.  "Move back" is like "take back", but without changing the
+contents of the list, and "move forward" is like making the next move
+that was already in the list again, also not changing the contents of
+the list.  If we had an array that supports fast random access, we
+would probably just store the index of the current move, but
+</p>
+
+<ul class="org-ul">
+<li>that's really boring</li>
+<li>linked lists don't offer fast random access, and we need to quickly
+access the next move when the "move forward" button is clicked</li>
+<li>we can learn about a cool purely functional data structure called <a href="https://pavpanchekha.com/blog/zippers/huet.html">the
+zipper</a>!</li>
+</ul>
+
+<p>
+Purely functional data structures are immutable, so they fit in nicely
+in our immutable world where we don't modify the model in-place but return a
+modified version of the model.  If you're interested in other purely
+functional data structures, I strongly recommend reading <a href="https://www.cs.cmu.edu/~rwh/theses/okasaki.pdf">Chris
+Okasaki's thesis</a>.
+</p>
+
+<p>
+The basic idea of a zipper is that we represent a data structure by a
+<i>context</i> (a data structure with a hole) and another data structure to
+fill that hole.  This gives us the ability to treat the boundary
+between these two as a <i>cursor</i>, and moving the cursor around can be
+achieved by making cheap local modifications.  Zippers can be defined
+for all algebraic data structures.  In this tutorial, we will first
+use list zippers, and in a later part even tree zippers.
+</p>
+
+<p>
+We know that a list is either the empty list <code>[]</code> or a list made up of
+head and tail: <code>hd::tl</code>.  For instance, the list <code>[1; 2; 3; 4]</code> is
+actually represented as <code>1::[2::[3::[4::[]]]]</code>.  Navigating in this
+list actually means moving into and out of the square brackets!  A
+list zipper separates what we've already seen and what we're about to
+see. For instance, a zipper at the position after <code>2</code> would be the
+pair of <code>past = 1::[2:: ◊ ]</code> (a list with a "hole") and a list to fill
+that hole: <code>future = [3; 4]</code>. 
+</p>
+
+<p>
+But how can we represent a list with a
+hole?  The crucial idea here is the "reversal of arrows".  Check out
+these nice visual explanations for <a href="https://pavpanchekha.com/blog/zippers/huet.html">lists</a> and <a href="http://blog.ezyang.com/2010/04/you-could-have-invented-zippers/">trees</a>.  We turn the
+"past" list around: <code>past = [2; 1]</code>.  Then navigation becomes easy.
+Moving back just takes the first element of <code>past</code> and appends it to the <code>future</code>
+list.  Moving forward just takes the first element of the <code>future</code>
+list and appends it to the <code>past</code> list.
+</p>
+
+<p>
+Start a new file <code>src/Zipper.ml</code>.  Here's the code for a simple list
+zipper:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-ocaml"><span style="color: #000000; font-weight: bold;">type</span> <span style="color: #6434A3;">'a context</span> <span style="color: #a52a2a;">=</span> 'a list
+<span style="color: #000000; font-weight: bold;">type</span> <span style="color: #6434A3;">'a zipper</span> <span style="color: #a52a2a;">=</span> 'a context <span style="color: #a52a2a;">*</span> 'a list
+
+<span style="color: #0000FF;">exception</span> <span style="color: #BA36A5;">End_of_list</span>
+<span style="color: #0000FF;">exception</span> <span style="color: #BA36A5;">Beginning_of_list</span>
+
+<span style="color: #8D8D84;">(* </span><span style="color: #8D8D84; font-style: italic;">move forward and return item and new zipper </span><span style="color: #8D8D84;">*)</span>
+<span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">fwd</span><span style="color: #BA36A5;"> </span><span style="color: #a52a2a;">(</span><span style="color: #BA36A5;">past</span><span style="color: #a52a2a;">,</span><span style="color: #BA36A5;"> future</span><span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">=</span>
+  <span style="color: #0000FF;">match</span> future <span style="color: #0000FF;">with</span>
+  <span style="color: #a52a2a;">|</span> <span style="color: #a52a2a;">[]</span> <span style="color: #a52a2a;">-&gt;</span> <span style="color: #006FE0;">raise</span> <span style="color: #000000; background-color: #FFFFFF;">End_of_list</span>
+  <span style="color: #a52a2a;">|</span> hd<span style="color: #a52a2a;">::</span>future' <span style="color: #a52a2a;">-&gt;</span> hd<span style="color: #a52a2a;">,</span> <span style="color: #a52a2a;">(</span>hd<span style="color: #a52a2a;">::</span>past<span style="color: #a52a2a;">,</span> future'<span style="color: #a52a2a;">)</span>
+
+<span style="color: #8D8D84;">(* </span><span style="color: #8D8D84; font-style: italic;">move back and return item and new zipper </span><span style="color: #8D8D84;">*)</span>
+<span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">back</span><span style="color: #BA36A5;"> </span><span style="color: #a52a2a;">(</span><span style="color: #BA36A5;">past</span><span style="color: #a52a2a;">,</span><span style="color: #BA36A5;"> future</span><span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">=</span>
+  <span style="color: #0000FF;">match</span> past <span style="color: #0000FF;">with</span>
+  <span style="color: #a52a2a;">|</span> <span style="color: #a52a2a;">[]</span> <span style="color: #a52a2a;">-&gt;</span> <span style="color: #006FE0;">raise</span> <span style="color: #000000; background-color: #FFFFFF;">Beginning_of_list</span>
+  <span style="color: #a52a2a;">|</span> hd<span style="color: #a52a2a;">::</span>past' <span style="color: #a52a2a;">-&gt;</span> hd<span style="color: #a52a2a;">,</span> <span style="color: #a52a2a;">(</span>past'<span style="color: #a52a2a;">,</span> hd<span style="color: #a52a2a;">::</span>future<span style="color: #a52a2a;">)</span>
+
+<span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">fwd'</span><span style="color: #BA36A5;"> item </span><span style="color: #a52a2a;">(</span><span style="color: #BA36A5;">past</span><span style="color: #a52a2a;">,</span><span style="color: #BA36A5;"> future</span><span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">=</span>
+  <span style="color: #0000FF;">match</span> future <span style="color: #0000FF;">with</span>
+  <span style="color: #a52a2a;">|</span> hd<span style="color: #a52a2a;">::</span>future' <span style="color: #0000FF;">when</span> hd <span style="color: #a52a2a;">=</span> item <span style="color: #a52a2a;">-&gt;</span> hd<span style="color: #a52a2a;">::</span>past<span style="color: #a52a2a;">,</span> future'
+  <span style="color: #a52a2a;">|</span> _ <span style="color: #a52a2a;">-&gt;</span> past<span style="color: #a52a2a;">,</span> <span style="color: #a52a2a;">[</span>item<span style="color: #a52a2a;">]</span>
+
+<span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">init</span><span style="color: #BA36A5;"> </span><span style="color: #a52a2a;">()</span> <span style="color: #a52a2a;">=</span> <span style="color: #a52a2a;">[],</span> <span style="color: #a52a2a;">[]</span>
+</pre>
+</div>
+
+<p>
+Notice how we use a <i>type variable</i> <code>'a</code> here to keep our
+implementation generic.  The functions <code>fwd</code> and <code>back</code>, in addition
+to moving the cursor, return the list item over which the cursor was
+moved.  The function <code>fwd'</code> is like <code>fwd</code> when the
+supplied item matches the next item in the list; otherwise it deletes
+the future and starts over.
+</p>
+
+<p>
+Let's use a list zipper instead of a list to represent the moves now.
+Additionally, we now need to keep track of the current ply.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-ocaml"><span style="color: #000000; font-weight: bold;">type</span> <span style="color: #6434A3;">model</span> <span style="color: #a52a2a;">=</span>
+  <span style="color: #a52a2a;">{</span> position <span style="color: #a52a2a;">:</span> <span style="color: #6434A3;">Chess.</span>position
+  <span style="color: #a52a2a;">;</span> board <span style="color: #a52a2a;">:</span> <span style="color: #6434A3;">Board.</span>model
+  <span style="color: #a52a2a;">;</span> moves <span style="color: #a52a2a;">:</span> <span style="color: #a52a2a;">(</span><span style="color: #6434A3;">Chess.</span>move <span style="color: #a52a2a;">*</span> string<span style="color: #a52a2a;">)</span> <span style="color: #6434A3;">Zipper.</span>zipper
+  <span style="color: #a52a2a;">;</span> ply <span style="color: #a52a2a;">:</span> int
+  <span style="color: #a52a2a;">}</span>
+
+<span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">init</span><span style="color: #BA36A5;"> </span><span style="color: #a52a2a;">()</span> <span style="color: #a52a2a;">=</span>
+  <span style="color: #a52a2a;">{</span> position <span style="color: #a52a2a;">=</span> <span style="color: #6434A3;">Chess.</span>init_position
+  <span style="color: #a52a2a;">;</span> board <span style="color: #a52a2a;">=</span> <span style="color: #6434A3;">Board.</span>init <span style="color: #a52a2a;">()</span>
+  <span style="color: #a52a2a;">;</span> moves <span style="color: #a52a2a;">=</span> <span style="color: #6434A3;">Zipper.</span>init <span style="color: #a52a2a;">()</span>
+  <span style="color: #a52a2a;">;</span> ply <span style="color: #a52a2a;">=</span> 0
+  <span style="color: #a52a2a;">},</span> <span style="color: #6434A3;">Cmd.</span>none
+</pre>
+</div>
+
+<p>
+In the <code>update</code> function, we need to track the ply number when using
+the zipper:
+</p>
+<div class="org-src-container">
+<pre class="src src-ocaml"><span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Random_move</span> move <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Board_msg</span> <span style="color: #a52a2a;">(</span><span style="color: #000000; background-color: #FFFFFF;">Move</span> move<span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">-&gt;</span>
+  <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">san</span> <span style="color: #a52a2a;">=</span> <span style="color: #6434A3;">Chess.</span>san_of_move model.position move <span style="color: #000000; font-weight: bold;">in</span>
+  <span style="color: #a52a2a;">{</span> model <span style="color: #0000FF;">with</span>
+    position <span style="color: #a52a2a;">=</span> <span style="color: #6434A3;">Chess.</span>make_move model.position move
+  <span style="color: #a52a2a;">;</span> moves <span style="color: #a52a2a;">=</span> <span style="color: #6434A3;">Zipper.</span>fwd' <span style="color: #a52a2a;">(</span>move<span style="color: #a52a2a;">,</span> san<span style="color: #a52a2a;">)</span> model.moves
+  <span style="color: #a52a2a;">;</span> ply <span style="color: #a52a2a;">=</span> model.ply <span style="color: #a52a2a;">+</span> 1
+  <span style="color: #a52a2a;">},</span> <span style="color: #6434A3;">Cmd.</span>none
+<span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Takeback_button</span> <span style="color: #a52a2a;">-&gt;</span>
+  <span style="color: #000000; font-weight: bold;">begin</span> <span style="color: #0000FF;">match</span> model.position.prev <span style="color: #0000FF;">with</span>
+    <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Some</span> position <span style="color: #a52a2a;">-&gt;</span>
+      <span style="color: #a52a2a;">{</span> model <span style="color: #0000FF;">with</span>
+        moves <span style="color: #a52a2a;">=</span> <span style="color: #6434A3;">Zipper.</span>back model.moves
+      <span style="color: #a52a2a;">;</span> position
+      <span style="color: #a52a2a;">;</span> ply <span style="color: #a52a2a;">=</span> model.ply <span style="color: #a52a2a;">-</span> 1<span style="color: #a52a2a;">}</span>
+    <span style="color: #a52a2a;">|</span> _ <span style="color: #a52a2a;">-&gt;</span> model
+  <span style="color: #000000; font-weight: bold;">end</span><span style="color: #a52a2a;">,</span> <span style="color: #6434A3;">Cmd.</span>none
+</pre>
+</div>
+
+<p>
+The <code>view</code> function hands the zipper and the ply number off to the
+<code>move_list_view</code>.  This is going to be a little tricky because the
+future needs to be counting upwards while the past needs to be
+counting down.  I chose to implement tail-recursive functions that
+make everything explicit:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-ocaml"><span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">move_list_future_view</span><span style="color: #BA36A5;"> ply future</span> <span style="color: #a52a2a;">=</span>
+  <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #000000; font-weight: bold;">rec</span> <span style="color: #006699;">loop</span><span style="color: #BA36A5;"> offset cont</span> <span style="color: #a52a2a;">=</span> <span style="color: #0000FF;">function</span>
+    <span style="color: #a52a2a;">|</span> <span style="color: #a52a2a;">[]</span> <span style="color: #a52a2a;">-&gt;</span> cont <span style="color: #a52a2a;">[]</span>
+    <span style="color: #a52a2a;">|</span> hd<span style="color: #a52a2a;">::</span>tl <span style="color: #a52a2a;">-&gt;</span>
+      loop <span style="color: #a52a2a;">(</span>offset <span style="color: #a52a2a;">+</span> 1<span style="color: #a52a2a;">)</span>
+        <span style="color: #a52a2a;">(</span><span style="color: #0000FF;">fun</span> <span style="color: #BA36A5;">acc</span> <span style="color: #a52a2a;">-&gt;</span> move_view <span style="color: #a52a2a;">(</span>ply <span style="color: #a52a2a;">+</span> offset<span style="color: #a52a2a;">)</span> hd<span style="color: #a52a2a;">::</span>acc <span style="color: #a52a2a;">|&gt;</span> cont<span style="color: #a52a2a;">)</span> tl
+  <span style="color: #000000; font-weight: bold;">in</span> loop 0 <span style="color: #a52a2a;">(</span><span style="color: #0000FF;">fun</span> <span style="color: #BA36A5;">x</span> <span style="color: #a52a2a;">-&gt;</span> x<span style="color: #a52a2a;">)</span> future
+
+<span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">move_list_view</span><span style="color: #BA36A5;"> ply </span><span style="color: #a52a2a;">(</span><span style="color: #BA36A5;">past</span><span style="color: #a52a2a;">,</span><span style="color: #BA36A5;"> future</span><span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">=</span>
+  <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #000000; font-weight: bold;">rec</span> <span style="color: #006699;">loop</span><span style="color: #BA36A5;"> offset acc</span> <span style="color: #a52a2a;">=</span> <span style="color: #0000FF;">function</span>
+    <span style="color: #a52a2a;">|</span> <span style="color: #a52a2a;">[]</span> <span style="color: #a52a2a;">-&gt;</span> acc
+    <span style="color: #a52a2a;">|</span> hd<span style="color: #a52a2a;">::</span>tl <span style="color: #a52a2a;">-&gt;</span> loop <span style="color: #a52a2a;">(</span>offset <span style="color: #a52a2a;">+</span> 1<span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">(</span>move_view <span style="color: #a52a2a;">(</span>ply <span style="color: #a52a2a;">-</span> offset<span style="color: #a52a2a;">)</span> hd<span style="color: #a52a2a;">::</span>acc<span style="color: #a52a2a;">)</span> tl
+  <span style="color: #000000; font-weight: bold;">in</span>
+  loop 1 <span style="color: #a52a2a;">(</span>move_list_future_view ply future<span style="color: #a52a2a;">)</span> past
+  <span style="color: #a52a2a;">|&gt;</span> ul <span style="color: #a52a2a;">[</span>class' <span style="color: #008000;">"moves"</span><span style="color: #a52a2a;">]</span>
+</pre>
+</div>
+
+<p>
+(Exercise: Rewrite move<sub>list</sub><sub>view</sub> in terms of <code>List.fold_left</code>. Hint:
+Carry the offset along with the accumulator.)
+</p>
+</div>
 </div>
 </div>
 </body>
