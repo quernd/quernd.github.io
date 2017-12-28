@@ -3,13 +3,13 @@
 "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
 <head>
-<!-- 2017-12-27 Wed 15:37 -->
+<!-- 2017-12-28 Thu 13:23 -->
 <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Twelve Days of Christmas #6</title>
 <meta name="generator" content="Org mode" />
 <meta name="author" content="Daniel Quernheim" />
-<link rel='stylesheet' href='/style.css' type='text/css'/><meta name="viewport" content="width=device-width"/>
+<link rel='stylesheet' href='/style.css' type='text/css'/><meta name="viewport" content="width=device-width"/></script>
 </head>
 <body>
 <div id="org-div-home-and-up">
@@ -104,9 +104,7 @@ defining a few useful types:
   <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Kside_castle</span>
 
 <span style="color: #000000; font-weight: bold;">type</span> <span style="color: #6434A3;">check</span> <span style="color: #a52a2a;">=</span>
-  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Check</span> <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Checkmate</span> <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">No_check</span>
-
-<span style="color: #000000; font-weight: bold;">type</span> <span style="color: #6434A3;">annotated_move</span> <span style="color: #a52a2a;">=</span> long_move <span style="color: #a52a2a;">*</span> check
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Check</span> <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Checkmate</span> <span style="color: #a52a2a;">|</span> No_check
 </pre>
 </div>
 
@@ -134,40 +132,43 @@ it for a capturing move, and optionally a promotion piece.
 
 
 <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">long_move</span><span style="color: #BA36A5;"> position move</span> <span style="color: #a52a2a;">=</span>
-  <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">check</span> <span style="color: #a52a2a;">=</span> annotate_move position move
-  <span style="color: #000000; font-weight: bold;">and</span> <span style="color: #BA36A5;">move'</span> <span style="color: #a52a2a;">=</span> 
-    <span style="color: #0000FF;">match</span> move <span style="color: #0000FF;">with</span>
-    <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Move</span> <span style="color: #a52a2a;">(</span>s_file<span style="color: #a52a2a;">,</span> s_rank<span style="color: #a52a2a;">,</span> t_file<span style="color: #a52a2a;">,</span> t_rank<span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">-&gt;</span>
-      <span style="color: #000000; font-weight: bold;">begin</span> <span style="color: #0000FF;">match</span> position.ar.<span style="color: #a52a2a;">(</span>s_file<span style="color: #a52a2a;">)</span>.<span style="color: #a52a2a;">(</span>s_rank<span style="color: #a52a2a;">)</span> <span style="color: #0000FF;">with</span>
-        <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Piece</span> <span style="color: #a52a2a;">(</span><span style="color: #000000; background-color: #FFFFFF;">Pawn</span><span style="color: #a52a2a;">,</span> _<span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">-&gt;</span>
-          <span style="color: #8D8D84;">(* </span><span style="color: #8D8D84; font-style: italic;">a pawn move is a capture if and only if it changes files </span><span style="color: #8D8D84;">*)</span>
-          <span style="color: #000000; background-color: #FFFFFF;">Pawn_move</span> <span style="color: #a52a2a;">(</span>s_file<span style="color: #a52a2a;">,</span> <span style="color: #a52a2a;">(</span>t_file<span style="color: #a52a2a;">,</span> t_rank<span style="color: #a52a2a;">),</span> <span style="color: #a52a2a;">(</span>s_file <span style="color: #a52a2a;">&lt;&gt;</span> t_file<span style="color: #a52a2a;">),</span> <span style="color: #000000; background-color: #FFFFFF;">None</span><span style="color: #a52a2a;">)</span>
-        <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Piece</span> <span style="color: #a52a2a;">(</span>p_type<span style="color: #a52a2a;">,</span> _<span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">-&gt;</span>
-          <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">capture</span> <span style="color: #a52a2a;">=</span>
-            <span style="color: #0000FF;">match</span> position.ar.<span style="color: #a52a2a;">(</span>t_file<span style="color: #a52a2a;">)</span>.<span style="color: #a52a2a;">(</span>t_rank<span style="color: #a52a2a;">)</span> <span style="color: #0000FF;">with</span>
-            <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Piece</span> _ <span style="color: #a52a2a;">-&gt;</span> <span style="color: #D0372D;">true</span> <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Empty</span> <span style="color: #a52a2a;">-&gt;</span> <span style="color: #D0372D;">false</span> <span style="color: #000000; font-weight: bold;">in</span>
-          <span style="color: #000000; background-color: #FFFFFF;">Piece_move</span> <span style="color: #a52a2a;">(</span>p_type<span style="color: #a52a2a;">,</span> <span style="color: #a52a2a;">(</span>s_file<span style="color: #a52a2a;">,</span> s_rank<span style="color: #a52a2a;">),</span> <span style="color: #a52a2a;">(</span>t_file<span style="color: #a52a2a;">,</span> t_rank<span style="color: #a52a2a;">),</span> capture<span style="color: #a52a2a;">)</span>
-        <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Empty</span> <span style="color: #a52a2a;">-&gt;</span> <span style="color: #006FE0;">raise</span> <span style="color: #000000; background-color: #FFFFFF;">Illegal_move</span>
-      <span style="color: #000000; font-weight: bold;">end</span>
-    <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Queenside_castle</span> <span style="color: #a52a2a;">-&gt;</span> <span style="color: #000000; background-color: #FFFFFF;">Qside_castle</span>
-    <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Kingside_castle</span> <span style="color: #a52a2a;">-&gt;</span> <span style="color: #000000; background-color: #FFFFFF;">Kside_castle</span>
-    <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Promotion</span> <span style="color: #a52a2a;">(</span>p_type<span style="color: #a52a2a;">,</span> s_file<span style="color: #a52a2a;">,</span> t_file<span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">-&gt;</span>
-      <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">t_rank</span> <span style="color: #a52a2a;">=</span>
-        <span style="color: #0000FF;">match</span> position.turn <span style="color: #0000FF;">with</span>
-        <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">White</span> <span style="color: #a52a2a;">-&gt;</span> 7 <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Black</span> <span style="color: #a52a2a;">-&gt;</span> 0 <span style="color: #000000; font-weight: bold;">in</span>
-      <span style="color: #000000; background-color: #FFFFFF;">Pawn_move</span> <span style="color: #a52a2a;">(</span>s_file<span style="color: #a52a2a;">,</span> <span style="color: #a52a2a;">(</span>t_file<span style="color: #a52a2a;">,</span> t_rank<span style="color: #a52a2a;">),</span> <span style="color: #a52a2a;">(</span>s_file <span style="color: #a52a2a;">&lt;&gt;</span> t_file<span style="color: #a52a2a;">),</span> <span style="color: #000000; background-color: #FFFFFF;">Some</span> p_type<span style="color: #a52a2a;">)</span>
-  <span style="color: #000000; font-weight: bold;">in</span> move'<span style="color: #a52a2a;">,</span> check
+  <span style="color: #0000FF;">match</span> move <span style="color: #0000FF;">with</span>
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Move</span> <span style="color: #a52a2a;">(</span>s_file<span style="color: #a52a2a;">,</span> s_rank<span style="color: #a52a2a;">,</span> t_file<span style="color: #a52a2a;">,</span> t_rank<span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">-&gt;</span>
+    <span style="color: #000000; font-weight: bold;">begin</span> <span style="color: #0000FF;">match</span> position.ar.<span style="color: #a52a2a;">(</span>s_file<span style="color: #a52a2a;">)</span>.<span style="color: #a52a2a;">(</span>s_rank<span style="color: #a52a2a;">)</span> <span style="color: #0000FF;">with</span>
+      <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Piece</span> <span style="color: #a52a2a;">(</span><span style="color: #000000; background-color: #FFFFFF;">Pawn</span><span style="color: #a52a2a;">,</span> _<span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">-&gt;</span>
+        <span style="color: #8D8D84;">(* </span><span style="color: #8D8D84; font-style: italic;">a pawn move is a capture if and only if it changes files </span><span style="color: #8D8D84;">*)</span>
+        <span style="color: #000000; background-color: #FFFFFF;">Pawn_move</span> <span style="color: #a52a2a;">(</span>s_file<span style="color: #a52a2a;">,</span> <span style="color: #a52a2a;">(</span>t_file<span style="color: #a52a2a;">,</span> t_rank<span style="color: #a52a2a;">),</span> <span style="color: #a52a2a;">(</span>s_file <span style="color: #a52a2a;">&lt;&gt;</span> t_file<span style="color: #a52a2a;">),</span> <span style="color: #000000; background-color: #FFFFFF;">None</span><span style="color: #a52a2a;">)</span>
+      <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Piece</span> <span style="color: #a52a2a;">(</span>p_type<span style="color: #a52a2a;">,</span> _<span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">-&gt;</span>
+        <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">capture</span> <span style="color: #a52a2a;">=</span>
+          <span style="color: #0000FF;">match</span> position.ar.<span style="color: #a52a2a;">(</span>t_file<span style="color: #a52a2a;">)</span>.<span style="color: #a52a2a;">(</span>t_rank<span style="color: #a52a2a;">)</span> <span style="color: #0000FF;">with</span>
+          <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Piece</span> _ <span style="color: #a52a2a;">-&gt;</span> <span style="color: #D0372D;">true</span> <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Empty</span> <span style="color: #a52a2a;">-&gt;</span> <span style="color: #D0372D;">false</span> <span style="color: #000000; font-weight: bold;">in</span>
+        <span style="color: #000000; background-color: #FFFFFF;">Piece_move</span> <span style="color: #a52a2a;">(</span>p_type<span style="color: #a52a2a;">,</span> <span style="color: #a52a2a;">(</span>s_file<span style="color: #a52a2a;">,</span> s_rank<span style="color: #a52a2a;">),</span> <span style="color: #a52a2a;">(</span>t_file<span style="color: #a52a2a;">,</span> t_rank<span style="color: #a52a2a;">),</span> capture<span style="color: #a52a2a;">)</span>
+      <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Empty</span> <span style="color: #a52a2a;">-&gt;</span> <span style="color: #006FE0;">raise</span> <span style="color: #000000; background-color: #FFFFFF;">Illegal_move</span>
+    <span style="color: #000000; font-weight: bold;">end</span>
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Queenside_castle</span> <span style="color: #a52a2a;">-&gt;</span> <span style="color: #000000; background-color: #FFFFFF;">Qside_castle</span>
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Kingside_castle</span> <span style="color: #a52a2a;">-&gt;</span> <span style="color: #000000; background-color: #FFFFFF;">Kside_castle</span>
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Promotion</span> <span style="color: #a52a2a;">(</span>p_type<span style="color: #a52a2a;">,</span> s_file<span style="color: #a52a2a;">,</span> t_file<span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">-&gt;</span>
+    <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">t_rank</span> <span style="color: #a52a2a;">=</span>
+      <span style="color: #0000FF;">match</span> position.turn <span style="color: #0000FF;">with</span>
+      <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">White</span> <span style="color: #a52a2a;">-&gt;</span> 7 <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Black</span> <span style="color: #a52a2a;">-&gt;</span> 0 <span style="color: #000000; font-weight: bold;">in</span>
+    <span style="color: #000000; background-color: #FFFFFF;">Pawn_move</span> <span style="color: #a52a2a;">(</span>s_file<span style="color: #a52a2a;">,</span> <span style="color: #a52a2a;">(</span>t_file<span style="color: #a52a2a;">,</span> t_rank<span style="color: #a52a2a;">),</span> <span style="color: #a52a2a;">(</span>s_file <span style="color: #a52a2a;">&lt;&gt;</span> t_file<span style="color: #a52a2a;">),</span> <span style="color: #000000; background-color: #FFFFFF;">Some</span> p_type<span style="color: #a52a2a;">)</span>
 </pre>
 </div>
 
 <p>
-This function converts the O'Chess move representation into the
+The <code>long_move</code> function converts the O'Chess move representation into the
 <code>long_move</code> type by adding the <code>capture</code> flag and straightening out a
 few kinks.  In particular, it separates <code>Move</code> into <code>Pawn_move</code> and
-<code>Piece_move</code>, and groups the latter together with <code>Promotion</code>.  It
-also adds check/checkmate information. There is a case that should
+<code>Piece_move</code>, and groups the latter together with <code>Promotion</code>. There is a case that should
 never happen (moving a piece from an empty square), so we raise an
 exception (from O'Chess) in that case.
+</p>
+
+<p>
+The <code>annotate_move</code> returns check/checkmate info for a given move by
+trying it in the given position and determining whether after the
+move, the other player's king will be in check.  If it is, and there
+are no legal moves, it's checkmate!
 </p>
 
 <p>
@@ -179,7 +180,6 @@ supplying the final argument all the time.  Make sure to update
 <p>
 Now we need to compute the disambiguated SAN for a given move.  We
 achieve this by trying each disambiguation strategy in turn.
-Check/checkmate doesn't matter here:
 </p>
 
 <div class="org-src-container">
@@ -189,7 +189,7 @@ Check/checkmate doesn't matter here:
 
 <span style="color: #8D8D84;">(* </span><span style="color: #8D8D84; font-style: italic;">return a short move for a piece move, else None </span><span style="color: #8D8D84;">*)</span>
 <span style="color: #8D8D84;">(* </span><span style="color: #8D8D84; font-style: italic;">following order of preference: Qg7, Qhg7, Q8g7, Qh8g7 </span><span style="color: #8D8D84;">*)</span>
-<span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">short_move_of_long_move</span><span style="color: #BA36A5;"> move_list </span><span style="color: #a52a2a;">(</span><span style="color: #BA36A5;">long_move</span><span style="color: #a52a2a;">,</span><span style="color: #BA36A5;"> _</span><span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">=</span>
+<span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">short_move_of_long_move</span><span style="color: #BA36A5;"> move_list long_move</span> <span style="color: #a52a2a;">=</span>
   <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">unique'</span> <span style="color: #a52a2a;">=</span> unique move_list <span style="color: #000000; font-weight: bold;">in</span>
   <span style="color: #0000FF;">match</span> long_move <span style="color: #0000FF;">with</span>
   <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Piece_move</span> <span style="color: #a52a2a;">(</span>p_type<span style="color: #a52a2a;">,</span> <span style="color: #a52a2a;">(</span>s_file<span style="color: #a52a2a;">,</span> s_rank<span style="color: #a52a2a;">),</span> target<span style="color: #a52a2a;">,</span> capture<span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">-&gt;</span>
@@ -219,7 +219,7 @@ square matches and if the optional disambiguation hints can be unified
   <span style="color: #a52a2a;">|</span> _ <span style="color: #a52a2a;">-&gt;</span> <span style="color: #D0372D;">false</span>
 
 <span style="color: #8D8D84;">(* </span><span style="color: #8D8D84; font-style: italic;">is the candidate a possible short form of a long move? </span><span style="color: #8D8D84;">*)</span>
-<span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">unify_move</span><span style="color: #BA36A5;"> short_move </span><span style="color: #a52a2a;">(</span><span style="color: #BA36A5;">long_move</span><span style="color: #a52a2a;">,</span><span style="color: #BA36A5;"> _</span><span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">=</span>
+<span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">unify_move</span><span style="color: #BA36A5;"> short_move long_move</span> <span style="color: #a52a2a;">=</span>
   <span style="color: #0000FF;">match</span> long_move <span style="color: #0000FF;">with</span>
   <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Piece_move</span> <span style="color: #a52a2a;">(</span>long_p_type<span style="color: #a52a2a;">,</span> long_source<span style="color: #a52a2a;">,</span> long_target<span style="color: #a52a2a;">,</span> _<span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">-&gt;</span>
     <span style="color: #8D8D84;">(* </span><span style="color: #8D8D84; font-style: italic;">capture irrelevant </span><span style="color: #8D8D84;">*)</span>
@@ -235,7 +235,8 @@ square matches and if the optional disambiguation hints can be unified
 </div>
 
 <p>
-Next, we use O'Chess to enumerate the legal moves and generate an
+Next, we define two ways of getting SAN strings.  The
+<code>legal_moves_with_san</code> function uses O'Chess to enumerate the legal moves and generate an
 <i>association list</i> of SAN and O'Chess moves.  An association list is a
 list of (key, value) pairs, and the <code>List</code> module provides some useful
 functions for searching the list for a given key and the like.  If
@@ -245,26 +246,35 @@ of legal moves are typically not longer than 30, so it shouldn't be a
 problem. 
 </p>
 
+<p>
+The <code>san_of_move</code> function just returns the SAN string for a given
+move in a given position.
+</p>
+
 <div class="org-src-container">
 <pre class="src src-ocaml"><span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">moves_assoc_list</span><span style="color: #BA36A5;"> position moves</span> <span style="color: #a52a2a;">=</span>
   <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">long_moves</span> <span style="color: #a52a2a;">=</span> moves <span style="color: #a52a2a;">|&gt;</span> <span style="color: #6434A3;">List.</span>map <span style="color: #a52a2a;">(</span>long_move position<span style="color: #a52a2a;">)</span> <span style="color: #000000; font-weight: bold;">in</span>
-  <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">san_moves</span> <span style="color: #a52a2a;">=</span> long_moves <span style="color: #a52a2a;">|&gt;</span> <span style="color: #6434A3;">List.</span>map <span style="color: #a52a2a;">(</span>san_of_move long_moves<span style="color: #a52a2a;">)</span> <span style="color: #000000; font-weight: bold;">in</span>
+  <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">san_moves</span> <span style="color: #a52a2a;">=</span> moves <span style="color: #a52a2a;">|&gt;</span> <span style="color: #6434A3;">List.</span>map <span style="color: #a52a2a;">(</span>san_of_move' position long_moves<span style="color: #a52a2a;">)</span> <span style="color: #000000; font-weight: bold;">in</span>
   <span style="color: #6434A3;">List.</span>combine moves san_moves
 
 <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">legal_moves_with_san</span><span style="color: #BA36A5;"> position</span> <span style="color: #a52a2a;">=</span>
   legal_moves position <span style="color: #a52a2a;">|&gt;</span> moves_assoc_list position
+
+<span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">san_of_move</span><span style="color: #BA36A5;"> position move</span> <span style="color: #a52a2a;">=</span>
+  <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">move_list</span> <span style="color: #a52a2a;">=</span> legal_moves position <span style="color: #a52a2a;">|&gt;</span> <span style="color: #6434A3;">List.</span>map <span style="color: #a52a2a;">(</span>long_move position<span style="color: #a52a2a;">)</span> <span style="color: #000000; font-weight: bold;">in</span>
+  san_of_move' position move_list move
 </pre>
 </div>
 
 <p>
-Finally, we're ready to calculate the SAN string for a given move from
-a <code>short_move</code> representation:
+Finally, we're ready to calculate the SAN string for a given move:
 </p>
 
 <div class="org-src-container">
-<pre class="src src-ocaml"><span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">san_of_move</span><span style="color: #BA36A5;"> move_list annotated_move</span> <span style="color: #a52a2a;">=</span>
-  <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">long_move</span><span style="color: #a52a2a;">,</span><span style="color: #BA36A5;"> check</span> <span style="color: #a52a2a;">=</span> annotated_move <span style="color: #000000; font-weight: bold;">in</span>
-  <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">short_move_option</span> <span style="color: #a52a2a;">=</span> short_move_of_long_move move_list annotated_move <span style="color: #000000; font-weight: bold;">in</span>
+<pre class="src src-ocaml"><span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">san_of_move'</span><span style="color: #BA36A5;"> position move_list move</span> <span style="color: #a52a2a;">=</span>
+  <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">long_move</span> <span style="color: #a52a2a;">=</span> long_move position move
+  <span style="color: #000000; font-weight: bold;">and</span> <span style="color: #BA36A5;">check</span> <span style="color: #a52a2a;">=</span> annotate_move position move <span style="color: #000000; font-weight: bold;">in</span>
+  <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">short_move_option</span> <span style="color: #a52a2a;">=</span> short_move_of_long_move move_list long_move <span style="color: #000000; font-weight: bold;">in</span>
   <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">san</span> <span style="color: #a52a2a;">=</span>
     <span style="color: #0000FF;">match</span> short_move_option<span style="color: #a52a2a;">,</span> long_move <span style="color: #0000FF;">with</span>
     <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">None</span><span style="color: #a52a2a;">,</span> <span style="color: #000000; background-color: #FFFFFF;">Qside_castle</span> <span style="color: #a52a2a;">-&gt;</span> <span style="color: #008000;">"O-O-O"</span>
@@ -276,19 +286,19 @@ a <code>short_move</code> representation:
          <span style="color: #0000FF;">else</span> <span style="color: #008000;">""</span><span style="color: #a52a2a;">)</span>
         <span style="color: #a52a2a;">(</span>char_of_file t_file<span style="color: #a52a2a;">)</span>
         <span style="color: #a52a2a;">(</span>char_of_rank t_rank<span style="color: #a52a2a;">)</span>
-        <span style="color: #000000; font-weight: bold;">begin</span> <span style="color: #0000FF;">match</span> promotion <span style="color: #0000FF;">with</span>
-          <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">None</span> <span style="color: #a52a2a;">-&gt;</span> <span style="color: #008000;">""</span>
-          <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Some</span> p_type <span style="color: #a52a2a;">-&gt;</span>
-            char_of_piece_type p_type <span style="color: #a52a2a;">|&gt;</span> <span style="color: #6434A3;">Printf.</span>sprintf <span style="color: #008000;">"=%c"</span> <span style="color: #000000; font-weight: bold;">end</span>
+        <span style="color: #a52a2a;">(</span><span style="color: #0000FF;">match</span> promotion <span style="color: #0000FF;">with</span>
+         <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">None</span> <span style="color: #a52a2a;">-&gt;</span> <span style="color: #008000;">""</span>
+         <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Some</span> p_type <span style="color: #a52a2a;">-&gt;</span>
+           char_of_piece_type p_type <span style="color: #a52a2a;">|&gt;</span> <span style="color: #6434A3;">Printf.</span>sprintf <span style="color: #008000;">"=%c"</span><span style="color: #a52a2a;">)</span>
     <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Some</span> <span style="color: #a52a2a;">(</span>p_type<span style="color: #a52a2a;">,</span> file_hint<span style="color: #a52a2a;">,</span> rank_hint<span style="color: #a52a2a;">,</span> <span style="color: #a52a2a;">(</span>t_file<span style="color: #a52a2a;">,</span> t_rank<span style="color: #a52a2a;">),</span> capture<span style="color: #a52a2a;">),</span> _ <span style="color: #a52a2a;">-&gt;</span>
       <span style="color: #6434A3;">Printf.</span>sprintf <span style="color: #008000;">"%c%s%s%s%c%c"</span>
         <span style="color: #a52a2a;">(</span>char_of_piece_type p_type<span style="color: #a52a2a;">)</span>
-        <span style="color: #000000; font-weight: bold;">begin</span> <span style="color: #0000FF;">match</span> file_hint <span style="color: #0000FF;">with</span>
-          <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">None</span> <span style="color: #a52a2a;">-&gt;</span> <span style="color: #008000;">""</span>
-          <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Some</span> file <span style="color: #a52a2a;">-&gt;</span> char_of_file file <span style="color: #a52a2a;">|&gt;</span> <span style="color: #6434A3;">Printf.</span>sprintf <span style="color: #008000;">"%c"</span> <span style="color: #000000; font-weight: bold;">end</span>
-        <span style="color: #000000; font-weight: bold;">begin</span> <span style="color: #0000FF;">match</span> rank_hint <span style="color: #0000FF;">with</span>
-          <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">None</span> <span style="color: #a52a2a;">-&gt;</span> <span style="color: #008000;">""</span>
-          <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Some</span> rank <span style="color: #a52a2a;">-&gt;</span> char_of_rank rank <span style="color: #a52a2a;">|&gt;</span> <span style="color: #6434A3;">Printf.</span>sprintf <span style="color: #008000;">"%c"</span> <span style="color: #000000; font-weight: bold;">end</span>
+        <span style="color: #a52a2a;">(</span><span style="color: #0000FF;">match</span> file_hint <span style="color: #0000FF;">with</span>
+         <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">None</span> <span style="color: #a52a2a;">-&gt;</span> <span style="color: #008000;">""</span>
+         <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Some</span> file <span style="color: #a52a2a;">-&gt;</span> char_of_file file <span style="color: #a52a2a;">|&gt;</span> <span style="color: #6434A3;">Printf.</span>sprintf <span style="color: #008000;">"%c"</span><span style="color: #a52a2a;">)</span>
+        <span style="color: #a52a2a;">(</span><span style="color: #0000FF;">match</span> rank_hint <span style="color: #0000FF;">with</span>
+         <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">None</span> <span style="color: #a52a2a;">-&gt;</span> <span style="color: #008000;">""</span>
+         <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Some</span> rank <span style="color: #a52a2a;">-&gt;</span> char_of_rank rank <span style="color: #a52a2a;">|&gt;</span> <span style="color: #6434A3;">Printf.</span>sprintf <span style="color: #008000;">"%c"</span><span style="color: #a52a2a;">)</span>
         <span style="color: #a52a2a;">(</span><span style="color: #0000FF;">if</span> capture <span style="color: #0000FF;">then</span> <span style="color: #008000;">"x"</span> <span style="color: #0000FF;">else</span> <span style="color: #008000;">""</span><span style="color: #a52a2a;">)</span>
         <span style="color: #a52a2a;">(</span>char_of_file t_file<span style="color: #a52a2a;">)</span>
         <span style="color: #a52a2a;">(</span>char_of_rank t_rank<span style="color: #a52a2a;">)</span>
@@ -382,7 +392,7 @@ when they come in.  Here's the relevant part of the <code>update</code> function
 
 <div class="org-src-container">
 <pre class="src src-ocaml"><span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Random_move</span> move <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Board_msg</span> <span style="color: #a52a2a;">(</span><span style="color: #000000; background-color: #FFFFFF;">Move</span> move<span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">-&gt;</span>
-  <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">san</span> <span style="color: #a52a2a;">=</span> <span style="color: #6434A3;">Chess.</span>legal_moves_with_san model.position <span style="color: #a52a2a;">|&gt;</span> <span style="color: #6434A3;">List.</span>assoc move <span style="color: #000000; font-weight: bold;">in</span>
+  <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">san</span> <span style="color: #a52a2a;">=</span> <span style="color: #6434A3;">Chess.</span>san_of_move model.position move <span style="color: #000000; font-weight: bold;">in</span>
   <span style="color: #a52a2a;">{</span> model <span style="color: #0000FF;">with</span>
     position <span style="color: #a52a2a;">=</span> <span style="color: #6434A3;">Chess.</span>make_move model.position move
   <span style="color: #a52a2a;">;</span> moves <span style="color: #a52a2a;">=</span> <span style="color: #a52a2a;">(</span>move<span style="color: #a52a2a;">,</span> san<span style="color: #a52a2a;">)::</span>model.moves
@@ -398,6 +408,11 @@ when they come in.  Here's the relevant part of the <code>update</code> function
 <p>
 Try making a few moves and use the takeback button now.  The list of
 moves should automatically update.
+</p>
+
+<p>
+(Exercise: Add a list of the possible moves in the current position so
+that the user can click a move and it will be played on the board.)
 </p>
 </div>
 </div>
