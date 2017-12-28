@@ -45,25 +45,25 @@ pre.src:hover:before {
 */
 
 #content  {
-			/* width: 100%; */
-			margin: 0 0;
-			padding: 0 30px;
-			}
+    /* width: 100%; */
+    margin: 0 0;
+    padding: 0 30px;
+}
 
-		@media screen and (min-width: 700px) {
-			#content {
-				width: 640px;
-				margin: 0 auto;
-				padding: 0;
-			}
-		}
+@media screen and (min-width: 700px) {
+    #content {
+	width: 640px;
+	margin: 0 auto;
+	padding: 0;
+    }
+}
 
 
 div, article	{
-			-moz-box-sizing: border-box;
-			-webkit-box-sizing: border-box;
-			box-sizing: border-box;
-			}
+    -moz-box-sizing: border-box;
+    -webkit-box-sizing: border-box;
+    box-sizing: border-box;
+}
 
 img.full {
     max-width: 100%;
@@ -76,7 +76,7 @@ img.full {
 p {
     margin: 0.5em 0 1em 0;
     padding: 0;
-	line-height: 1.5em;
+    line-height: 1.5em;
 }
 
 /*	Typography	*/
@@ -91,7 +91,7 @@ table {
 }
 
 table tr:nth-of-type(even) {
-  background-color: #f0f0f0;
+    background-color: #f0f0f0;
 }
 
 .twitter-tweet {
@@ -100,12 +100,12 @@ table tr:nth-of-type(even) {
 }
 
 body {
-		margin: 1.5em 0;
-		background-color: #fff;
-		color: #808080;
-		font-family: Helvetica, Arial, sans-serif;
-		font-size: 1em;
-			}
+    margin: 1.5em 0;
+    background-color: #fff;
+    color: #808080;
+    font-family: Helvetica, Arial, sans-serif;
+    font-size: 1em;
+}
 
 
 h1 {
@@ -114,89 +114,89 @@ h1 {
 } 
 
 h1.title, h2, h3, h4, h5, h6, h7, h8  {
-		font-family: Georgia, "Times New Roman", serif;
-		text-transform: uppercase;
-		font-weight: 400;
-		line-height: 1.5em;
-		letter-spacing: 0.25em;
-		margin: 0.5em 0 0.25em 0;
-		padding: 0;
-		color: #3b3b3b;
-			}
-			
+    font-family: Georgia, "Times New Roman", serif;
+    text-transform: uppercase;
+    font-weight: 400;
+    line-height: 1.5em;
+    letter-spacing: 0.25em;
+    margin: 0.5em 0 0.25em 0;
+    padding: 0;
+    color: #3b3b3b;
+}
+
 h1.name {
-	font-size: 2em;
-		font-family: Georgia, "Times New Roman", serif;
-		font-weight: 400;
-		line-height: 1.25em;
-		letter-spacing: 0.15em;
-		margin: 0.5em 0 0.25em 0;
-		padding: 0;
-		color: #3b3b3b;
-	}
+    font-size: 2em;
+    font-family: Georgia, "Times New Roman", serif;
+    font-weight: 400;
+    line-height: 1.25em;
+    letter-spacing: 0.15em;
+    margin: 0.5em 0 0.25em 0;
+    padding: 0;
+    color: #3b3b3b;
+}
 
 
 
 h2 {
-	font-size: 1.2em;
-/*	font-weight: 800; */
-	color: #3b3b3b;
-	}
+    font-size: 1.2em;
+    /*	font-weight: 800; */
+    color: #3b3b3b;
+}
 
 
 h3 {
-	font-size: 1em;
-/*	font-weight: 800; */
-	color: #3b3b3b;
-	}
+    font-size: 1em;
+    /*	font-weight: 800; */
+    color: #3b3b3b;
+}
 
 
-		@media screen and (min-width: 700px) {
-			h1.title {
-				font-size: 1.7em;
-			}
-                        h1.name { font-size: 2.4em; }
-		}
+@media screen and (min-width: 700px) {
+    h1.title {
+	font-size: 1.7em;
+    }
+    h1.name { font-size: 2.4em; }
+}
 
 
 
 /*	Links	*/
 
 a {
-		color: #00459a;
-		text-decoration: none;
-		border-bottom: solid 1px #00459a;
-			}
+    color: #00459a;
+    text-decoration: none;
+    border-bottom: solid 1px #00459a;
+}
 
 a:hover {
-		color: #ff7a00;
-		border-bottom: solid 1px #ff7a00;
-			}
+    color: #ff7a00;
+    border-bottom: solid 1px #ff7a00;
+}
 
+/*
+a.img {
+    margin: 0;
+    padding: 0;
+}
 
-a.img   {
-		margin: 0;
-		padding: 0;
-			}
-
-a.img:hover   {
-		border-bottom: 0px;
-		margin: 0;
-		padding: 0;
-			}
+a.img:hover {
+    border-bottom: 0px;
+    margin: 0;
+    padding: 0;
+} */
 
 /*	Header	*/
 
-header  {
-		overflow: auto;
-			}
+header {
+    overflow: auto;
+}
 
-.title   {
-		margin: 0;
-		/* float: left; */
-		text-align: left;
-		/* padding-bottom: 1.5em; */
-			}
+.title {
+    margin: 0;
+    /* float: left; */
+    text-align: left;
+    /* padding-bottom: 1.5em; */
+}
 
 #table-of-contents {
     padding-top: 1.5em;
@@ -206,13 +206,13 @@ header  {
 
 .bio {
     padding-top: 1em;
-		font-size: 1.1em;
-		letter-spacing: 0.05em;
-		line-height: 1.7em;
-			}
+    font-size: 1.1em;
+    letter-spacing: 0.05em;
+    line-height: 1.7em;
+}
 
 ul {
-    		list-style-type: circle;
+    list-style-type: circle;
 }
 
 ul li {
@@ -222,23 +222,22 @@ ul li {
 
 ol li {
     line-height: 1.5em;
-        padding: .2em 0 .2em 0;
+    padding: .2em 0 .2em 0;
 }
 
 .mod {
-		border-top: 1px solid #808080;
-		padding: 0.75em 0 0.75em 0;
-			}
-			
-.mod ul		{
-		padding-left: 1.7em;
-		list-style-type: circle;
-                
-		}
-		
-		
+    border-top: 1px solid #808080;
+    padding: 0.75em 0 0.75em 0;
+}
+
+.mod ul	{
+    padding-left: 1.7em;
+    list-style-type: circle;
+}
+
+
 .mod ul li {
-		line-height: 2.1em;
-		}
+    line-height: 2.1em;
+}
 
 
