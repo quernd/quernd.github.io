@@ -3,7 +3,7 @@
 "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
 <head>
-<!-- 2017-12-30 Sat 19:24 -->
+<!-- 2017-12-30 Sat 20:36 -->
 <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Twelve Days of Christmas #8</title>
@@ -30,14 +30,284 @@ This is the eighth part of <a href="../index.html">a chess-themed tutorial</a> o
 Yesterday, we implemented the move list by using a functional
 programming technique called the "zipper".  Today, we will now add the
 possibility to load chess games from the popular Lichess server, as well
-as client-side routing.  Start from tag <code>day7</code> if you are following along with my
+as client-side routing.  This will turn our program into what is
+usually called a "single-page application" (SPA).  Start from tag <code>day7</code> if you are following along with my
 repository.
 </p>
 
+<div id="outline-container-org283f9b4" class="outline-2">
+<h2 id="org283f9b4">Responsive CSS</h2>
+<div class="outline-text-2" id="text-org283f9b4">
+<p>
+First, let's account for the fact that users with different devices
+might use our app, and let's scale and arrange the content on the
+screen according to the size of the browser window.  On a wide screen,
+it makes sense to have the move list and the board side by side, but
+on a narrow screen such as a phone in portrait format, the move list
+should be under the screen. Also the board should scale up and down according to
+the browser window size.
+</p>
+
+<p>
+Let's first refactor the main view so we can assign styles easier:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-ocaml"><span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">buttons_view</span> <span style="color: #a52a2a;">=</span>
+  <span style="color: #6434A3;">List.</span>map <span style="color: #a52a2a;">(</span>map board_msg<span style="color: #a52a2a;">)</span> <span style="color: #6434A3;">Board.</span>buttons_view <span style="color: #a52a2a;">@</span>
+  <span style="color: #a52a2a;">[</span> button <span style="color: #a52a2a;">[</span>onClick <span style="color: #000000; background-color: #FFFFFF;">Random_button</span><span style="color: #a52a2a;">]</span> <span style="color: #a52a2a;">[</span>text <span style="color: #008000;">"random move"</span><span style="color: #a52a2a;">]</span>
+  <span style="color: #a52a2a;">;</span> button <span style="color: #a52a2a;">[</span>onClick <span style="color: #000000; background-color: #FFFFFF;">Back_button</span><span style="color: #a52a2a;">]</span> <span style="color: #a52a2a;">[</span>text <span style="color: #008000;">"back"</span><span style="color: #a52a2a;">]</span>
+  <span style="color: #a52a2a;">;</span> button <span style="color: #a52a2a;">[</span>onClick <span style="color: #000000; background-color: #FFFFFF;">Fwd_button</span><span style="color: #a52a2a;">]</span> <span style="color: #a52a2a;">[</span>text <span style="color: #008000;">"forward"</span><span style="color: #a52a2a;">]</span>
+  <span style="color: #a52a2a;">]</span>
+  <span style="color: #a52a2a;">|&gt;</span> nav <span style="color: #a52a2a;">[</span>id <span style="color: #008000;">"buttons"</span><span style="color: #a52a2a;">]</span>
+
+<span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">header_nav_view</span> <span style="color: #a52a2a;">=</span>
+  nav <span style="color: #a52a2a;">[</span>class' <span style="color: #008000;">"top"</span><span style="color: #a52a2a;">]</span>
+    <span style="color: #a52a2a;">[</span> ul <span style="color: #a52a2a;">[]</span>
+        <span style="color: #a52a2a;">[</span> li <span style="color: #a52a2a;">[</span>class' <span style="color: #008000;">"home"</span><span style="color: #a52a2a;">]</span> <span style="color: #a52a2a;">[</span>text <span style="color: #008000;">"TEA-Chess"</span><span style="color: #a52a2a;">]</span>
+        <span style="color: #a52a2a;">;</span> li <span style="color: #a52a2a;">[]</span>
+            <span style="color: #a52a2a;">[</span> a <span style="color: #a52a2a;">[</span>href <span style="color: #008000;">"https://quernd.github.io/tutorials/tea-chess"</span><span style="color: #a52a2a;">]</span>
+                <span style="color: #a52a2a;">[</span>text <span style="color: #008000;">"Tutorial"</span><span style="color: #a52a2a;">]</span> <span style="color: #a52a2a;">]</span>
+        <span style="color: #a52a2a;">;</span> li <span style="color: #a52a2a;">[]</span>
+            <span style="color: #a52a2a;">[</span> a <span style="color: #a52a2a;">[</span>href <span style="color: #008000;">"https://github.com/quernd/tea-chess"</span><span style="color: #a52a2a;">]</span>
+                <span style="color: #a52a2a;">[</span>text <span style="color: #008000;">"Code"</span><span style="color: #a52a2a;">]</span> <span style="color: #a52a2a;">]</span>
+        <span style="color: #a52a2a;">]</span>
+    <span style="color: #a52a2a;">]</span>
+
+<span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">game_nav_view</span><span style="color: #BA36A5;"> _model</span> <span style="color: #a52a2a;">=</span>
+  <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">game_nav_item</span><span style="color: #BA36A5;"> current link label</span> <span style="color: #a52a2a;">=</span>
+    li <span style="color: #a52a2a;">[</span> <span style="color: #0000FF;">if</span> current <span style="color: #0000FF;">then</span> class' <span style="color: #008000;">"current"</span> <span style="color: #0000FF;">else</span> noProp <span style="color: #a52a2a;">]</span>
+      <span style="color: #a52a2a;">[</span> <span style="color: #0000FF;">if</span> current <span style="color: #0000FF;">then</span> text label <span style="color: #0000FF;">else</span> a <span style="color: #a52a2a;">[</span>href link<span style="color: #a52a2a;">]</span> <span style="color: #a52a2a;">[</span>text label<span style="color: #a52a2a;">]</span> <span style="color: #a52a2a;">]</span> <span style="color: #000000; font-weight: bold;">in</span>
+  nav <span style="color: #a52a2a;">[</span>class' <span style="color: #008000;">"top tabbed"</span><span style="color: #a52a2a;">]</span>
+    <span style="color: #a52a2a;">[</span> ul <span style="color: #a52a2a;">[]</span>
+        <span style="color: #a52a2a;">[</span> game_nav_item <span style="color: #D0372D;">true</span> <span style="color: #008000;">"#/game"</span> <span style="color: #008000;">"Game"</span>
+        <span style="color: #a52a2a;">;</span> game_nav_item <span style="color: #D0372D;">false</span> <span style="color: #008000;">"#/tournament"</span> <span style="color: #008000;">"Tournament"</span>
+        <span style="color: #a52a2a;">]</span>
+    <span style="color: #a52a2a;">]</span>
+
+<span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">view</span><span style="color: #BA36A5;"> model</span> <span style="color: #a52a2a;">=</span>
+  <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">game_status</span> <span style="color: #a52a2a;">=</span> <span style="color: #6434A3;">Chess.</span>game_status model.position <span style="color: #000000; font-weight: bold;">in</span>
+  <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">interactable</span> <span style="color: #a52a2a;">=</span>
+    <span style="color: #0000FF;">match</span> game_status <span style="color: #0000FF;">with</span>
+    <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Play</span> move_list <span style="color: #a52a2a;">-&gt;</span> <span style="color: #6434A3;">Board.</span><span style="color: #000000; background-color: #FFFFFF;">Interactable</span> <span style="color: #a52a2a;">(</span>model.position.turn<span style="color: #a52a2a;">,</span> move_list<span style="color: #a52a2a;">)</span>
+    <span style="color: #a52a2a;">|</span> _ <span style="color: #a52a2a;">-&gt;</span> <span style="color: #6434A3;">Board.</span><span style="color: #000000; background-color: #FFFFFF;">Not_interactable</span>
+  <span style="color: #000000; font-weight: bold;">in</span>
+  main <span style="color: #a52a2a;">[]</span>
+    <span style="color: #a52a2a;">[</span> section <span style="color: #a52a2a;">[</span>id <span style="color: #008000;">"board"</span><span style="color: #a52a2a;">]</span>
+        <span style="color: #a52a2a;">[</span> header_nav_view
+        <span style="color: #a52a2a;">;</span> <span style="color: #6434A3;">Board.</span>view interactable model.position.ar model.board
+          <span style="color: #a52a2a;">|&gt;</span> map board_msg
+        <span style="color: #a52a2a;">;</span> buttons_view
+          <span style="color: #8D8D84;">(* </span><span style="color: #8D8D84; font-style: italic;">; Board.result_view game_status </span><span style="color: #8D8D84;">*)</span>
+        <span style="color: #a52a2a;">]</span>
+    <span style="color: #a52a2a;">;</span> section <span style="color: #a52a2a;">[</span>id <span style="color: #008000;">"game"</span><span style="color: #a52a2a;">]</span>
+        <span style="color: #a52a2a;">[</span> game_nav_view model
+        <span style="color: #a52a2a;">;</span> section <span style="color: #a52a2a;">[</span>class' <span style="color: #008000;">"scroll"</span><span style="color: #a52a2a;">]</span> <span style="color: #a52a2a;">[</span>move_list_view model.ply model.moves<span style="color: #a52a2a;">]</span>
+        <span style="color: #a52a2a;">]</span>
+    <span style="color: #a52a2a;">]</span>
+</pre>
+</div>
+
+<p>
+I added two navigation elements.  The <code>game_nav_view</code> will be a list
+of tabs that will enable the user to switch between games later.  Now
+let's add some CSS to style the <code>&lt;nav&gt;</code> tags to look like tabs. 
+</p>
+
+<div class="org-src-container">
+<pre class="src src-css"><span style="color: #0000ff; font-weight: bold;">nav.top </span>{
+    <span style="color: #00AA00;">text-align</span>: left;
+    <span style="color: #00AA00;">border-bottom</span>: .15em solid #808080;
+    <span style="color: #00AA00;">margin-bottom</span>: .5em;
+    <span style="color: #00AA00;">overflow-x</span>: scroll;
+}
+
+<span style="color: #0000ff; font-weight: bold;">nav ul </span>{
+    <span style="color: #00AA00;">margin-bottom</span>: .5em;
+    <span style="color: #00AA00;">padding-left</span>: 0;
+}
+
+<span style="color: #0000ff; font-weight: bold;">nav ul li </span>{
+    <span style="color: #00AA00;">display</span>: inline;
+    <span style="color: #00AA00;">padding</span>: .5em 1em .5em 1em;
+    <span style="color: #00AA00;">margin-right</span>: .5em;
+    <span style="color: #00AA00;">margin-left</span>: .5em;
+}
+
+<span style="color: #0000ff; font-weight: bold;">nav.tabbed ul li </span>{
+    <span style="color: #00AA00;">border</span>: .15em solid #808080;
+    <span style="color: #00AA00;">border-bottom</span>: 0;
+    <span style="color: #00AA00;">border-top-right-radius</span>: .5em;
+    <span style="color: #00AA00;">border-top-left-radius</span>: .5em;
+    <span style="color: #00AA00;">background-color</span>: #f0f0f0;
+}
+
+<span style="color: #0000ff; font-weight: bold;">nav.tabbed ul li.current </span>{
+    <span style="color: #00AA00;">background-color</span>: #808080;
+    <span style="color: #00AA00;">color</span>: white;
+}
+
+<span style="color: #0000ff; font-weight: bold;">li.home </span>{
+    <span style="color: #00AA00;">font-weight</span>: bold;
+}
+</pre>
+</div>
+
+<p>
+To switch between a left/right and top/down layout of board and rest,
+we use the flexbox model.  We will have one main flexbox holding two
+flex items (the board and the game view).  The game view will expand,
+while the board view is fixed in size.  This happens automatically
+because of the <code>flex: auto;</code> property of <code>#game</code>, which in turn is a
+flexbox holding two elements, the <code>&lt;nav&gt;</code> bar and a scrollable area
+that will hold the move list.  The layout switch from left/right to
+top/down happens through a media query that changes <code>flex-direction</code>
+from <code>row</code> to <code>column</code>
+when appropriate.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-css"><span style="color: #0000ff; font-weight: bold;">main </span>{
+    <span style="color: #00AA00;">display</span>: flex;
+    <span style="color: #00AA00;">height</span>: 100%;
+    <span style="color: #00AA00;">flex-direction</span>: row;
+}
+
+<span style="color: #0000ff; font-weight: bold;">#board </span>{
+    <span style="color: #00AA00;">text-align</span>: center;
+}
+
+<span style="color: #0000ff; font-weight: bold;">#game </span>{
+    <span style="color: #00AA00;">overflow-y</span>: hidden;
+    <span style="color: #00AA00;">flex</span>: auto;
+    <span style="color: #00AA00;">display</span>: flex;
+    <span style="color: #00AA00;">flex-direction</span>: column;
+}
+
+<span style="color: #0000ff; font-weight: bold;">#game &gt; nav </span>{
+    <span style="color: #00AA00;">flex</span>: none;
+    <span style="color: #00AA00;">overflow-y</span>: auto;
+    <span style="color: #00AA00;">white-space</span>: nowrap;
+}
+
+<span style="color: #0000ff; font-weight: bold;">.scroll </span>{
+    <span style="color: #00AA00;">overflow-y</span>: scroll;
+    <span style="color: #00AA00;">flex</span>: auto;
+    <span style="color: #00AA00;">padding</span>: .5em;
+}
+
+<span style="color: #006FE0;">@media</span> screen and (max-width:648px) and (min-height:480px) {
+    <span style="color: #0000ff; font-weight: bold;">main </span>{
+        <span style="color: #00AA00;">flex-direction</span>: column;
+    }
+}
+</pre>
+</div>
+
+<p>
+We also use CSS media queries to scale down the board and all its
+elements as the screen gets smaller:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-css"><span style="color: #006FE0;">@media</span> screen and (max-width:832px) {
+    <span style="color: #0000ff; font-weight: bold;">cb-square </span>{
+        <span style="color: #00AA00;">width</span>: 48px;
+        <span style="color: #00AA00;">height</span>: 48px;
+    }
+    <span style="color: #0000ff; font-weight: bold;">cb-board </span>{
+        <span style="color: #00AA00;">width</span>: 384px;
+        <span style="color: #00AA00;">height</span>: 384px;
+    }
+    <span style="color: #0000ff; font-weight: bold;">cb-promo </span>{
+        <span style="color: #00AA00;">width</span>: 384px;
+        <span style="color: #00AA00;">height</span>: 384px;
+    }
+    <span style="color: #0000ff; font-weight: bold;">cb-promo cb-square </span>{
+        <span style="color: #00AA00;">box-shadow</span>: inset 0 0 20px 2.4px #808080;
+    }
+    <span style="color: #0000ff; font-weight: bold;">cb-promo cb-square:hover </span>{
+        <span style="color: #00AA00;">box-shadow</span>: inset 0 0 38.4px 6.4px #d85000;
+    }
+}
+
+<span style="color: #006FE0;">@media</span> screen and (max-width:740px) {
+    <span style="color: #0000ff; font-weight: bold;">cb-square </span>{
+        <span style="color: #00AA00;">width</span>: 36px;
+        <span style="color: #00AA00;">height</span>: 36px;
+    }
+    <span style="color: #0000ff; font-weight: bold;">cb-board </span>{
+        <span style="color: #00AA00;">width</span>: 288px;
+        <span style="color: #00AA00;">height</span>: 288px;
+    }
+    <span style="color: #0000ff; font-weight: bold;">cb-promo </span>{
+        <span style="color: #00AA00;">width</span>: 288px;
+        <span style="color: #00AA00;">height</span>: 288px;
+    }
+    <span style="color: #0000ff; font-weight: bold;">cb-promo cb-square </span>{
+        <span style="color: #00AA00;">box-shadow</span>: inset 0 0 15px 1.8px #808080;
+    }
+    <span style="color: #0000ff; font-weight: bold;">cb-promo cb-square:hover </span>{
+        <span style="color: #00AA00;">box-shadow</span>: inset 0 0 28.8px 4.8px #d85000;
+    }
+}
+
+<span style="color: #006FE0;">@media</span> screen and (max-height:740px) {
+    <span style="color: #0000ff; font-weight: bold;">cb-square </span>{
+        <span style="color: #00AA00;">width</span>: 36px;
+        <span style="color: #00AA00;">height</span>: 36px;
+    }
+    <span style="color: #0000ff; font-weight: bold;">cb-board </span>{
+        <span style="color: #00AA00;">width</span>: 288px;
+        <span style="color: #00AA00;">height</span>: 288px;
+    }
+    <span style="color: #0000ff; font-weight: bold;">cb-promo </span>{
+        <span style="color: #00AA00;">width</span>: 288px;
+        <span style="color: #00AA00;">height</span>: 288px;
+    }
+    <span style="color: #0000ff; font-weight: bold;">cb-promo cb-square </span>{
+        <span style="color: #00AA00;">box-shadow</span>: inset 0 0 15px 1.8px #808080;
+    }
+    <span style="color: #0000ff; font-weight: bold;">cb-promo cb-square:hover </span>{
+        <span style="color: #00AA00;">box-shadow</span>: inset 0 0 28.8px 4.8px #d85000;
+    }
+}
+</pre>
+</div>
+
+<p>
+You should now have a layout that rearranges when the browser window
+shrinks and expands, like this:
+</p>
+
+<p>
+<img class="full" src="responsive.gif" />
+</p>
+</div>
+</div>
+
+<div id="outline-container-org22d83ff" class="outline-2">
+<h2 id="org22d83ff">Making AJAX requests</h2>
+<div class="outline-text-2" id="text-org22d83ff">
+<p>
+Let's get some AJAX action going by making a GET request to an API.
+The awesome <a href="https://lichess.org/">Lichess online chess server</a> exposes <a href="https://github.com/ornicar/lila">a public API</a> for all
+sorts of requests.  For instance, we can get a JSON record for the
+<a href="https://lichess.org/blog/WjRTPScAAJXo7r5s/magnus-carlsen-wins-the-first-lichess-titled-arena">titled player tournament</a> that was hosted recently (won by World
+Champion Magnus Carlsen) by accessing
+<code>https://lichess.org/api/tournament/GToVqkC9</code>.
+</p>
+
+
 <p>
 <a href="https://github.com/Freeboard/thingproxy">https://github.com/Freeboard/thingproxy</a>
-<a href="https://github.com/ornicar/lila">https://github.com/ornicar/lila</a>
 </p>
+</div>
+</div>
+
+<div id="outline-container-org0f98fdc" class="outline-2">
+<h2 id="org0f98fdc">Client-side routing</h2>
+</div>
 </div>
 </body>
 </html>
