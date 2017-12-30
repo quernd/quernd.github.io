@@ -3,7 +3,7 @@
 "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
 <head>
-<!-- 2017-12-29 Fri 21:43 -->
+<!-- 2017-12-30 Sat 19:24 -->
 <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Twelve Days of Christmas #7</title>
@@ -165,15 +165,6 @@ in our immutable world where we don't modify the model in-place but return a
 modified version of the model.  If you're interested in other purely
 functional data structures, I strongly recommend reading <a href="https://www.cs.cmu.edu/~rwh/theses/okasaki.pdf">Chris Okasaki's thesis</a>.
 </p>
-</div>
-
-<div id="outline-container-org2a489b5" class="outline-3">
-<h3 id="org2a489b5"><span class="todo TODO">TODO</span> also mention</h3>
-<div class="outline-text-3" id="text-org2a489b5">
-<p>
-<a href="http://learnyouahaskell.com/zippers">http://learnyouahaskell.com/zippers</a>
-<a href="https://learnyouanelm.github.io/pages/14-zippers.html">https://learnyouanelm.github.io/pages/14-zippers.html</a>
-</p>
 
 <p>
 The basic idea of a zipper is that we represent a data structure by a
@@ -182,7 +173,9 @@ fill that hole.  This gives us the ability to treat the boundary
 between these two as a <i>cursor</i>, and moving the cursor around can be
 achieved by making cheap local modifications.  Zippers can be defined
 for all algebraic data structures.  In this tutorial, we will first
-use list zippers, and in a later part even tree zippers.
+use list zippers, and in a later part even tree zippers.  You can
+learn more about zippers in the excellent <a href="http://learnyouahaskell.com/zippers">"Learn You a Haskell for
+Great Good"</a> book, or in its <a href="https://learnyouanelm.github.io/pages/14-zippers.html">Elm adaptation</a>.
 </p>
 
 <p>
@@ -299,15 +292,11 @@ The <code>view</code> function hands the zipper and the ply number off to the
 <code>move_list_view</code>.  This is going to be a little tricky because the
 future needs to be counting upwards while the past needs to be
 counting down.  I chose to implement tail-recursive functions that
-make everything explicit.  <code>move_list_future_way</code> uses continuation
-passing, while <code>move_list_view</code> uses an accumulator. 
+make everything explicit.   If you are new to functional programming,
+these might look a little scary.  I recommend the excellent <a href="https://fsharpforfunandprofit.com/posts/recursive-types-and-folds/">series on
+"folds" by Scott Wlaschin</a> if you want to understand what is going on here.
 </p>
-</div>
-</div>
 
-<div id="outline-container-org4fd847f" class="outline-3">
-<h3 id="org4fd847f"><span class="todo TODO">TODO</span> Write more about tail-recursive functions and why we do this.</h3>
-<div class="outline-text-3" id="text-org4fd847f">
 <div class="org-src-container">
 <pre class="src src-ocaml"><span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">move_list_future_view</span><span style="color: #BA36A5;"> ply future</span> <span style="color: #a52a2a;">=</span>
   <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #000000; font-weight: bold;">rec</span> <span style="color: #006699;">loop</span><span style="color: #BA36A5;"> offset cont</span> <span style="color: #a52a2a;">=</span> <span style="color: #0000FF;">function</span>
@@ -326,6 +315,27 @@ passing, while <code>move_list_view</code> uses an accumulator.
   <span style="color: #a52a2a;">|&gt;</span> ul <span style="color: #a52a2a;">[</span>class' <span style="color: #008000;">"moves"</span><span style="color: #a52a2a;">]</span>
 </pre>
 </div>
+
+<p>
+The function <code>move_list_view</code> uses an
+accumulator to which each element is prepended as we step deeper into
+the list.  This results in a list with the order of items reversed and
+is similar to the function <code>List.fold_left</code> from the OCaml standard library.
+</p>
+
+<p>
+On the other hand, <code>move_list_future_way</code> is a tail-recursive
+implementation similar to <code>List.fold_right</code> using a technique called continuation
+passing.  Instead of building the entire result list incrementally
+while going over it, we build up a function that will be evaluated
+when the end of the list is reached.  This way, the original order of
+the moves is kept. 
+</p>
+
+<p>
+In both functions, we thread along the offset argument to calculate
+the move number.
+</p>
 
 <p>
 (Exercise: If you like functional programming, rewrite <code>move_list_view</code> in terms of <code>List.fold_left</code>. Hint:
@@ -424,7 +434,6 @@ the keyboard :-)
 </div>
 </div>
 </div>
-</div>
 
 
 <div id="outline-container-orga0e634b" class="outline-2">
@@ -449,41 +458,17 @@ integer argument:
 <span style="color: #808080;">[@@bs.deriving {accessors}]</span>
 </pre>
 </div>
-</div>
 
-<div id="outline-container-org73e7730" class="outline-3">
-<h3 id="org73e7730"><span class="todo TODO">TODO</span> explain the jumps</h3>
-<div class="outline-text-3" id="text-org73e7730">
 <p>
-We realize that it fits our story better to start counting the past
-from 0 instead of the future.  This means we have to adapt <code>move_view</code>
-to calculate the move number slightly differently.
+We will use <code>Jump</code> with a negative number to jump back, and with a
+positive number to jump forward in the move list. First, let's make
+the moves clickable.  We refactor <code>move_view</code> so that instead of the
+sum of ply and offset it takes both arguments. A click on a move will trigger a <code>Jump</code> message
+with the appropriate offset:
 </p>
 
 <div class="org-src-container">
-<pre class="src src-ocaml"><span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">update</span><span style="color: #BA36A5;"> model</span> <span style="color: #a52a2a;">=</span> <span style="color: #0000FF;">function</span>
-
-  <span style="color: #a52a2a;">...</span>
-
-  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Jump</span> how_many <span style="color: #a52a2a;">-&gt;</span>
-    <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #000000; font-weight: bold;">rec</span> <span style="color: #006699;">jump_fwd</span><span style="color: #BA36A5;"> position zipper n</span> <span style="color: #a52a2a;">=</span>
-      <span style="color: #0000FF;">if</span> n <span style="color: #a52a2a;">&lt;=</span> 0 <span style="color: #0000FF;">then</span> position<span style="color: #a52a2a;">,</span> zipper
-      <span style="color: #0000FF;">else</span> <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #a52a2a;">(</span><span style="color: #BA36A5;">move</span><span style="color: #a52a2a;">,</span><span style="color: #BA36A5;"> _san</span><span style="color: #a52a2a;">),</span><span style="color: #BA36A5;"> zipper'</span> <span style="color: #a52a2a;">=</span> <span style="color: #6434A3;">Zipper.</span>fwd zipper <span style="color: #000000; font-weight: bold;">in</span>
-        jump_fwd <span style="color: #a52a2a;">(</span><span style="color: #6434A3;">Chess.</span>make_move position move<span style="color: #a52a2a;">)</span> zipper' <span style="color: #a52a2a;">(</span>n <span style="color: #a52a2a;">-</span> 1<span style="color: #a52a2a;">)</span> <span style="color: #000000; font-weight: bold;">in</span>
-    <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #000000; font-weight: bold;">rec</span> <span style="color: #006699;">jump_back</span><span style="color: #BA36A5;"> </span><span style="color: #a52a2a;">(</span><span style="color: #BA36A5;">position</span><span style="color: #a52a2a;">:</span><span style="color: #6434A3;">Chess.</span><span style="color: #6434A3;">position</span><span style="color: #a52a2a;">)</span><span style="color: #BA36A5;"> zipper n</span> <span style="color: #a52a2a;">=</span>
-      <span style="color: #0000FF;">match</span> position.prev<span style="color: #a52a2a;">,</span> n <span style="color: #0000FF;">with</span>
-      <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Some</span> position'<span style="color: #a52a2a;">,</span> n <span style="color: #0000FF;">when</span> n <span style="color: #a52a2a;">&lt;</span> 0 <span style="color: #a52a2a;">-&gt;</span>
-        jump_back position' <span style="color: #a52a2a;">(</span><span style="color: #6434A3;">Zipper.</span>back zipper<span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">(</span>n <span style="color: #a52a2a;">+</span> 1<span style="color: #a52a2a;">)</span>
-      <span style="color: #a52a2a;">|</span> _ <span style="color: #a52a2a;">-&gt;</span> position<span style="color: #a52a2a;">,</span> zipper <span style="color: #000000; font-weight: bold;">in</span>
-    <span style="color: #000000; font-weight: bold;">begin</span> <span style="color: #0000FF;">match</span> how_many <span style="color: #0000FF;">with</span>
-      <span style="color: #a52a2a;">|</span> 0 <span style="color: #a52a2a;">-&gt;</span> model<span style="color: #a52a2a;">,</span> <span style="color: #6434A3;">Cmd.</span>none
-      <span style="color: #a52a2a;">|</span> n <span style="color: #a52a2a;">-&gt;</span> <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">position</span><span style="color: #a52a2a;">,</span><span style="color: #BA36A5;"> moves</span> <span style="color: #a52a2a;">=</span>
-               <span style="color: #0000FF;">if</span> n <span style="color: #a52a2a;">&gt;</span> 0 <span style="color: #0000FF;">then</span> jump_fwd model.position model.moves n
-               <span style="color: #0000FF;">else</span> jump_back model.position model.moves n <span style="color: #000000; font-weight: bold;">in</span>
-        <span style="color: #a52a2a;">{</span>model <span style="color: #0000FF;">with</span> position<span style="color: #a52a2a;">;</span> moves<span style="color: #a52a2a;">;</span> ply <span style="color: #a52a2a;">=</span> model.ply <span style="color: #a52a2a;">+</span> n<span style="color: #a52a2a;">},</span> <span style="color: #6434A3;">Cmd.</span>none
-    <span style="color: #000000; font-weight: bold;">end</span>
-
-<span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">move_view</span><span style="color: #BA36A5;"> </span><span style="color: #a52a2a;">?(</span><span style="color: #BA36A5;">highlight</span><span style="color: #a52a2a;">=</span><span style="color: #D0372D;">false</span><span style="color: #a52a2a;">)</span><span style="color: #BA36A5;"> current_ply offset </span><span style="color: #a52a2a;">(</span><span style="color: #BA36A5;">_move</span><span style="color: #a52a2a;">,</span><span style="color: #BA36A5;"> san</span><span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">=</span>
+<pre class="src src-ocaml"><span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">move_view</span><span style="color: #BA36A5;"> </span><span style="color: #a52a2a;">?(</span><span style="color: #BA36A5;">highlight</span><span style="color: #a52a2a;">=</span><span style="color: #D0372D;">false</span><span style="color: #a52a2a;">)</span><span style="color: #BA36A5;"> current_ply offset </span><span style="color: #a52a2a;">(</span><span style="color: #BA36A5;">_move</span><span style="color: #a52a2a;">,</span><span style="color: #BA36A5;"> san</span><span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">=</span>
   <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">ply</span> <span style="color: #a52a2a;">=</span> current_ply <span style="color: #a52a2a;">+</span> offset <span style="color: #a52a2a;">+</span> 1 <span style="color: #000000; font-weight: bold;">in</span>
   <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">number</span> <span style="color: #a52a2a;">=</span> ply <span style="color: #a52a2a;">/</span> 2
   <span style="color: #000000; font-weight: bold;">and</span> <span style="color: #BA36A5;">w_move</span> <span style="color: #a52a2a;">=</span> ply <span style="color: #a52a2a;">mod</span> 2 <span style="color: #a52a2a;">=</span> 0 <span style="color: #000000; font-weight: bold;">in</span>
@@ -498,15 +483,14 @@ to calculate the move number slightly differently.
         <span style="color: #a52a2a;">]</span> <span style="color: #a52a2a;">[</span>text san<span style="color: #a52a2a;">]</span>
     <span style="color: #a52a2a;">]</span>
 
-<span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">home_view</span><span style="color: #BA36A5;"> </span><span style="color: #a52a2a;">~</span><span style="color: #BA36A5;">highlight current_ply</span> <span style="color: #a52a2a;">=</span>
-  li <span style="color: #a52a2a;">[</span> classList
-         <span style="color: #a52a2a;">[</span> <span style="color: #008000;">"move"</span><span style="color: #a52a2a;">,</span> <span style="color: #D0372D;">true</span>
-         <span style="color: #a52a2a;">;</span> <span style="color: #008000;">"highlight"</span><span style="color: #a52a2a;">,</span> highlight <span style="color: #a52a2a;">]</span> <span style="color: #a52a2a;">]</span>
-    <span style="color: #a52a2a;">[</span> span
-        <span style="color: #a52a2a;">[</span> class' <span style="color: #008000;">"move"</span>
-        <span style="color: #a52a2a;">;</span> onClick <span style="color: #a52a2a;">(</span><span style="color: #000000; background-color: #FFFFFF;">Jump</span> <span style="color: #a52a2a;">(-</span>current_ply<span style="color: #a52a2a;">))</span>
-        <span style="color: #a52a2a;">]</span> <span style="color: #a52a2a;">[</span>text <span style="color: #008000;">{js|\u2302|js}</span><span style="color: #a52a2a;">]</span>
-    <span style="color: #a52a2a;">]</span>
+<span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">move_list_future_view</span><span style="color: #BA36A5;"> ply future</span> <span style="color: #a52a2a;">=</span>
+  <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #000000; font-weight: bold;">rec</span> <span style="color: #006699;">loop</span><span style="color: #BA36A5;"> offset cont</span> <span style="color: #a52a2a;">=</span> <span style="color: #0000FF;">function</span>
+    <span style="color: #a52a2a;">|</span> <span style="color: #a52a2a;">[]</span> <span style="color: #a52a2a;">-&gt;</span> cont <span style="color: #a52a2a;">[]</span>
+    <span style="color: #a52a2a;">|</span> hd<span style="color: #a52a2a;">::</span>tl <span style="color: #a52a2a;">-&gt;</span>
+      loop <span style="color: #a52a2a;">(</span>offset <span style="color: #a52a2a;">+</span> 1<span style="color: #a52a2a;">)</span>
+        <span style="color: #a52a2a;">(</span><span style="color: #0000FF;">fun</span> <span style="color: #BA36A5;">acc</span> <span style="color: #a52a2a;">-&gt;</span> move_view ply offset hd<span style="color: #a52a2a;">::</span>acc
+                    <span style="color: #a52a2a;">|&gt;</span> cont<span style="color: #a52a2a;">)</span> tl
+  <span style="color: #000000; font-weight: bold;">in</span> loop 1 <span style="color: #a52a2a;">(</span><span style="color: #0000FF;">fun</span> <span style="color: #BA36A5;">x</span> <span style="color: #a52a2a;">-&gt;</span> x<span style="color: #a52a2a;">)</span> future
 
 <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">move_list_view</span><span style="color: #BA36A5;"> ply </span><span style="color: #a52a2a;">(</span><span style="color: #BA36A5;">past</span><span style="color: #a52a2a;">,</span><span style="color: #BA36A5;"> future</span><span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">=</span>
   <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #000000; font-weight: bold;">rec</span> <span style="color: #006699;">loop</span><span style="color: #BA36A5;"> offset acc</span> <span style="color: #a52a2a;">=</span> <span style="color: #0000FF;">function</span>
@@ -519,7 +503,41 @@ to calculate the move number slightly differently.
      <span style="color: #a52a2a;">|&gt;</span> ul <span style="color: #a52a2a;">[</span>class' <span style="color: #008000;">"moves"</span><span style="color: #a52a2a;">]</span>
 </pre>
 </div>
+
+<p>
+Notice that I also changed the offset on the currently highlighted
+move to be 0 instead of –1.  This way, clicking the highlighted move
+triggers no jump. Finally, we react to the <code>Jump</code> message:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-ocaml"><span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Jump</span> how_many <span style="color: #a52a2a;">-&gt;</span>
+  <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #000000; font-weight: bold;">rec</span> <span style="color: #006699;">jump_fwd</span><span style="color: #BA36A5;"> position zipper n</span> <span style="color: #a52a2a;">=</span>
+    <span style="color: #0000FF;">if</span> n <span style="color: #a52a2a;">&lt;=</span> 0 <span style="color: #0000FF;">then</span> position<span style="color: #a52a2a;">,</span> zipper
+    <span style="color: #0000FF;">else</span> <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #a52a2a;">(</span><span style="color: #BA36A5;">move</span><span style="color: #a52a2a;">,</span><span style="color: #BA36A5;"> _san</span><span style="color: #a52a2a;">),</span><span style="color: #BA36A5;"> zipper'</span> <span style="color: #a52a2a;">=</span> <span style="color: #6434A3;">Zipper.</span>fwd zipper <span style="color: #000000; font-weight: bold;">in</span>
+      jump_fwd <span style="color: #a52a2a;">(</span><span style="color: #6434A3;">Chess.</span>make_move position move<span style="color: #a52a2a;">)</span> zipper' <span style="color: #a52a2a;">(</span>n <span style="color: #a52a2a;">-</span> 1<span style="color: #a52a2a;">)</span> <span style="color: #000000; font-weight: bold;">in</span>
+  <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #000000; font-weight: bold;">rec</span> <span style="color: #006699;">jump_back</span><span style="color: #BA36A5;"> </span><span style="color: #a52a2a;">(</span><span style="color: #BA36A5;">position</span><span style="color: #a52a2a;">:</span><span style="color: #6434A3;">Chess.</span><span style="color: #6434A3;">position</span><span style="color: #a52a2a;">)</span><span style="color: #BA36A5;"> zipper n</span> <span style="color: #a52a2a;">=</span>
+    <span style="color: #0000FF;">match</span> position.prev<span style="color: #a52a2a;">,</span> n <span style="color: #0000FF;">with</span>
+    <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Some</span> position'<span style="color: #a52a2a;">,</span> n <span style="color: #0000FF;">when</span> n <span style="color: #a52a2a;">&lt;</span> 0 <span style="color: #a52a2a;">-&gt;</span>
+      jump_back position' <span style="color: #a52a2a;">(</span><span style="color: #6434A3;">Zipper.</span>back zipper<span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">(</span>n <span style="color: #a52a2a;">+</span> 1<span style="color: #a52a2a;">)</span>
+    <span style="color: #a52a2a;">|</span> _ <span style="color: #a52a2a;">-&gt;</span> position<span style="color: #a52a2a;">,</span> zipper <span style="color: #000000; font-weight: bold;">in</span>
+  <span style="color: #000000; font-weight: bold;">begin</span> <span style="color: #0000FF;">match</span> how_many <span style="color: #0000FF;">with</span>
+    <span style="color: #a52a2a;">|</span> 0 <span style="color: #a52a2a;">-&gt;</span> model<span style="color: #a52a2a;">,</span> <span style="color: #6434A3;">Cmd.</span>none
+    <span style="color: #a52a2a;">|</span> n <span style="color: #a52a2a;">-&gt;</span> <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">position</span><span style="color: #a52a2a;">,</span><span style="color: #BA36A5;"> moves</span> <span style="color: #a52a2a;">=</span>
+             <span style="color: #0000FF;">if</span> n <span style="color: #a52a2a;">&gt;</span> 0 <span style="color: #0000FF;">then</span> jump_fwd model.position model.moves n
+             <span style="color: #0000FF;">else</span> jump_back model.position model.moves n <span style="color: #000000; font-weight: bold;">in</span>
+      <span style="color: #a52a2a;">{</span>model <span style="color: #0000FF;">with</span> position<span style="color: #a52a2a;">;</span> moves<span style="color: #a52a2a;">;</span> ply <span style="color: #a52a2a;">=</span> model.ply <span style="color: #a52a2a;">+</span> n<span style="color: #a52a2a;">},</span> <span style="color: #6434A3;">Cmd.</span>none
+  <span style="color: #000000; font-weight: bold;">end</span>
+</pre>
 </div>
+
+<p>
+You should now be able to go back and forward using the buttons,
+keyboard shortcuts, and by just clicking on moves.  <a href="../day8/index.html">Tomorrow, we will
+turn our program into a "single-page application" (SPA)</a> by adding
+client-side routing and some AJAX functionality to load games from the
+popular <a href="https://lichess.org/">Lichess online chess server</a>.
+</p>
 </div>
 </div>
 </div>
