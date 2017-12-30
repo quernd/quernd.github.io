@@ -3,7 +3,7 @@
 "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
 <head>
-<!-- 2017-12-30 Sat 21:38 -->
+<!-- 2017-12-30 Sat 22:25 -->
 <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Twelve Days of Christmas #8</title>
@@ -31,7 +31,7 @@ Yesterday, we implemented the move list by using a functional
 programming technique called the "zipper".  Today, we will now add the
 possibility to load chess games from the popular Lichess server, as well
 as client-side routing.  This will turn our program into what is
-usually called a "single-page application" (SPA).  Start from tag <code>day7</code> if you are following along with my
+usually called a <a href="https://en.wikipedia.org/wiki/Single-page_application">"single-page application"</a> (SPA).  Start from tag <code>day7</code> if you are following along with my
 repository.
 </p>
 
@@ -442,9 +442,13 @@ The tournament view is nice, but we need a way to switch between the
 move list view and the tournament view, and also between games if we
 load games from the server.  We keep track of the current view by a
 <code>view</code> field in the <code>model</code> record.  The current view is also
-represented in the URL.  In fact, we can trigger actions that
-change the view by navigating to a URL instead of sending a message.
-We will listen to updates in the URL and update the model accordingly.
+represented in the URL, so that it can be bookmarked or shared.  Also,
+the browser's history buttons can be used.  For this, we use the
+portion of the URL after the hash (#) symbol.  Remember that the hash
+symbol is used for page-internal links and will thus not cause a
+refresh, but we can still listen to updates in the URL and update the
+model accordingly. In fact, we will trigger actions that
+change the view through links to a URL instead of sending a message.
 </p>
 
 <p>
@@ -593,7 +597,216 @@ default "Game" view.
 <h2 id="orgb42952e">A tabbed list of game views</h2>
 <div class="outline-text-2" id="text-orgb42952e">
 <p>
-<a href="https://github.com/Freeboard/thingproxy">https://github.com/Freeboard/thingproxy</a>
+Let's load a game into a new tab when we click the game ID in the
+tournament view.  First, we define a new view and some new messages:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-ocaml"><span style="color: #000000; font-weight: bold;">type</span> <span style="color: #6434A3;">view</span> <span style="color: #a52a2a;">=</span>
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Game</span>
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Tournament</span>
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Pgn</span> <span style="color: #0000FF;">of</span> string
+
+<span style="color: #000000; font-weight: bold;">type</span> <span style="color: #6434A3;">model</span> <span style="color: #a52a2a;">=</span>
+  <span style="color: #a52a2a;">...</span>
+  <span style="color: #a52a2a;">;</span> pgn <span style="color: #a52a2a;">:</span> <span style="color: #a52a2a;">(</span>string <span style="color: #a52a2a;">*</span> string transfer<span style="color: #a52a2a;">)</span> list <span style="color: #8D8D84;">(* </span><span style="color: #8D8D84; font-style: italic;">association list </span><span style="color: #8D8D84;">*)</span>
+  <span style="color: #a52a2a;">...</span>
+
+<span style="color: #000000; font-weight: bold;">type</span> <span style="color: #6434A3;">msg</span> <span style="color: #a52a2a;">=</span>  
+  <span style="color: #a52a2a;">...</span>
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Pgn_requested</span> <span style="color: #0000FF;">of</span> string
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Pgn_data</span> <span style="color: #0000FF;">of</span> string <span style="color: #a52a2a;">*</span> <span style="color: #a52a2a;">(</span>string<span style="color: #a52a2a;">,</span> string <span style="color: #6434A3;">Http.</span>error<span style="color: #a52a2a;">)</span> <span style="color: #6434A3;">Result.</span>t
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Close_tab</span> <span style="color: #0000FF;">of</span> string
+<span style="color: #808080;">[@@bs.deriving {accessors}]</span>
+
+
+<span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">view_of_location</span><span style="color: #BA36A5;"> location</span> <span style="color: #a52a2a;">=</span>
+  <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #000000; font-weight: bold;">open </span><span style="color: #6434A3;">Web.Location</span> <span style="color: #000000; font-weight: bold;">in</span>
+  <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">route</span> <span style="color: #a52a2a;">=</span> <span style="color: #6434A3;">Chess.</span>split_on_char <span style="color: #008000;">'/'</span> location.hash <span style="color: #000000; font-weight: bold;">in</span>
+  <span style="color: #0000FF;">match</span> route <span style="color: #0000FF;">with</span>
+  <span style="color: #a52a2a;">|</span> <span style="color: #a52a2a;">[</span><span style="color: #008000;">"#"</span><span style="color: #a52a2a;">;</span> <span style="color: #008000;">"game"</span><span style="color: #a52a2a;">]</span> <span style="color: #a52a2a;">-&gt;</span> <span style="color: #000000; background-color: #FFFFFF;">Game</span><span style="color: #a52a2a;">,</span> <span style="color: #6434A3;">Cmd.</span>none
+  <span style="color: #a52a2a;">|</span> <span style="color: #a52a2a;">[</span><span style="color: #008000;">"#"</span><span style="color: #a52a2a;">;</span> <span style="color: #008000;">"tournament"</span><span style="color: #a52a2a;">]</span> <span style="color: #a52a2a;">-&gt;</span> <span style="color: #000000; background-color: #FFFFFF;">Tournament</span><span style="color: #a52a2a;">,</span> <span style="color: #6434A3;">Cmd.</span>none
+  <span style="color: #a52a2a;">|</span> <span style="color: #a52a2a;">[</span><span style="color: #008000;">"#"</span><span style="color: #a52a2a;">;</span> <span style="color: #008000;">"pgn"</span><span style="color: #a52a2a;">;</span> id<span style="color: #a52a2a;">]</span> <span style="color: #a52a2a;">-&gt;</span>  <span style="color: #000000; background-color: #FFFFFF;">Pgn</span> id<span style="color: #a52a2a;">,</span> <span style="color: #6434A3;">Cmd.</span>msg <span style="color: #a52a2a;">(</span><span style="color: #000000; background-color: #FFFFFF;">Pgn_requested</span> id<span style="color: #a52a2a;">)</span>
+  <span style="color: #a52a2a;">|</span> _ <span style="color: #a52a2a;">-&gt;</span> <span style="color: #000000; background-color: #FFFFFF;">Game</span><span style="color: #a52a2a;">,</span> <span style="color: #6434A3;">Navigation.</span>modifyUrl <span style="color: #008000;">"#/game"</span>  <span style="color: #8D8D84;">(* </span><span style="color: #8D8D84; font-style: italic;">default route </span><span style="color: #8D8D84;">*)</span>
+
+<span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">init</span><span style="color: #BA36A5;"> </span><span style="color: #a52a2a;">()</span><span style="color: #BA36A5;"> location</span> <span style="color: #a52a2a;">=</span>
+  <span style="color: #a52a2a;">...</span>
+  <span style="color: #a52a2a;">;</span> pgn <span style="color: #a52a2a;">=</span> <span style="color: #a52a2a;">[]</span>
+  <span style="color: #a52a2a;">...</span>
+</pre>
+</div>
+
+<p>
+We use the <code>split_on_char</code> function that we added to O'Chess (maybe we
+should move it to a different module?!) to match
+routes in a more systematic fashion.
+</p>
+
+<p>
+We will keep track of the games in the <code>pgn</code> field of the <code>model</code>
+record (PGN stands for <a href="https://en.wikipedia.org/wiki/Portable_Game_Notation"><i>Portable Game Notation</i></a>) by using an
+<i>association list</i>, or a key-value list, where the keys are game IDs
+and the values are of type <code>string transfer</code>.  Let's write the handler
+for the <code>Pgn_requested</code> message that is received when the user clicks
+a game link:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-ocaml"><span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Pgn_requested</span> id <span style="color: #a52a2a;">-&gt;</span>
+  <span style="color: #0000FF;">if</span> <span style="color: #6434A3;">List.</span>mem_assoc id model.pgn
+  <span style="color: #0000FF;">then</span> model<span style="color: #a52a2a;">,</span> <span style="color: #6434A3;">Cmd.</span>none
+  <span style="color: #0000FF;">else</span> 
+    <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">url</span> <span style="color: #a52a2a;">=</span>
+      <span style="color: #6434A3;">Printf.</span>sprintf <span style="color: #008000;">"https://lichess.org/game/export/%s.pgn"</span> id <span style="color: #000000; font-weight: bold;">in</span>
+    <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">cmd</span> <span style="color: #a52a2a;">=</span> <span style="color: #6434A3;">Http.</span>getString url <span style="color: #a52a2a;">|&gt;</span> <span style="color: #6434A3;">Http.</span>send <span style="color: #a52a2a;">(</span>pgn_data id<span style="color: #a52a2a;">)</span> <span style="color: #000000; font-weight: bold;">in</span>
+    <span style="color: #a52a2a;">{</span> model <span style="color: #0000FF;">with</span>
+      view <span style="color: #a52a2a;">=</span> <span style="color: #000000; background-color: #FFFFFF;">Pgn</span> id
+    <span style="color: #a52a2a;">;</span> pgn <span style="color: #a52a2a;">=</span> <span style="color: #a52a2a;">(</span>id<span style="color: #a52a2a;">,</span> <span style="color: #000000; background-color: #FFFFFF;">Loading</span><span style="color: #a52a2a;">)::</span>model.pgn
+    <span style="color: #a52a2a;">},</span> cmd
+</pre>
+</div>
+
+<p>
+When the game ID is already found in the association list, no action
+is performed, but when it isn't, an HTTP request is issued and the
+game is added to the list with status <code>Loading</code>.  The other messages
+are handled as follows:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-ocaml"><span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Pgn_data</span> <span style="color: #a52a2a;">(</span>id<span style="color: #a52a2a;">,</span> <span style="color: #6434A3;">Result.</span><span style="color: #000000; background-color: #FFFFFF;">Error</span> _e<span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">-&gt;</span>
+  <span style="color: #a52a2a;">{</span> model <span style="color: #0000FF;">with</span>
+    pgn <span style="color: #a52a2a;">=</span> <span style="color: #a52a2a;">(</span>id<span style="color: #a52a2a;">,</span> <span style="color: #000000; background-color: #FFFFFF;">Failed</span><span style="color: #a52a2a;">)::</span><span style="color: #6434A3;">List.</span>remove_assoc id model.pgn
+  <span style="color: #a52a2a;">},</span> <span style="color: #6434A3;">Cmd.</span>none
+<span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Pgn_data</span> <span style="color: #a52a2a;">(</span>id<span style="color: #a52a2a;">,</span> <span style="color: #6434A3;">Result.</span><span style="color: #000000; background-color: #FFFFFF;">Ok</span> data<span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">-&gt;</span>
+  <span style="color: #a52a2a;">{</span> model <span style="color: #0000FF;">with</span>
+    pgn <span style="color: #a52a2a;">=</span> <span style="color: #a52a2a;">(</span>id<span style="color: #a52a2a;">,</span> <span style="color: #000000; background-color: #FFFFFF;">Received</span> data<span style="color: #a52a2a;">)::</span><span style="color: #6434A3;">List.</span>remove_assoc id model.pgn
+  <span style="color: #a52a2a;">},</span> <span style="color: #6434A3;">Cmd.</span>none
+<span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Close_tab</span> id <span style="color: #a52a2a;">-&gt;</span>
+  <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">pgn</span> <span style="color: #a52a2a;">=</span> <span style="color: #6434A3;">List.</span>remove_assoc id model.pgn <span style="color: #000000; font-weight: bold;">in</span>
+  <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">view</span> <span style="color: #a52a2a;">=</span> <span style="color: #000000; font-weight: bold;">begin</span> <span style="color: #0000FF;">match</span> pgn <span style="color: #0000FF;">with</span>
+    <span style="color: #a52a2a;">|</span> <span style="color: #a52a2a;">(</span>id<span style="color: #a52a2a;">,</span> _<span style="color: #a52a2a;">)::</span>_ <span style="color: #a52a2a;">-&gt;</span> <span style="color: #000000; background-color: #FFFFFF;">Pgn</span> id
+    <span style="color: #a52a2a;">|</span> <span style="color: #a52a2a;">[]</span> <span style="color: #a52a2a;">-&gt;</span> <span style="color: #000000; background-color: #FFFFFF;">Tournament</span>
+  <span style="color: #000000; font-weight: bold;">end</span> <span style="color: #000000; font-weight: bold;">in</span>
+  <span style="color: #a52a2a;">{</span>model <span style="color: #0000FF;">with</span> pgn<span style="color: #a52a2a;">;</span> view<span style="color: #a52a2a;">},</span> <span style="color: #6434A3;">Cmd.</span>none
+</pre>
+</div>
+
+<p>
+Finally, we add a PGN view and a list of tabs to switch between views.
+We need to handle the case of the ID not yet being found in the list
+because there is a short moment in time when the view has already
+been set to <code>Pgn id</code>, but the HTTP request hasn't yet been sent out.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-ocaml"><span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">pgn_view</span><span style="color: #BA36A5;"> id pgn</span> <span style="color: #a52a2a;">=</span>
+  <span style="color: #0000FF;">try</span> <span style="color: #0000FF;">match</span> <span style="color: #6434A3;">List.</span>assoc id pgn <span style="color: #0000FF;">with</span>
+    <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Loading</span> <span style="color: #a52a2a;">-&gt;</span> text <span style="color: #008000;">"Loading PGN game..."</span>
+    <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Received</span> pgn' <span style="color: #a52a2a;">-&gt;</span> 
+      pre <span style="color: #a52a2a;">[</span>style <span style="color: #008000;">"white-space"</span> <span style="color: #008000;">"pre-wrap"</span><span style="color: #a52a2a;">]</span> <span style="color: #a52a2a;">[</span>text pgn'<span style="color: #a52a2a;">]</span>
+    <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Failed</span> <span style="color: #a52a2a;">-&gt;</span> text <span style="color: #008000;">"Game could not be loaded."</span>             
+  <span style="color: #0000FF;">with</span> <span style="color: #006FE0;">Not_found</span> <span style="color: #a52a2a;">-&gt;</span> text <span style="color: #008000;">""</span>
+
+<span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">game_nav_view</span><span style="color: #BA36A5;"> model</span> <span style="color: #a52a2a;">=</span>
+  <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">pgn_nav_item</span><span style="color: #BA36A5;"> id</span> <span style="color: #a52a2a;">=</span>
+    li <span style="color: #a52a2a;">[</span> <span style="color: #0000FF;">if</span> model.view <span style="color: #a52a2a;">=</span> <span style="color: #000000; background-color: #FFFFFF;">Pgn</span> id <span style="color: #0000FF;">then</span> class' <span style="color: #008000;">"current"</span> <span style="color: #0000FF;">else</span> noProp <span style="color: #a52a2a;">]</span>
+      <span style="color: #a52a2a;">[</span> <span style="color: #0000FF;">if</span> model.view <span style="color: #a52a2a;">=</span> <span style="color: #000000; background-color: #FFFFFF;">Pgn</span> id
+        <span style="color: #0000FF;">then</span> text id
+        <span style="color: #0000FF;">else</span> a <span style="color: #a52a2a;">[</span>href <span style="color: #a52a2a;">(</span><span style="color: #6434A3;">Printf.</span>sprintf <span style="color: #008000;">"#/pgn/%s"</span> id<span style="color: #a52a2a;">)]</span> <span style="color: #a52a2a;">[</span>text id<span style="color: #a52a2a;">]</span>
+      <span style="color: #a52a2a;">;</span> span <span style="color: #a52a2a;">[]</span> <span style="color: #a52a2a;">[</span>text <span style="color: #008000;">" "</span><span style="color: #a52a2a;">]</span>
+      <span style="color: #a52a2a;">;</span> span <span style="color: #a52a2a;">[</span> style <span style="color: #008000;">"cursor"</span> <span style="color: #008000;">"pointer"</span>
+             <span style="color: #a52a2a;">;</span> onClick <span style="color: #a52a2a;">(</span><span style="color: #000000; background-color: #FFFFFF;">Close_tab</span> id<span style="color: #a52a2a;">)</span>
+             <span style="color: #a52a2a;">]</span> <span style="color: #a52a2a;">[</span>text <span style="color: #008000;">"(x)"</span><span style="color: #a52a2a;">]</span>
+      <span style="color: #a52a2a;">]</span> <span style="color: #000000; font-weight: bold;">in</span>
+
+  <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">game_nav_item</span><span style="color: #BA36A5;"> current link label</span> <span style="color: #a52a2a;">=</span>
+    li <span style="color: #a52a2a;">[</span> <span style="color: #0000FF;">if</span> current <span style="color: #0000FF;">then</span> class' <span style="color: #008000;">"current"</span> <span style="color: #0000FF;">else</span> noProp <span style="color: #a52a2a;">]</span>
+      <span style="color: #a52a2a;">[</span> <span style="color: #0000FF;">if</span> current <span style="color: #0000FF;">then</span> text label <span style="color: #0000FF;">else</span> a <span style="color: #a52a2a;">[</span>href link<span style="color: #a52a2a;">]</span> <span style="color: #a52a2a;">[</span>text label<span style="color: #a52a2a;">]</span> <span style="color: #a52a2a;">]</span> <span style="color: #000000; font-weight: bold;">in</span>
+
+  nav <span style="color: #a52a2a;">[</span>class' <span style="color: #008000;">"top tabbed"</span><span style="color: #a52a2a;">]</span>
+    <span style="color: #a52a2a;">[</span> ul <span style="color: #a52a2a;">[]</span>
+        <span style="color: #a52a2a;">([</span> game_nav_item <span style="color: #a52a2a;">(</span>model.view <span style="color: #a52a2a;">=</span> <span style="color: #000000; background-color: #FFFFFF;">Game</span><span style="color: #a52a2a;">)</span> <span style="color: #008000;">"#/game"</span> <span style="color: #008000;">"Game"</span>
+         <span style="color: #a52a2a;">;</span> game_nav_item <span style="color: #a52a2a;">(</span>model.view <span style="color: #a52a2a;">=</span> <span style="color: #000000; background-color: #FFFFFF;">Tournament</span><span style="color: #a52a2a;">)</span> <span style="color: #008000;">"#/tournament"</span> <span style="color: #008000;">"Tournament"</span>
+         <span style="color: #a52a2a;">]</span> <span style="color: #a52a2a;">@</span> <span style="color: #a52a2a;">(</span><span style="color: #6434A3;">List.</span>rev_map <span style="color: #a52a2a;">(</span><span style="color: #0000FF;">fun</span> <span style="color: #a52a2a;">(</span><span style="color: #BA36A5;">id</span><span style="color: #a52a2a;">,</span><span style="color: #BA36A5;"> _</span><span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">-&gt;</span> pgn_nav_item id<span style="color: #a52a2a;">)</span> model.pgn<span style="color: #a52a2a;">))</span>
+    <span style="color: #a52a2a;">]</span>
+</pre>
+</div>
+
+<p>
+Don't forget to complete the <code>match</code> in the main <code>view</code> by adding a
+case:
+</p>
+<div class="org-src-container">
+<pre class="src src-ocaml"><span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Pgn</span> id <span style="color: #a52a2a;">-&gt;</span> pgn_view id model.pgn
+</pre>
+</div>
+
+<p>
+Head to your browser and click a game&#x2026; and be disappointed: "Game
+could not be loaded."  Check the developer tools and see this error:
+</p>
+
+<pre class="example">
+Cross-Origin Request Blocked: The Same Origin Policy disallows reading the remote resource at https://lichess.org/game/export/PyzfyNUx.pgn. (Reason: CORS header ‘Access-Control-Allow-Origin’ missing).
+</pre>
+
+<p>
+This part of the Lichess API cannot be accessed this way in order to
+prevent cross-site scripting security problems. There is a
+way around it (called JSONP), but it's painful.  I have an easier
+solution for the purpose of this tutorial: let's use a proxy server!
+</p>
+
+<p>
+I recommend grabbing a copy of the <a href="https://github.com/Freeboard/thingproxy">Thingproxy</a> server and running it on
+your own computer.  You can also learn more about the underlying
+problem on their website. Since you already have Node.js and NPM or Yarn
+installed, it's a matter of 1-2-3:
+</p>
+
+<pre class="example">
+git clone https://github.com/Freeboard/thingproxy
+cd thingproxy
+node server.js
+</pre>
+
+<p>
+And the Thingproxy server is running on <code>http://localhost:3000</code>.  Just
+prefix any URL with <code>http://localhost:3000/fetch/</code> and you're good to
+go. If you don't have the patience, you can use a hosted proxy server
+at <code>https://thingproxy.freeboard.io/fetch/</code>.  I put the following in
+my <code>src/Main.ml</code>, and everything worked like a charm.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-ocaml"><span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">proxy</span> <span style="color: #a52a2a;">=</span> <span style="color: #008000;">"http://localhost:3000/fetch/"</span>
+  <span style="color: #a52a2a;">...</span>
+      <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">url</span> <span style="color: #a52a2a;">=</span>
+        <span style="color: #6434A3;">Printf.</span>sprintf <span style="color: #008000;">"%shttps://lichess.org/game/export/%s.pgn"</span> proxy id <span style="color: #000000; font-weight: bold;">in</span>
+
+</pre>
+</div>
+
+<p>
+Open lots of games, see them show up in tabs. If you open many tabs,
+the tab bar will be scrollable but it won't expand or wrap because of this CSS:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-css"><span style="color: #0000ff; font-weight: bold;">#game &gt; nav </span>{
+    <span style="color: #00AA00;">flex</span>: none;
+    <span style="color: #00AA00;">overflow-y</span>: auto;
+    <span style="color: #00AA00;">white-space</span>: nowrap;
+}
+</pre>
+</div>
+
+<p>
+That's it for today.  <a href="../day9/index.html">Tomorrow, we will learn how to parse the PGN
+format so that we can actually play through the games on the board
+instead of just seeing the game notation.</a>  We will use a very
+functional way, namely parser combinators.  Today's code is tag <code>day8</code>.
 </p>
 </div>
 </div>
