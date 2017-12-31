@@ -3,7 +3,7 @@
 "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
 <head>
-<!-- 2017-12-31 Sun 22:30 -->
+<!-- 2017-12-31 Sun 23:49 -->
 <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Twelve Days of Christmas #9</title>
@@ -75,11 +75,9 @@ earlier.  The combinators that we used there were <code>list</code>, <code>field
 </p>
 
 <p>
-I chose to use a <a href="https://github.com/pyrocat101/opal">small self-contained
+I chose to use an MIT-licenced <a href="https://github.com/pyrocat101/opal">small self-contained
 implementation of parser combinators called Opal</a>.  Just drop <code>opal.ml</code>
-into your <code>src</code> directory.  Today&rsquo;s part of this tutorial is a little
-different from the others because most of the action is going to
-happen in the terminal.  To get you acquainted with parser
+into your <code>src</code> directory.  To get you acquainted with parser
 combinators, let&rsquo;s explore them in an interactive way in the OCaml
 toplevel (the read-eval-print loop).  Open a terminal and type <code>ocaml</code>, or better yet, <code>utop</code>.  <a href="https://github.com/diml/utop">Utop</a> offers readline support and
 tab-completion, and is more colorful :-)  You can install it through
@@ -194,7 +192,20 @@ However, it doesn&rsquo;t stop here.  Our anonymous function runs runs
 the remaining input to another anonymous function.  At some point this
 madness has to stop:  the function <code>return</code> takes two arguments.  The
 first is supplied by the pair <code>(file, rank)</code>.  The second is the
-remaining input that we&rsquo;re still carrying around.  The combination of
+remaining input that we&rsquo;re still carrying around.  
+</p>
+
+<p>
+Does it work? Yes it does!
+</p>
+<div class="org-src-container">
+<pre class="src src-ocaml">utop <span style="color: #a52a2a;">#</span> <span style="color: #6434A3;">LazyStream.</span>of_string <span style="color: #008000;">"e4"</span> <span style="color: #a52a2a;">|&gt;</span> parse pgn_square <span style="color: #ff4500;">;;</span>
+<span style="color: #a52a2a;">-</span> <span style="color: #a52a2a;">:</span> <span style="color: #a52a2a;">(</span>char <span style="color: #a52a2a;">*</span> char<span style="color: #a52a2a;">)</span> option <span style="color: #a52a2a;">=</span> <span style="color: #000000; background-color: #FFFFFF;">Some</span> <span style="color: #a52a2a;">(</span><span style="color: #008000;">'e'</span><span style="color: #a52a2a;">,</span> <span style="color: #008000;">'4'</span><span style="color: #a52a2a;">)</span>
+</pre>
+</div>
+
+<p>
+The combination of
 <code>&gt;&gt;=</code> (called <i>bind</i>) and <code>return</code> is extremely powerful!  With <code>&gt;&gt;=</code>,
 you run parsers sequentially, and with <code>return</code>, you can specify the
 format of the return value.   If all of this went a little too fast
@@ -214,7 +225,7 @@ the <code>p1</code>, returning only the result of <code>p2</code>.)
 <h2 id="org21cb1ff">The PGN format</h2>
 <div class="outline-text-2" id="text-org21cb1ff">
 <p>
-Let&rsquo;s jump right in and start writing a parser for the <a href="https://www.chessclub.com/user/help/PGN-spec">PGN format</a>.
+After this warmup, let&rsquo;s jump right in and start writing a parser for the <a href="https://www.chessclub.com/user/help/PGN-spec">PGN format</a>.
 Here&rsquo;s a sample game in PGN from the specification:
 </p>
 
@@ -247,7 +258,8 @@ call the set of features seen in this example &ldquo;Simple PGN&rdquo;.
 </p>
 
 <p>
-There are a few more things you can find in a PGN file, though. PGN
+There are a few more things you can find in a PGN file, though.
+Strings can contain quotation marks escaped with <code>\</code>, PGN
 may contain variations (move sequences that were not
 played, but are included for analysis), and variations can contain
 comments and they can even be nested.  Some header items can carry
@@ -260,8 +272,36 @@ special meaning (for instance, if the game starts from a specified position).
 <h2 id="orgae27bb8">A parser for Simple PGN</h2>
 <div class="outline-text-2" id="text-orgae27bb8">
 <p>
-Let&rsquo;s address Simple PGN first.
+Let&rsquo;s address Simple PGN first.  Start a new file <code>src/Pgn.ml</code> with
+the following:
 </p>
+
+<div class="org-src-container">
+<pre class="src src-ocaml"><span style="color: #000000; font-weight: bold;">module</span> <span style="color: #6434A3;">Opal</span> <span style="color: #a52a2a;">=</span> <span style="color: #000000; font-weight: bold;">struct</span>
+  <span style="color: #000000; font-weight: bold;">include</span> <span style="color: #6434A3;">Opal</span>
+
+  <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">maybe</span><span style="color: #BA36A5;"> p</span> <span style="color: #a52a2a;">=</span> option <span style="color: #000000; background-color: #FFFFFF;">None</span> <span style="color: #a52a2a;">(</span>p <span style="color: #a52a2a;">&gt;&gt;=</span> <span style="color: #0000FF;">fun</span> <span style="color: #BA36A5;">x</span> <span style="color: #a52a2a;">-&gt;</span> return <span style="color: #a52a2a;">(</span><span style="color: #000000; background-color: #FFFFFF;">Some</span> x<span style="color: #a52a2a;">))</span>
+
+<span style="color: #000000; font-weight: bold;">end</span>
+
+<span style="color: #000000; font-weight: bold;">open </span><span style="color: #6434A3;">Opal</span>
+</pre>
+</div>
+
+<p>
+We define a <code>maybe</code> combinator that returns an <code>option</code>.  
+</p>
+
+<p>
+For the header, the specification
+says that a tag pair &ldquo;is composed of four consecutive tokens: a left bracket token, a
+symbol token, a string token, and a right bracket token.&rdquo;  So we have:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-ocaml">
+</pre>
+</div>
 </div>
 </div>
 
