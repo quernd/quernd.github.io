@@ -3,7 +3,7 @@
 "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
 <head>
-<!-- 2017-12-31 Sun 15:21 -->
+<!-- 2017-12-31 Sun 16:16 -->
 <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Twelve Days of Christmas #9</title>
@@ -29,22 +29,140 @@ This is the ninth part of <a href="../index.html">a chess-themed tutorial</a> on
 <p>
  Today, we will use parser
 combinators to be able to read the most widespread format for storing
-chess games.  Start from tag <code>day8</code> if you are following along with my
+chess games, the PGN format.  Start from tag <code>day8</code> if you are following along with my
 repository.
 </p>
 
+<div id="outline-container-orgb93ef88" class="outline-2">
+<h2 id="orgb93ef88">What is a parser combinator?</h2>
+<div class="outline-text-2" id="text-orgb93ef88">
 <p>
-<a href="https://fsharpforfunandprofit.com/posts/understanding-parser-combinators/">https://fsharpforfunandprofit.com/posts/understanding-parser-combinators/</a>
+A <i>parser</i> processes a string and analyzes it in order build a data
+structure such as a syntax tree, according to a set of rules.  There
+are two widespread approaches to writing parsers:  A <i>parser
+generator</i> takes as its input a formal grammar written in a certain
+format, and returns the actual parser function.  Thus, the generator
+needs to be run every time the grammar is changed, but the generated
+parser is a standalone function.
 </p>
 
 <p>
-<a href="https://www.chessclub.com/user/help/PGN-spec">https://www.chessclub.com/user/help/PGN-spec</a>
+<i>Parser combinators</i> on the other hand are a convenient way of
+building parsers on the fly from
+smaller units without having to specify the grammar in a different
+language, much like the way we built JSON decoders from building
+blocks.  In this part of the tutorial, we will build a parser
+using parser combinators for the textual representation of chess games called PGN.
 </p>
-
 
 <p>
-Use local storage
+We will use a small self-contained parser combinator library and only
+touch very lightly on technical matters.
+If you're interested in learning more about parser combinators and
+maybe even writing your own parser combinator library, you
+should check out <a href="https://fsharpforfunandprofit.com/posts/understanding-parser-combinators/">Scott Wlaschin's "Understanding Parser Combinators"
+series</a>.  It's aimed at F#, but F# and OCaml share a lot of similarities.
 </p>
+
+<p>
+Essentially, a parser combinator is a function that takes parsers as
+its arguments and returns a new parser.  A parser, on the other hand,
+is a function that takes a string as its argument and returns
+something else.  Compare that to what you learned about JSON decoders
+earlier.  The combinators that we used there were <code>list</code>, <code>field</code>,
+<code>map2</code> etc.
+</p>
+
+<p>
+For this part of the tutorial, I chose a <a href="https://github.com/pyrocat101/opal">small self-contained
+implementation of parser combinators called Opal</a>.  Just drop <code>opal.ml</code>
+into your <code>src</code> directory.  To get you acquainted with parser
+combinators, let's explore them in an interactive way in the OCaml
+toplevel (the read-eval-print loop).  Open a terminal and type <code>ocaml</code>, or better yet, if you
+have <a href="https://github.com/diml/utop">Utop</a> installed, type <code>utop</code>.  Utop offers readline support and
+tab-completion, and is more colorful :-)  You can install it through
+OPAM with <code>opam install utop</code>.
+</p>
+
+<p>
+Utop will greet you with a prompt like <code>utop #</code>.  Let's load <code>src/opal.ml</code>:
+</p>
+
+<pre class="example">
+─( 16:12:32 )─&lt; command 0 &gt;──────────────────────────────────────{ counter: 0 }─
+utop # #use "src/opal.ml";;
+</pre>
+
+<p>
+You'll see the <i>signature</i> of Opal, listing all the types and
+functions that it exposes.
+</p>
+</div>
+
+<div id="outline-container-org597aeef" class="outline-3">
+<h3 id="org597aeef"><span class="todo TODO">TODO</span> Utop examples</h3>
+</div>
+</div>
+
+<div id="outline-container-org21cb1ff" class="outline-2">
+<h2 id="org21cb1ff">The PGN format</h2>
+<div class="outline-text-2" id="text-org21cb1ff">
+<p>
+Let's jump right in and start writing a parser for the <a href="https://www.chessclub.com/user/help/PGN-spec">PGN format</a>.
+Here's a sample game in PGN from the specification:
+</p>
+
+<pre class="example">
+[Event "F/S Return Match"]
+[Site "Belgrade, Serbia JUG"]
+[Date "1992.11.04"]
+[Round "29"]
+[White "Fischer, Robert J."]
+[Black "Spassky, Boris V."]
+[Result "1/2-1/2"]
+
+1. e4 e5 2. Nf3 Nc6 3. Bb5 a6 {This opening is called the Ruy Lopez.}
+4. Ba4 Nf6 5. O-O Be7 6. Re1 b5 7. Bb3 d6 8. c3 O-O 9. h3 Nb8 10. d4 Nbd7
+11. c4 c6 12. cxb5 axb5 13. Nc3 Bb7 14. Bg5 b4 15. Nb1 h6 16. Bh4 c5 17. dxe5
+Nxe4 18. Bxe7 Qxe7 19. exd6 Qf6 20. Nbd2 Nxd6 21. Nc4 Nxc4 22. Bxc4 Nb6
+23. Ne5 Rae8 24. Bxf7+ Rxf7 25. Nxf7 Rxe1+ 26. Qxe1 Kxf7 27. Qe3 Qg5 28. Qxg5
+hxg5 29. b3 Ke6 30. a3 Kd6 31. axb4 cxb4 32. Ra5 Nd5 33. f3 Bc8 34. Kf2 Bf5
+35. Ra7 g6 36. Ra6+ Kc5 37. Ke1 Nf4 38. g3 Nxh3 39. Kd2 Kb5 40. Rd6 Kc5 41. Ra6
+Nf2 42. g4 Bd3 43. Re6 1/2-1/2
+</pre>
+
+<p>
+As you can see, the moves are in SAN format which we already know,
+followed by a result that's either <code>1/2-1/2</code>, <code>1-0</code>, <code>0-1</code> or <code>*</code>
+(unfinished game).
+The header of the file is a list of key-value pairs of metadata.
+Comments can be inserted after a move enclosed in curly braces.  Let's
+call the set of features seen in this example "Simple PGN".
+</p>
+
+<p>
+There are a few more things you can find in a PGN file, though. PGN
+may contain variations (move sequences that were not
+played, but are included for analysis), and variations can contain
+comments and they can even be nested.  Some header items can carry
+special meaning (for instance, if the game starts from a specified position).
+</p>
+</div>
+</div>
+
+<div id="outline-container-orgae27bb8" class="outline-2">
+<h2 id="orgae27bb8">A parser for Simple PGN</h2>
+<div class="outline-text-2" id="text-orgae27bb8">
+<p>
+Let's address Simple PGN first.
+</p>
+</div>
+</div>
+
+
+<div id="outline-container-orgf5006b9" class="outline-2">
+<h2 id="orgf5006b9">A parser for PGN</h2>
+</div>
 </div>
 </body>
 </html>
