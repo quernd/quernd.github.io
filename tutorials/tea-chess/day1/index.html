@@ -3,32 +3,260 @@
 "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
 <head>
-<!-- 2017-12-30 Sat 22:25 -->
+<!-- 2017-12-25 Mon 17:56 -->
 <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Twelve Days of Christmas #1</title>
+<title>Twelve Days of Christmas</title>
 <meta name="generator" content="Org mode" />
 <meta name="author" content="Daniel Quernheim" />
-<link rel='stylesheet' href='/style.css' type='text/css'/><meta name="viewport" content="width=device-width"/></script>
+<style type="text/css">
+ <!--/*--><![CDATA[/*><!--*/
+  .title  { text-align: center;
+             margin-bottom: .2em; }
+  .subtitle { text-align: center;
+              font-size: medium;
+              font-weight: bold;
+              margin-top:0; }
+  .todo   { font-family: monospace; color: red; }
+  .done   { font-family: monospace; color: green; }
+  .priority { font-family: monospace; color: orange; }
+  .tag    { background-color: #eee; font-family: monospace;
+            padding: 2px; font-size: 80%; font-weight: normal; }
+  .timestamp { color: #bebebe; }
+  .timestamp-kwd { color: #5f9ea0; }
+  .org-right  { margin-left: auto; margin-right: 0px;  text-align: right; }
+  .org-left   { margin-left: 0px;  margin-right: auto; text-align: left; }
+  .org-center { margin-left: auto; margin-right: auto; text-align: center; }
+  .underline { text-decoration: underline; }
+  #postamble p, #preamble p { font-size: 90%; margin: .2em; }
+  p.verse { margin-left: 3%; }
+  pre {
+    border: 1px solid #ccc;
+    box-shadow: 3px 3px 3px #eee;
+    padding: 8pt;
+    font-family: monospace;
+    overflow: auto;
+    margin: 1.2em;
+  }
+  pre.src {
+    position: relative;
+    overflow: visible;
+    padding-top: 1.2em;
+  }
+  pre.src:before {
+    display: none;
+    position: absolute;
+    background-color: white;
+    top: -10px;
+    right: 10px;
+    padding: 3px;
+    border: 1px solid black;
+  }
+  pre.src:hover:before { display: inline;}
+  /* Languages per Org manual */
+  pre.src-asymptote:before { content: 'Asymptote'; }
+  pre.src-awk:before { content: 'Awk'; }
+  pre.src-C:before { content: 'C'; }
+  /* pre.src-C++ doesn't work in CSS */
+  pre.src-clojure:before { content: 'Clojure'; }
+  pre.src-css:before { content: 'CSS'; }
+  pre.src-D:before { content: 'D'; }
+  pre.src-ditaa:before { content: 'ditaa'; }
+  pre.src-dot:before { content: 'Graphviz'; }
+  pre.src-calc:before { content: 'Emacs Calc'; }
+  pre.src-emacs-lisp:before { content: 'Emacs Lisp'; }
+  pre.src-fortran:before { content: 'Fortran'; }
+  pre.src-gnuplot:before { content: 'gnuplot'; }
+  pre.src-haskell:before { content: 'Haskell'; }
+  pre.src-hledger:before { content: 'hledger'; }
+  pre.src-java:before { content: 'Java'; }
+  pre.src-js:before { content: 'Javascript'; }
+  pre.src-latex:before { content: 'LaTeX'; }
+  pre.src-ledger:before { content: 'Ledger'; }
+  pre.src-lisp:before { content: 'Lisp'; }
+  pre.src-lilypond:before { content: 'Lilypond'; }
+  pre.src-lua:before { content: 'Lua'; }
+  pre.src-matlab:before { content: 'MATLAB'; }
+  pre.src-mscgen:before { content: 'Mscgen'; }
+  pre.src-ocaml:before { content: 'Objective Caml'; }
+  pre.src-octave:before { content: 'Octave'; }
+  pre.src-org:before { content: 'Org mode'; }
+  pre.src-oz:before { content: 'OZ'; }
+  pre.src-plantuml:before { content: 'Plantuml'; }
+  pre.src-processing:before { content: 'Processing.js'; }
+  pre.src-python:before { content: 'Python'; }
+  pre.src-R:before { content: 'R'; }
+  pre.src-ruby:before { content: 'Ruby'; }
+  pre.src-sass:before { content: 'Sass'; }
+  pre.src-scheme:before { content: 'Scheme'; }
+  pre.src-screen:before { content: 'Gnu Screen'; }
+  pre.src-sed:before { content: 'Sed'; }
+  pre.src-sh:before { content: 'shell'; }
+  pre.src-sql:before { content: 'SQL'; }
+  pre.src-sqlite:before { content: 'SQLite'; }
+  /* additional languages in org.el's org-babel-load-languages alist */
+  pre.src-forth:before { content: 'Forth'; }
+  pre.src-io:before { content: 'IO'; }
+  pre.src-J:before { content: 'J'; }
+  pre.src-makefile:before { content: 'Makefile'; }
+  pre.src-maxima:before { content: 'Maxima'; }
+  pre.src-perl:before { content: 'Perl'; }
+  pre.src-picolisp:before { content: 'Pico Lisp'; }
+  pre.src-scala:before { content: 'Scala'; }
+  pre.src-shell:before { content: 'Shell Script'; }
+  pre.src-ebnf2ps:before { content: 'ebfn2ps'; }
+  /* additional language identifiers per "defun org-babel-execute"
+       in ob-*.el */
+  pre.src-cpp:before  { content: 'C++'; }
+  pre.src-abc:before  { content: 'ABC'; }
+  pre.src-coq:before  { content: 'Coq'; }
+  pre.src-groovy:before  { content: 'Groovy'; }
+  /* additional language identifiers from org-babel-shell-names in
+     ob-shell.el: ob-shell is the only babel language using a lambda to put
+     the execution function name together. */
+  pre.src-bash:before  { content: 'bash'; }
+  pre.src-csh:before  { content: 'csh'; }
+  pre.src-ash:before  { content: 'ash'; }
+  pre.src-dash:before  { content: 'dash'; }
+  pre.src-ksh:before  { content: 'ksh'; }
+  pre.src-mksh:before  { content: 'mksh'; }
+  pre.src-posh:before  { content: 'posh'; }
+  /* Additional Emacs modes also supported by the LaTeX listings package */
+  pre.src-ada:before { content: 'Ada'; }
+  pre.src-asm:before { content: 'Assembler'; }
+  pre.src-caml:before { content: 'Caml'; }
+  pre.src-delphi:before { content: 'Delphi'; }
+  pre.src-html:before { content: 'HTML'; }
+  pre.src-idl:before { content: 'IDL'; }
+  pre.src-mercury:before { content: 'Mercury'; }
+  pre.src-metapost:before { content: 'MetaPost'; }
+  pre.src-modula-2:before { content: 'Modula-2'; }
+  pre.src-pascal:before { content: 'Pascal'; }
+  pre.src-ps:before { content: 'PostScript'; }
+  pre.src-prolog:before { content: 'Prolog'; }
+  pre.src-simula:before { content: 'Simula'; }
+  pre.src-tcl:before { content: 'tcl'; }
+  pre.src-tex:before { content: 'TeX'; }
+  pre.src-plain-tex:before { content: 'Plain TeX'; }
+  pre.src-verilog:before { content: 'Verilog'; }
+  pre.src-vhdl:before { content: 'VHDL'; }
+  pre.src-xml:before { content: 'XML'; }
+  pre.src-nxml:before { content: 'XML'; }
+  /* add a generic configuration mode; LaTeX export needs an additional
+     (add-to-list 'org-latex-listings-langs '(conf " ")) in .emacs */
+  pre.src-conf:before { content: 'Configuration File'; }
+
+  table { border-collapse:collapse; }
+  caption.t-above { caption-side: top; }
+  caption.t-bottom { caption-side: bottom; }
+  td, th { vertical-align:top;  }
+  th.org-right  { text-align: center;  }
+  th.org-left   { text-align: center;   }
+  th.org-center { text-align: center; }
+  td.org-right  { text-align: right;  }
+  td.org-left   { text-align: left;   }
+  td.org-center { text-align: center; }
+  dt { font-weight: bold; }
+  .footpara { display: inline; }
+  .footdef  { margin-bottom: 1em; }
+  .figure { padding: 1em; }
+  .figure p { text-align: center; }
+  .inlinetask {
+    padding: 10px;
+    border: 2px solid gray;
+    margin: 10px;
+    background: #ffffcc;
+  }
+  #org-div-home-and-up
+   { text-align: right; font-size: 70%; white-space: nowrap; }
+  textarea { overflow-x: auto; }
+  .linenr { font-size: smaller }
+  .code-highlighted { background-color: #ffff00; }
+  .org-info-js_info-navigation { border-style: none; }
+  #org-info-js_console-label
+    { font-size: 10px; font-weight: bold; white-space: nowrap; }
+  .org-info-js_search-highlight
+    { background-color: #ffff00; color: #000000; font-weight: bold; }
+  .org-svg { width: 90%; }
+  /*]]>*/-->
+</style>
+<script type="text/javascript">
+/*
+@licstart  The following is the entire license notice for the
+JavaScript code in this tag.
+
+Copyright (C) 2012-2017 Free Software Foundation, Inc.
+
+The JavaScript code in this tag is free software: you can
+redistribute it and/or modify it under the terms of the GNU
+General Public License (GNU GPL) as published by the Free Software
+Foundation, either version 3 of the License, or (at your option)
+any later version.  The code is distributed WITHOUT ANY WARRANTY;
+without even the implied warranty of MERCHANTABILITY or FITNESS
+FOR A PARTICULAR PURPOSE.  See the GNU GPL for more details.
+
+As additional permission under GNU GPL version 3 section 7, you
+may distribute non-source (e.g., minimized or compacted) forms of
+that code without the copy of the GNU GPL normally required by
+section 4, provided you include this license notice and a URL
+through which recipients can access the Corresponding Source.
+
+
+@licend  The above is the entire license notice
+for the JavaScript code in this tag.
+*/
+<!--/*--><![CDATA[/*><!--*/
+ function CodeHighlightOn(elem, id)
+ {
+   var target = document.getElementById(id);
+   if(null != target) {
+     elem.cacheClassElem = elem.className;
+     elem.cacheClassTarget = target.className;
+     target.className = "code-highlighted";
+     elem.className   = "code-highlighted";
+   }
+ }
+ function CodeHighlightOff(elem, id)
+ {
+   var target = document.getElementById(id);
+   if(elem.cacheClassElem)
+     elem.className = elem.cacheClassElem;
+   if(elem.cacheClassTarget)
+     target.className = elem.cacheClassTarget;
+ }
+/*]]>*///-->
+</script>
 </head>
 <body>
-<div id="org-div-home-and-up">
- <a accesskey="h" href=""> UP </a>
- |
- <a accesskey="H" href="/"> HOME </a>
-</div><div id="preamble" class="status">
-<nav><a href="/">home</a></nav>
-</div>
 <div id="content">
-<h1 class="title">Twelve Days of Christmas #1</h1>
+<h1 class="title">Twelve Days of Christmas</h1>
+<div id="table-of-contents">
+<h2>Table of Contents</h2>
+<div id="text-table-of-contents">
+<ul>
+<li><a href="#orga4627c6">1. Day 1: A static chessboard without pieces</a>
+<ul>
+<li><a href="#orgf1169c0">1.1. First things first</a></li>
+<li><a href="#orgf3e307e">1.2. The Elm architecture</a></li>
+<li><a href="#org2abbfe0">1.3. Starting from (almost) scratch</a></li>
+<li><a href="#org8a644a6">1.4. Your first view function</a></li>
+</ul>
+</li>
+</ul>
+</div>
+</div>
 <p>
-This is the first part of <a href="../index.html">a chess-themed tutorial</a> on writing an SPA in
-<a href="https://github.com/OvermindDL1/bucklescript-tea">Bucklescript-TEA</a>.  After this part, your app will look similar to <a href="demo.html">this demo</a>.
+This is the first part of <a href="file:///Users/daniel/Playground/tea-chess/doc/index.html">a chess-themed tutorial</a> on writing an SPA in
+<a href="https://github.com/OvermindDL1/bucklescript-tea">Bucklescript-TEA</a>.
 </p>
 
-<div id="outline-container-org3d9b73d" class="outline-2">
-<h2 id="org3d9b73d">First things first</h2>
-<div class="outline-text-2" id="text-org3d9b73d">
+<div id="outline-container-orga4627c6" class="outline-2">
+<h2 id="orga4627c6"><span class="section-number-2">1</span> Day 1: A static chessboard without pieces</h2>
+<div class="outline-text-2" id="text-1">
+</div>
+<div id="outline-container-orgf1169c0" class="outline-3">
+<h3 id="orgf1169c0"><span class="section-number-3">1.1</span> First things first</h3>
+<div class="outline-text-3" id="text-1-1">
 <p>
 Before you can start, make sure you have the following installed:
 </p>
@@ -129,9 +357,9 @@ Bucklescript version.
 </div>
 </div>
 
-<div id="outline-container-orgdcb8924" class="outline-2">
-<h2 id="orgdcb8924">The Elm architecture</h2>
-<div class="outline-text-2" id="text-orgdcb8924">
+<div id="outline-container-orgf3e307e" class="outline-3">
+<h3 id="orgf3e307e"><span class="section-number-3">1.2</span> The Elm architecture</h3>
+<div class="outline-text-3" id="text-1-2">
 <p>
 Open <code>src/Main.ml</code> and take a look at the code. Now, if you are
 familiar with the "Elm architecture", made popular by the Elm language
@@ -147,45 +375,23 @@ grasp if all you remember is this:
 <li>Your program state is represented by a <i>model</i>.</li>
 <li>Whenever stuff happens (user clicks a button, AJAX data comes in,
 etc.), the <i>update</i> function receives a <i>message</i> and the current
-model and returns a new model.</li>
+<i>model</i> and returns a new <i>model</i>.</li>
 <li>The <i>view</i> function computes a
 virtual DOM tree from the model (which is rendered to the
-screen).</li>
+screen) and a recipe for any side effects that you would like to
+execute (called a <i>command</i>).</li>
+<li>Side effects are managed behind the scenes to ensure that your
+functions stay pure; when a side effect is actually executed, it
+gets boxed into a <i>message</i>.  In addition to commands, your program
+can listen to <i>subscriptions</i> to receive messages
+on events such as mouse and keyboard events, websockets, and time.</li>
 </ol>
 
 <p>
-Here's an adorable illustration by <a href="https://twitter.com/01k">Kolja Wilcke</a> from his and <a href="https://twitter.com/unsoundscapes">Andrey
-Kuzmin</a>'s <a href="https://www.youtube.com/watch?v=En2BKs8unnQ">talk</a> on <a href="https://github.com/w0rm/creating-a-fun-game-with-elm">Creating a Fun Game With Elm</a>:
-</p>
-
-<p>
-<blockquote class="twitter-tweet" data-lang="en"><p lang="en" dir="ltr">Elm Architecture <a href="https://twitter.com/hashtag/illustration?src=hash&amp;ref_src=twsrc%5Etfw">#illustration</a> from our talk with <a href="https://twitter.com/unsoundscapes?ref_src=twsrc%5Etfw">@unsoundscapes</a> <a href="https://twitter.com/curry_on_conf?ref_src=twsrc%5Etfw">@curry_on_conf</a> <a href="https://t.co/yTE5iivne7">pic.twitter.com/yTE5iivne7</a></p>&mdash; Kolja Wilcke (@01k) <a href="https://twitter.com/01k/status/755005168933011456?ref_src=twsrc%5Etfw">July 18, 2016</a></blockquote>
-<script async src="https://platform.twitter.com/widgets.js"
-charset="utf-8"></script>
-</p>
-
-<p>
-Side effects are managed behind the scenes to ensure that your
-functions stay pure. (A function is <a href="https://en.wikipedia.org/wiki/Pure_function">pure</a> when it will always return
-the same output value when called with the same input arguments, and
-doesn't cause any side effect.)  Therefore, in the Elm architecture,
-you only deal with <i>recipes</i> for side effects, called <i>commands</i>.
-When you need to ask for a side effect to be
-performed, you can issue a command together with the new model in
-the <i>update</i> function. Your program can also listen to <i>subscriptions</i>
-to receive messages on events such as mouse and keyboard events,
-websockets, and time. Both commands and subscriptions will feed
-messages into your update function.  In order to use commands and
-subscriptions, you need to "upgrade" from <code>beginnerProgram</code> to <code>standardProgram</code>.
-</p>
-
-<p>
 If you installed Merlin, you can use it to examine the types of the
-functions involved in the Elm Architecture. (For instance, if you're
+functions involved in the Elm Architecture. For instance, if you're
 using Emacs, press <kbd>C-c C-t</kbd>, and Merlin will tell
-you the type of the function name at the point (cursor).  Press
-<kbd>C-c C-l</kbd>, and it will take you to the definition
-of the function.)
+you the type of the function name at the point (cursor):
 </p>
 
 <ul class="org-ul">
@@ -217,9 +423,9 @@ types.
 </div>
 </div>
 
-<div id="outline-container-org96ebc77" class="outline-2">
-<h2 id="org96ebc77">Starting from (almost) scratch</h2>
-<div class="outline-text-2" id="text-org96ebc77">
+<div id="outline-container-org2abbfe0" class="outline-3">
+<h3 id="org2abbfe0"><span class="section-number-3">1.3</span> Starting from (almost) scratch</h3>
+<div class="outline-text-3" id="text-1-3">
 <p>
 To see if hot reloading works, try changing the line 
 </p>
@@ -327,9 +533,9 @@ because <code>function</code> has built-in pattern-matching.
 </div>
 </div>
 
-<div id="outline-container-org63e9cba" class="outline-2">
-<h2 id="org63e9cba">Your first view function</h2>
-<div class="outline-text-2" id="text-org63e9cba">
+<div id="outline-container-org8a644a6" class="outline-3">
+<h3 id="org8a644a6"><span class="section-number-3">1.4</span> Your first view function</h3>
+<div class="outline-text-3" id="text-1-4">
 <p>
 We still need to write a meaningful <code>view</code> function, of course.  Right
 now it only returns <code>noNode</code>, which is a placeholder for when you
@@ -498,11 +704,11 @@ selectors.  Now the <code>view</code> function is a lot simpler:
 
 <p>
 We use <code>node</code> (defined in <code>Tea.Html</code>) to define our custom tags.  You
-should now see a nice-looking chessboard similar to <a href="demo.html">this demo</a>.  Just a small problem: still
-no pieces!  <a href="../day2/index.html">Tomorrow, we will add pieces and teach our program to make
-random moves on the board.</a>  If you want to synchronize with my
-repository, check out the tag <code>day1</code>.
+should now see a nice-looking chessboard.  Just a small problem: still
+no pieces!  Tomorrow, we will add pieces and teach our program to make
+random moves on the board.
 </p>
+</div>
 </div>
 </div>
 <div id="footnotes">
@@ -518,5 +724,10 @@ code a chessboard.
 
 </div>
 </div></div>
+<div id="postamble" class="status">
+<p class="author">Author: Daniel Quernheim</p>
+<p class="date">Created: 2017-12-25 Mon 17:56</p>
+<p class="validation"><a href="http://validator.w3.org/check?uri=referer">Validate</a></p>
+</div>
 </body>
 </html>
