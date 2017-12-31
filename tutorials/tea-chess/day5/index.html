@@ -3,7 +3,7 @@
 "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
 <head>
-<!-- 2017-12-31 Sun 00:13 -->
+<!-- 2017-12-31 Sun 22:30 -->
 <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Twelve Days of Christmas #5</title>
@@ -36,7 +36,7 @@ repository.
 <h2 id="orge235c7d">Moving the piece along with the mouse</h2>
 <div class="outline-text-2" id="text-orge235c7d">
 <p>
-So far, we didn't implement a crucial part of drag and drop: the
+So far, we didn&rsquo;t implement a crucial part of drag and drop: the
 dragged piece stayed in its original place.  Now we will make sure
 that the piece will be dragged, and we will also highlight legal
 targets for the piece to be dropped. 
@@ -62,14 +62,14 @@ excellent open-source online chess server <a href="https://lichess.org/">Lichess
 </p>
 
 <p>
-Now let's tackle piece dragging first.  We add <code>z-index: 9</code> to the CSS
+Now let&rsquo;s tackle piece dragging first.  We add <code>z-index: 9</code> to the CSS
 styles of the piece so that it will float above all other pieces.
 Then we make use of the CSS <code>transform</code>
 property that can do all sorts of things to DOM elements.  In
 particular, we will use <code>translate()</code> to shift it according to how
 much the mouse pointer has moved since the piece was picked up.  We
 add <code>drag.offset.x - (drag.size / 2)</code> so that the piece is always
-centered under the mouse pointer.  Let's also
+centered under the mouse pointer.  Let&rsquo;s also
 highlight possible targets for the piece to move to by adding the
 <code>destination</code> and <code>hovering</code> class to them according to some helper functions. 
  The <code>square_view</code> function now looks
@@ -134,7 +134,7 @@ You now get instant feedback when you drag a piece.
 
 <p>
 (Exercise: Add some visual feedback for the user about the original
-square of the dragged piece, i.e. by including a "ghost" piece with
+square of the dragged piece, i.e. by including a &ldquo;ghost&rdquo; piece with
 lower opacity, or by coloring the original square.)
 </p>
 </div>
@@ -144,9 +144,9 @@ lower opacity, or by coloring the original square.)
 <h2 id="org5fb972f">Pawn promotion</h2>
 <div class="outline-text-2" id="text-org5fb972f">
 <p>
-Finally let's tackle the big elephant in the room: pawn promotion.
-When a pawn reaches the oppenent's home rank, it should be promoted to
-a knight, bishop, rook, or queen.  We'll implement a nice-looking
+Finally let&rsquo;s tackle the big elephant in the room: pawn promotion.
+When a pawn reaches the oppenent&rsquo;s home rank, it should be promoted to
+a knight, bishop, rook, or queen.  We&rsquo;ll implement a nice-looking
 piecer chooser that, again, is inspired by (i.e. stolen from) Lichess.
 Add this to your <code>main.css</code>:
 </p>
@@ -186,13 +186,13 @@ Add this to your <code>main.css</code>:
 </div>
 
 <p>
-If you don't understand what this does &#x2013; don't worry, neither did I
+If you don&rsquo;t understand what this does &#x2013; don&rsquo;t worry, neither did I
 when I first saw it. But it looks pretty cool! We will display the <code>cb-promo</code> element together with the actual board in a
 wrapper, but only when needed.
 </p>
 
 <p>
-Let's add a new state <code>Promoting</code> and two new internal messages:
+Let&rsquo;s add a new state <code>Promoting</code> and two new internal messages:
 </p>
 
 <div class="org-src-container">
@@ -221,7 +221,7 @@ Let's add a new state <code>Promoting</code> and two new internal messages:
 </div>
 
 <p>
-The <code>Promoting</code> state will be entered in the <code>update</code> function when an "incomplete" move has been made:
+The <code>Promoting</code> state will be entered in the <code>update</code> function when an &ldquo;incomplete&rdquo; move has been made:
 </p>
 
 <div class="org-src-container">
@@ -327,8 +327,7 @@ In the <code>update</code> function, promotion is handled in the following way:
 
 <p>
 Congratulations, you should now be able to promote pawns! This is tag
-<code>day5</code> in my repository. <a href="../day6/index.html">Tomorrow, we
-will implement move logging and take-back functionality.</a>
+<code>day5</code> in my repository. <a href="../day6/index.html">Tomorrow, we will implement move logging and take-back functionality.</a>
 </p>
 </div>
 </div>

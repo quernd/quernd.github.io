@@ -3,7 +3,7 @@
 "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
 <head>
-<!-- 2017-12-31 Sun 16:16 -->
+<!-- 2017-12-31 Sun 22:30 -->
 <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Twelve Days of Christmas #9</title>
@@ -37,8 +37,9 @@ repository.
 <h2 id="orgb93ef88">What is a parser combinator?</h2>
 <div class="outline-text-2" id="text-orgb93ef88">
 <p>
-A <i>parser</i> processes a string and analyzes it in order build a data
-structure such as a syntax tree, according to a set of rules.  There
+Every once in a while you have to deal with string data instead of
+JSON data.  A <i>parser</i> processes a string and analyzes it in order build a data
+structure such as an OCaml record, according to a set of rules.  There
 are two widespread approaches to writing parsers:  A <i>parser
 generator</i> takes as its input a formal grammar written in a certain
 format, and returns the actual parser function.  Thus, the generator
@@ -58,10 +59,10 @@ using parser combinators for the textual representation of chess games called PG
 <p>
 We will use a small self-contained parser combinator library and only
 touch very lightly on technical matters.
-If you're interested in learning more about parser combinators and
+If you&rsquo;re interested in learning more about parser combinators and
 maybe even writing your own parser combinator library, you
-should check out <a href="https://fsharpforfunandprofit.com/posts/understanding-parser-combinators/">Scott Wlaschin's "Understanding Parser Combinators"
-series</a>.  It's aimed at F#, but F# and OCaml share a lot of similarities.
+should check out <a href="https://fsharpforfunandprofit.com/posts/understanding-parser-combinators/">Scott Wlaschin&rsquo;s &ldquo;Understanding Parser Combinators&rdquo;
+series</a>.  It&rsquo;s aimed at F#, but F# and OCaml share a lot of similarities.
 </p>
 
 <p>
@@ -70,37 +71,142 @@ its arguments and returns a new parser.  A parser, on the other hand,
 is a function that takes a string as its argument and returns
 something else.  Compare that to what you learned about JSON decoders
 earlier.  The combinators that we used there were <code>list</code>, <code>field</code>,
-<code>map2</code> etc.
+<code>map2</code> etc. 
 </p>
 
 <p>
-For this part of the tutorial, I chose a <a href="https://github.com/pyrocat101/opal">small self-contained
+I chose to use a <a href="https://github.com/pyrocat101/opal">small self-contained
 implementation of parser combinators called Opal</a>.  Just drop <code>opal.ml</code>
-into your <code>src</code> directory.  To get you acquainted with parser
-combinators, let's explore them in an interactive way in the OCaml
-toplevel (the read-eval-print loop).  Open a terminal and type <code>ocaml</code>, or better yet, if you
-have <a href="https://github.com/diml/utop">Utop</a> installed, type <code>utop</code>.  Utop offers readline support and
+into your <code>src</code> directory.  Today&rsquo;s part of this tutorial is a little
+different from the others because most of the action is going to
+happen in the terminal.  To get you acquainted with parser
+combinators, let&rsquo;s explore them in an interactive way in the OCaml
+toplevel (the read-eval-print loop).  Open a terminal and type <code>ocaml</code>, or better yet, <code>utop</code>.  <a href="https://github.com/diml/utop">Utop</a> offers readline support and
 tab-completion, and is more colorful :-)  You can install it through
 OPAM with <code>opam install utop</code>.
 </p>
 
 <p>
-Utop will greet you with a prompt like <code>utop #</code>.  Let's load <code>src/opal.ml</code>:
+Utop will greet you with a prompt like <code>utop #</code>.  Let&rsquo;s load
+<code>src/opal.ml</code>.  Note that you have to end a statement with <code>;;</code> in Utop.
 </p>
 
-<pre class="example">
-─( 16:12:32 )─&lt; command 0 &gt;──────────────────────────────────────{ counter: 0 }─
-utop # #use "src/opal.ml";;
+<div class="org-src-container">
+<pre class="src src-ocaml">utop <span style="color: #a52a2a;">#</span> <span style="color: #a52a2a;">#</span>use <span style="color: #008000;">"src/opal.ml"</span><span style="color: #ff4500;">;;</span>
 </pre>
-
-<p>
-You'll see the <i>signature</i> of Opal, listing all the types and
-functions that it exposes.
-</p>
 </div>
 
-<div id="outline-container-org597aeef" class="outline-3">
-<h3 id="org597aeef"><span class="todo TODO">TODO</span> Utop examples</h3>
+<p>
+You&rsquo;ll see the <i>signature</i> of Opal, listing all the types and
+functions that it exposes.
+</p>
+
+<p>
+Are you ready to write your first parser? There it is:
+</p>
+<div class="org-src-container">
+<pre class="src src-ocaml">utop <span style="color: #a52a2a;">#</span> <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">pgn_capture</span> <span style="color: #a52a2a;">=</span> exactly <span style="color: #008000;">'x'</span><span style="color: #ff4500;">;;</span>
+<span style="color: #000000; font-weight: bold;">val</span> <span style="color: #006699;">capture</span> <span style="color: #a52a2a;">:</span> char input <span style="color: #a52a2a;">-&gt;</span> <span style="color: #a52a2a;">(</span>char <span style="color: #a52a2a;">*</span> char input<span style="color: #a52a2a;">)</span> option <span style="color: #a52a2a;">=</span> <span style="color: #a52a2a;">&lt;</span><span style="color: #0000FF;">fun</span><span style="color: #a52a2a;">&gt;</span>
+</pre>
+</div>
+
+<p>
+OCaml tells you that <code>capture</code> is a function that takes a <code>char input</code>
+and either returns <code>None</code> (if the parser failed) or <code>Some</code> pair of
+<code>char</code> (the result of applying the parser to the input) and
+another <code>char input</code> (the remaining input).  Building a parser using
+parser combinators is all about making the parsers work together so
+that each parser feeds the remaining input into the next parser.
+</p>
+
+<p>
+Let&rsquo;s try out our parser. We can convert a string into type <code>input</code> by
+using <code>LazyStream.of_string</code>:
+</p>
+<div class="org-src-container">
+<pre class="src src-ocaml">utop <span style="color: #a52a2a;">#</span> <span style="color: #6434A3;">LazyStream.</span>of_string<span style="color: #ff4500;">;;</span>
+<span style="color: #a52a2a;">-</span> <span style="color: #a52a2a;">:</span> bytes <span style="color: #a52a2a;">-&gt;</span> char input <span style="color: #a52a2a;">=</span> <span style="color: #a52a2a;">&lt;</span><span style="color: #0000FF;">fun</span><span style="color: #a52a2a;">&gt;</span>
+
+utop <span style="color: #a52a2a;">#</span> <span style="color: #6434A3;">LazyStream.</span>of_string <span style="color: #008000;">"x"</span> <span style="color: #a52a2a;">|&gt;</span> pgn_capture<span style="color: #ff4500;">;;</span>
+<span style="color: #a52a2a;">-</span> <span style="color: #a52a2a;">:</span> <span style="color: #a52a2a;">(</span>char <span style="color: #a52a2a;">*</span> char input<span style="color: #a52a2a;">)</span> option <span style="color: #a52a2a;">=</span> <span style="color: #000000; background-color: #FFFFFF;">Some</span> <span style="color: #a52a2a;">(</span><span style="color: #008000;">'x'</span><span style="color: #a52a2a;">,</span> <span style="color: #6434A3;">LazyStream.</span><span style="color: #000000; background-color: #FFFFFF;">Nil</span><span style="color: #a52a2a;">)</span>
+
+utop <span style="color: #a52a2a;">#</span> <span style="color: #6434A3;">LazyStream.</span>of_string <span style="color: #008000;">"xyz"</span> <span style="color: #a52a2a;">|&gt;</span> pgn_capture<span style="color: #ff4500;">;;</span>
+<span style="color: #a52a2a;">-</span> <span style="color: #a52a2a;">:</span> <span style="color: #a52a2a;">(</span>char <span style="color: #a52a2a;">*</span> char input<span style="color: #a52a2a;">)</span> option <span style="color: #a52a2a;">=</span> <span style="color: #000000; background-color: #FFFFFF;">Some</span> <span style="color: #a52a2a;">(</span><span style="color: #008000;">'x'</span><span style="color: #a52a2a;">,</span> <span style="color: #6434A3;">LazyStream.</span><span style="color: #000000; background-color: #FFFFFF;">Cons</span> <span style="color: #a52a2a;">(</span><span style="color: #008000;">'y'</span><span style="color: #a52a2a;">,</span> <span style="color: #a52a2a;">&lt;</span><span style="color: #0000FF;">lazy</span><span style="color: #a52a2a;">&gt;))</span>
+
+utop <span style="color: #a52a2a;">#</span> <span style="color: #6434A3;">LazyStream.</span>of_string <span style="color: #008000;">"yz"</span> <span style="color: #a52a2a;">|&gt;</span> pgn_capture<span style="color: #ff4500;">;;</span>
+<span style="color: #a52a2a;">-</span> <span style="color: #a52a2a;">:</span> <span style="color: #a52a2a;">(</span>char <span style="color: #a52a2a;">*</span> char input<span style="color: #a52a2a;">)</span> option <span style="color: #a52a2a;">=</span> None
+</pre>
+</div>
+
+<p>
+Looks good! Note that the parser also returns the remainder of the
+input.  If we are only interested whether parsing succeeded, we can
+use the function <code>parse</code>:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-ocaml">utop <span style="color: #a52a2a;">#</span> <span style="color: #6434A3;">LazyStream.</span>of_string <span style="color: #008000;">"xyz"</span> <span style="color: #a52a2a;">|&gt;</span> parse pgn_capture<span style="color: #ff4500;">;;</span>
+<span style="color: #a52a2a;">-</span> <span style="color: #a52a2a;">:</span> char option <span style="color: #a52a2a;">=</span> <span style="color: #000000; background-color: #FFFFFF;">Some</span> <span style="color: #008000;">'x'</span>
+</pre>
+</div>
+
+<p>
+Here are some more simple parsers, defined by the &ldquo;or&rdquo; combinator
+<code>&lt;|&gt;</code>, or by spelling out a list of possible
+characters to match. 
+</p>
+
+<div class="org-src-container">
+<pre class="src src-ocaml">utop <span style="color: #a52a2a;">#</span> <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">pgn_castle</span> <span style="color: #a52a2a;">=</span> token <span style="color: #008000;">"O-O"</span> <span style="color: #a52a2a;">&lt;|&gt;</span> token <span style="color: #008000;">"O-O-O"</span><span style="color: #ff4500;">;;</span>
+utop <span style="color: #a52a2a;">#</span> <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">pgn_piece</span> <span style="color: #a52a2a;">=</span> one_of <span style="color: #a52a2a;">[</span><span style="color: #008000;">'K'</span><span style="color: #a52a2a;">;</span> <span style="color: #008000;">'Q'</span><span style="color: #a52a2a;">;</span> <span style="color: #008000;">'R'</span><span style="color: #a52a2a;">;</span> <span style="color: #008000;">'B'</span><span style="color: #a52a2a;">;</span> <span style="color: #008000;">'N'</span><span style="color: #a52a2a;">;</span> <span style="color: #008000;">'P'</span><span style="color: #a52a2a;">]</span><span style="color: #ff4500;">;;</span>
+utop <span style="color: #a52a2a;">#</span> <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">pgn_file</span> <span style="color: #a52a2a;">=</span> one_of <span style="color: #a52a2a;">[</span><span style="color: #008000;">'a'</span><span style="color: #a52a2a;">;</span> <span style="color: #008000;">'b'</span><span style="color: #a52a2a;">;</span> <span style="color: #008000;">'c'</span><span style="color: #a52a2a;">;</span> <span style="color: #008000;">'d'</span><span style="color: #a52a2a;">;</span> <span style="color: #008000;">'e'</span><span style="color: #a52a2a;">;</span> <span style="color: #008000;">'f'</span><span style="color: #a52a2a;">;</span> <span style="color: #008000;">'g'</span><span style="color: #a52a2a;">;</span> <span style="color: #008000;">'h'</span><span style="color: #a52a2a;">]</span><span style="color: #ff4500;">;;</span>
+utop <span style="color: #a52a2a;">#</span> <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">pgn_rank</span> <span style="color: #a52a2a;">=</span> one_of <span style="color: #a52a2a;">[</span><span style="color: #008000;">'1'</span><span style="color: #a52a2a;">;</span> <span style="color: #008000;">'2'</span><span style="color: #a52a2a;">;</span> <span style="color: #008000;">'3'</span><span style="color: #a52a2a;">;</span> <span style="color: #008000;">'4'</span><span style="color: #a52a2a;">;</span> <span style="color: #008000;">'5'</span><span style="color: #a52a2a;">;</span> <span style="color: #008000;">'6'</span><span style="color: #a52a2a;">;</span> <span style="color: #008000;">'7'</span><span style="color: #a52a2a;">;</span> <span style="color: #008000;">'8'</span><span style="color: #a52a2a;">]</span><span style="color: #ff4500;">;;</span>
+</pre>
+</div>
+
+<p>
+Now let&rsquo;s see if we can combine some parsers to match a move.  Here&rsquo;s a bit of
+black magic:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-ocaml">utop <span style="color: #a52a2a;">#</span> <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">pgn_square</span> <span style="color: #a52a2a;">=</span> pgn_file <span style="color: #a52a2a;">&gt;&gt;=</span> <span style="color: #0000FF;">fun</span> <span style="color: #BA36A5;">file</span> <span style="color: #a52a2a;">-&gt;</span> 
+                        pgn_rank <span style="color: #a52a2a;">&gt;&gt;=</span> <span style="color: #0000FF;">fun</span> <span style="color: #BA36A5;">rank</span> <span style="color: #a52a2a;">-&gt;</span> return <span style="color: #a52a2a;">(</span>file<span style="color: #a52a2a;">,</span> rank<span style="color: #a52a2a;">)</span><span style="color: #ff4500;">;;</span>
+<span style="color: #000000; font-weight: bold;">val</span> <span style="color: #006699;">pgn_square</span> <span style="color: #a52a2a;">:</span> char input <span style="color: #a52a2a;">-&gt;</span> <span style="color: #a52a2a;">((</span>char <span style="color: #a52a2a;">*</span> char<span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">*</span> char input<span style="color: #a52a2a;">)</span> option <span style="color: #a52a2a;">=</span> <span style="color: #a52a2a;">&lt;</span><span style="color: #0000FF;">fun</span><span style="color: #a52a2a;">&gt;</span>
+</pre>
+</div>
+
+<p>
+Whoah! What&rsquo;s going on there?  Let&rsquo;s see.  If you peek at the source
+code of Opal, you&rsquo;ll see that the operator <code>&gt;&gt;=</code> takes a parser (<code>pgn_file</code>) and a function (<code>fun file -&gt;
+...</code>).  It will return a new parser that applies <code>pgn_file</code> first and
+if it succeeds, hands off the result and the remaining input to the
+function.  But wait, <code>fun file -&gt; ...</code> only takes one argument?!
+That&rsquo;s because it&rsquo;s <i>partially applied</i>.  It takes one argument now
+and the other argument later.  Remember that the second argument is
+the remaining input, so it will be a function still looking for
+remaining input, hence – a parser!
+</p>
+
+<p>
+However, it doesn&rsquo;t stop here.  Our anonymous function runs runs
+<code>pgn_rank</code> on the remaining input, and again hands off the result and
+the remaining input to another anonymous function.  At some point this
+madness has to stop:  the function <code>return</code> takes two arguments.  The
+first is supplied by the pair <code>(file, rank)</code>.  The second is the
+remaining input that we&rsquo;re still carrying around.  The combination of
+<code>&gt;&gt;=</code> (called <i>bind</i>) and <code>return</code> is extremely powerful!  With <code>&gt;&gt;=</code>,
+you run parsers sequentially, and with <code>return</code>, you can specify the
+format of the return value.   If all of this went a little too fast
+for you, check out <a href="https://fsharpforfunandprofit.com/posts/understanding-parser-combinators/">Scott Wlaschin&rsquo;s excellent tutorial on parser combinators</a>.
+</p>
+
+<p>
+(Exercise:  Implement a parser combinator that takes two parsers
+<code>p1</code> and <code>p2</code> and
+returns a parser that ignores the result of
+the <code>p1</code>, returning only the result of <code>p2</code>.)
+</p>
 </div>
 </div>
 
@@ -108,8 +214,8 @@ functions that it exposes.
 <h2 id="org21cb1ff">The PGN format</h2>
 <div class="outline-text-2" id="text-org21cb1ff">
 <p>
-Let's jump right in and start writing a parser for the <a href="https://www.chessclub.com/user/help/PGN-spec">PGN format</a>.
-Here's a sample game in PGN from the specification:
+Let&rsquo;s jump right in and start writing a parser for the <a href="https://www.chessclub.com/user/help/PGN-spec">PGN format</a>.
+Here&rsquo;s a sample game in PGN from the specification:
 </p>
 
 <pre class="example">
@@ -133,11 +239,11 @@ Nf2 42. g4 Bd3 43. Re6 1/2-1/2
 
 <p>
 As you can see, the moves are in SAN format which we already know,
-followed by a result that's either <code>1/2-1/2</code>, <code>1-0</code>, <code>0-1</code> or <code>*</code>
+followed by a result that&rsquo;s either <code>1/2-1/2</code>, <code>1-0</code>, <code>0-1</code> or <code>*</code>
 (unfinished game).
 The header of the file is a list of key-value pairs of metadata.
-Comments can be inserted after a move enclosed in curly braces.  Let's
-call the set of features seen in this example "Simple PGN".
+Comments can be inserted after a move enclosed in curly braces.  Let&rsquo;s
+call the set of features seen in this example &ldquo;Simple PGN&rdquo;.
 </p>
 
 <p>
@@ -154,7 +260,7 @@ special meaning (for instance, if the game starts from a specified position).
 <h2 id="orgae27bb8">A parser for Simple PGN</h2>
 <div class="outline-text-2" id="text-orgae27bb8">
 <p>
-Let's address Simple PGN first.
+Let&rsquo;s address Simple PGN first.
 </p>
 </div>
 </div>
