@@ -3,7 +3,7 @@
 "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
 <head>
-<!-- 2017-12-31 Sun 00:13 -->
+<!-- 2017-12-31 Sun 15:21 -->
 <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Twelve Days of Christmas #7</title>
@@ -217,7 +217,7 @@ zipper:
   <span style="color: #a52a2a;">|</span> <span style="color: #a52a2a;">[]</span> <span style="color: #a52a2a;">-&gt;</span> <span style="color: #006FE0;">raise</span> <span style="color: #000000; background-color: #FFFFFF;">End_of_list</span>
   <span style="color: #a52a2a;">|</span> hd<span style="color: #a52a2a;">::</span>future' <span style="color: #a52a2a;">-&gt;</span> hd<span style="color: #a52a2a;">,</span> <span style="color: #a52a2a;">(</span>hd<span style="color: #a52a2a;">::</span>past<span style="color: #a52a2a;">,</span> future'<span style="color: #a52a2a;">)</span>
 
-<span style="color: #8D8D84;">(* </span><span style="color: #8D8D84; font-style: italic;">move back and return item and new zipper </span><span style="color: #8D8D84;">*)</span>
+<span style="color: #8D8D84;">(* </span><span style="color: #8D8D84; font-style: italic;">move back and return new zipper </span><span style="color: #8D8D84;">*)</span>
 <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">back</span><span style="color: #BA36A5;"> </span><span style="color: #a52a2a;">(</span><span style="color: #BA36A5;">past</span><span style="color: #a52a2a;">,</span><span style="color: #BA36A5;"> future</span><span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">=</span>
   <span style="color: #0000FF;">match</span> past <span style="color: #0000FF;">with</span>
   <span style="color: #a52a2a;">|</span> <span style="color: #a52a2a;">[]</span> <span style="color: #a52a2a;">-&gt;</span> <span style="color: #006FE0;">raise</span> <span style="color: #000000; background-color: #FFFFFF;">Beginning_of_list</span>
