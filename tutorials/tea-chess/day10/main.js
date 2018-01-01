@@ -15688,7 +15688,11 @@ function update_route(model, route) {
                 modifyUrl(location_of_route(route))
               ];
       } else {
-        exit$$1 = 1;
+        var newrecord = model.slice();
+        return /* tuple */[
+                (newrecord[/* route */6] = route, newrecord),
+                modifyUrl(location_of_route(route))
+              ];
       }
     }
     if (exit$$1 === 1) {
@@ -15796,7 +15800,7 @@ function update(model, param) {
                       /* game */model[/* game */0],
                       /* board */model[/* board */1],
                       /* scratch_game */init$4(/* () */0),
-                      /* local_games */_3(IntMap[/* add */3], key, Infix[/* |. */0](model, model[/* game */0]), model[/* local_games */3]),
+                      /* local_games */_3(IntMap[/* add */3], key, init$4(/* () */0), model[/* local_games */3]),
                       /* tournament */model[/* tournament */4],
                       /* lichess_games */model[/* lichess_games */5],
                       /* route */model[/* route */6]
@@ -15939,9 +15943,19 @@ function update(model, param) {
             var local_games = fold_left((function (acc, v) {
                     return _3(IntMap[/* add */3], caml_int_of_string(v), game_of_string(assoc(v, list)), acc);
                   }), IntMap[/* empty */0], games$1);
-            var newrecord$1 = model.slice();
+            var match$6 = model[/* route */6];
+            var game;
+            game = typeof match$6 === "number" || match$6.tag ? model[/* game */0] : Infix[/* |-- */3](local_lens, for_key(match$6[0]));
             return /* tuple */[
-                    (newrecord$1[/* local_games */3] = local_games, newrecord$1),
+                    /* record */[
+                      /* game */game,
+                      /* board */model[/* board */1],
+                      /* scratch_game */model[/* scratch_game */2],
+                      /* local_games */local_games,
+                      /* tournament */model[/* tournament */4],
+                      /* lichess_games */model[/* lichess_games */5],
+                      /* route */model[/* route */6]
+                    ],
                     none
                   ];
           }
@@ -15955,11 +15969,11 @@ function update(model, param) {
           }
           break;
       case 4 : 
-          var match$6 = param[0];
-          if (match$6.tag) {
-            var newrecord$2 = model.slice();
+          var match$7 = param[0];
+          if (match$7.tag) {
+            var newrecord$1 = model.slice();
             return /* tuple */[
-                    (newrecord$2[/* tournament */4] = /* Failed */2, newrecord$2),
+                    (newrecord$1[/* tournament */4] = /* Failed */2, newrecord$1),
                     none
                   ];
           } else {
@@ -15972,13 +15986,13 @@ function update(model, param) {
                   }), Decoder[/* field */11]("id", Decoder[/* string */2]), Decoder[/* field */11]("u", players_decoder));
             var list_decoder = Decoder[/* list */7](pairing_decoder);
             var pairings_decoder = Decoder[/* field */11]("pairings", list_decoder);
-            var newrecord$3 = model.slice();
-            var match$7 = Decoder[/* decodeString */32](pairings_decoder, match$6[0]);
+            var newrecord$2 = model.slice();
+            var match$8 = Decoder[/* decodeString */32](pairings_decoder, match$7[0]);
             var tmp$1;
-            tmp$1 = match$7.tag ? /* Failed */2 : /* Received */[match$7[0]];
-            newrecord$3[/* tournament */4] = tmp$1;
+            tmp$1 = match$8.tag ? /* Failed */2 : /* Received */[match$8[0]];
+            newrecord$2[/* tournament */4] = tmp$1;
             return /* tuple */[
-                    newrecord$3,
+                    newrecord$2,
                     none
                   ];
           }
@@ -15986,17 +16000,17 @@ function update(model, param) {
       case 5 : 
           return update_route(model, route_of_location(param[0]));
       case 7 : 
-          var match$8 = param[1];
-          if (match$8.tag) {
+          var match$9 = param[1];
+          if (match$9.tag) {
             return /* tuple */[
                     model,
                     none
                   ];
           } else {
             try {
-              var game = game_of_string(match$8[0]);
+              var game$1 = game_of_string(match$9[0]);
               return /* tuple */[
-                      Infix[/* ^= */1](param[0], game, model),
+                      Infix[/* ^= */1](param[0], game$1, model),
                       none
                     ];
             }
@@ -16206,7 +16220,7 @@ var scratch_view = div$2(/* None */0, /* None */0, /* [] */0, /* :: */[
       buttons_view,
       /* :: */[
         p(/* None */0, /* None */0, /* [] */0, /* :: */[
-              text$1("This is a scratch buffer.  The game will not be saved in the browser's local storage.  Click \"new tab\" to open the game in a separate tab."),
+              text$1("This is a scratch buffer.  The game will not be saved in the browser's local storage.  Click \"new tab\" to open a new game in a separate tab."),
               /* [] */0
             ]),
         /* [] */0
