@@ -3,7 +3,7 @@
 "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
 <head>
-<!-- 2017-12-31 Sun 00:13 -->
+<!-- 2018-01-01 Mon 01:04 -->
 <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Twelve Days of Christmas #8</title>
@@ -28,10 +28,10 @@ This is the eighth part of <a href="../index.html">a chess-themed tutorial</a> o
 
 <p>
 Yesterday, we implemented the move list by using a functional
-programming technique called the "zipper".  Today, we will now add the
+programming technique called the &ldquo;zipper&rdquo;.  Today, we will now add the
 possibility to load chess games from the popular Lichess server, as well
 as client-side routing.  This will turn our program into what is
-usually called a <a href="https://en.wikipedia.org/wiki/Single-page_application">"single-page application"</a> (SPA).  Start from tag <code>day7</code> if you are following along with my
+usually called a <a href="https://en.wikipedia.org/wiki/Single-page_application">&ldquo;single-page application&rdquo;</a> (SPA).  Start from tag <code>day7</code> if you are following along with my
 repository.
 </p>
 
@@ -39,8 +39,8 @@ repository.
 <h2 id="org283f9b4">Responsive CSS</h2>
 <div class="outline-text-2" id="text-org283f9b4">
 <p>
-First, let's account for the fact that users with different devices
-might use our app, and let's scale and arrange the content on the
+First, let&rsquo;s account for the fact that users with different devices
+might use our app, and let&rsquo;s scale and arrange the content on the
 screen according to the size of the browser window.  On a wide screen,
 it makes sense to have the move list and the board side by side, but
 on a narrow screen such as a phone in portrait format, the move list
@@ -49,7 +49,7 @@ the browser window size.
 </p>
 
 <p>
-Let's first refactor the main view so we can assign styles easier:
+Let&rsquo;s first refactor the main view so we can assign styles easier:
 </p>
 
 <div class="org-src-container">
@@ -111,7 +111,7 @@ Let's first refactor the main view so we can assign styles easier:
 <p>
 I added two navigation elements.  The <code>game_nav_view</code> will be a list
 of tabs that will enable the user to switch between games later.  Now
-let's add some CSS to style the <code>&lt;nav&gt;</code> tags to look like tabs. 
+let&rsquo;s add some CSS to style the <code>&lt;nav&gt;</code> tags to look like tabs. 
 </p>
 
 <div class="org-src-container">
@@ -290,7 +290,7 @@ shrinks and expands, like this:
 <h2 id="org22d83ff">Making AJAX requests</h2>
 <div class="outline-text-2" id="text-org22d83ff">
 <p>
-Let's get some AJAX action going by making a GET request to an API.
+Let&rsquo;s get some AJAX action going by making a GET request to an API.
 The awesome <a href="https://lichess.org/">Lichess online chess server</a> exposes <a href="https://github.com/ornicar/lila">a public API</a> for all
 sorts of requests.  For instance, we can get a JSON record for the
 <a href="https://lichess.org/blog/WjRTPScAAJXo7r5s/magnus-carlsen-wins-the-first-lichess-titled-arena">titled player tournament</a> that was hosted recently (won by World
@@ -299,8 +299,8 @@ Champion Magnus Carlsen) by accessing
 </p>
 
 <p>
-First, we define some types and messages.  Let's define a variant type
-for an HTTP request.  Let's simplify a bit and assume it can have
+First, we define some types and messages.  Let&rsquo;s define a variant type
+for an HTTP request.  Let&rsquo;s simplify a bit and assume it can have
 three states: <code>Loading</code> when the request is sent, and eventually one
 of <code>Failed</code> or <code>Received</code> with a payload.
 </p>
@@ -385,8 +385,8 @@ usual building blocks as follows:
 </div>
 
 <p>
-Let's do something useful with the tournament info: we will display
-the list of games in a table in the "Tournament" tab.  Here's a simple
+Let&rsquo;s do something useful with the tournament info: we will display
+the list of games in a table in the &ldquo;Tournament&rdquo; tab.  Here&rsquo;s a simple
 tournament view:
 </p>
 
@@ -406,7 +406,7 @@ tournament view:
 </div>
 
 <p>
-Notice how we're already preparing links to open the individual games
+Notice how we&rsquo;re already preparing links to open the individual games
 with client-side routing (also called <i>hash routing</i>).  To make the
 table look nice, add this to <code>release/css/main.css</code>:
 </p>
@@ -428,7 +428,7 @@ Now make sure the tournament view is showing instead of the move list:
 </div>
 
 <p>
-You should now see a list of games, maybe after a short "Loading&#x2026;"
+You should now see a list of games, maybe after a short &ldquo;Loading&#x2026;&rdquo;
 status info.
 </p>
 </div>
@@ -443,7 +443,7 @@ move list view and the tournament view, and also between games if we
 load games from the server.  We keep track of the current view by a
 <code>view</code> field in the <code>model</code> record.  The current view is also
 represented in the URL, so that it can be bookmarked or shared.  Also,
-the browser's history buttons can be used.  For this, we use the
+the browser&rsquo;s history buttons can be used.  For this, we use the
 portion of the URL after the hash (#) symbol.  Remember that the hash
 symbol is used for page-internal links and will thus not cause a
 refresh, but we can still listen to updates in the URL and update the
@@ -452,7 +452,7 @@ change the view through links to a URL instead of sending a message.
 </p>
 
 <p>
-Let's add a <code>view</code> field to our model:
+Let&rsquo;s add a <code>view</code> field to our model:
 </p>
 
 <div class="org-src-container">
@@ -585,10 +585,10 @@ and we style the tabs to highlight the active tab:
 </div>
 
 <p>
-You can now switch between the "Game" and "Tournament" tabs, and you
+You can now switch between the &ldquo;Game&rdquo; and &ldquo;Tournament&rdquo; tabs, and you
 will also be able to go directly to a specific view by typing its URL.
-Any URL that doesn't match a known route will be replaced by the
-default "Game" view.
+Any URL that doesn&rsquo;t match a known route will be replaced by the
+default &ldquo;Game&rdquo; view.
 </p>
 </div>
 </div>
@@ -597,7 +597,7 @@ default "Game" view.
 <h2 id="orgb42952e">A tabbed list of game views</h2>
 <div class="outline-text-2" id="text-orgb42952e">
 <p>
-Let's load a game into a new tab when we click the game ID in the
+Let&rsquo;s load a game into a new tab when we click the game ID in the
 tournament view.  First, we define a new view and some new messages:
 </p>
 
@@ -608,12 +608,12 @@ tournament view.  First, we define a new view and some new messages:
   <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Pgn</span> <span style="color: #0000FF;">of</span> string
 
 <span style="color: #000000; font-weight: bold;">type</span> <span style="color: #6434A3;">model</span> <span style="color: #a52a2a;">=</span>
-  <span style="color: #a52a2a;">...</span>
+<span style="color: #8D8D84;">(* </span><span style="color: #8D8D84; font-style: italic;">... </span><span style="color: #8D8D84;">*)</span>
   <span style="color: #a52a2a;">;</span> pgn <span style="color: #a52a2a;">:</span> <span style="color: #a52a2a;">(</span>string <span style="color: #a52a2a;">*</span> string transfer<span style="color: #a52a2a;">)</span> list <span style="color: #8D8D84;">(* </span><span style="color: #8D8D84; font-style: italic;">association list </span><span style="color: #8D8D84;">*)</span>
-  <span style="color: #a52a2a;">...</span>
+<span style="color: #8D8D84;">(* </span><span style="color: #8D8D84; font-style: italic;">... </span><span style="color: #8D8D84;">*)</span>
 
 <span style="color: #000000; font-weight: bold;">type</span> <span style="color: #6434A3;">msg</span> <span style="color: #a52a2a;">=</span>  
-  <span style="color: #a52a2a;">...</span>
+<span style="color: #8D8D84;">(* </span><span style="color: #8D8D84; font-style: italic;">... </span><span style="color: #8D8D84;">*)</span>
   <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Pgn_requested</span> <span style="color: #0000FF;">of</span> string
   <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Pgn_data</span> <span style="color: #0000FF;">of</span> string <span style="color: #a52a2a;">*</span> <span style="color: #a52a2a;">(</span>string<span style="color: #a52a2a;">,</span> string <span style="color: #6434A3;">Http.</span>error<span style="color: #a52a2a;">)</span> <span style="color: #6434A3;">Result.</span>t
   <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Close_tab</span> <span style="color: #0000FF;">of</span> string
@@ -630,14 +630,14 @@ tournament view.  First, we define a new view and some new messages:
   <span style="color: #a52a2a;">|</span> _ <span style="color: #a52a2a;">-&gt;</span> <span style="color: #000000; background-color: #FFFFFF;">Game</span><span style="color: #a52a2a;">,</span> <span style="color: #6434A3;">Navigation.</span>modifyUrl <span style="color: #008000;">"#/game"</span>  <span style="color: #8D8D84;">(* </span><span style="color: #8D8D84; font-style: italic;">default route </span><span style="color: #8D8D84;">*)</span>
 
 <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">init</span><span style="color: #BA36A5;"> </span><span style="color: #a52a2a;">()</span><span style="color: #BA36A5;"> location</span> <span style="color: #a52a2a;">=</span>
-  <span style="color: #a52a2a;">...</span>
+<span style="color: #8D8D84;">(* </span><span style="color: #8D8D84; font-style: italic;">... </span><span style="color: #8D8D84;">*)</span>
   <span style="color: #a52a2a;">;</span> pgn <span style="color: #a52a2a;">=</span> <span style="color: #a52a2a;">[]</span>
-  <span style="color: #a52a2a;">...</span>
+<span style="color: #8D8D84;">(* </span><span style="color: #8D8D84; font-style: italic;">... </span><span style="color: #8D8D84;">*)</span>
 </pre>
 </div>
 
 <p>
-We use the <code>split_on_char</code> function that we added to O'Chess (maybe we
+We use the <code>split_on_char</code> function that we added to O&rsquo;Chess (maybe we
 should move it to a different module?!) to match
 routes in a more systematic fashion.
 </p>
@@ -646,7 +646,7 @@ routes in a more systematic fashion.
 We will keep track of the games in the <code>pgn</code> field of the <code>model</code>
 record (PGN stands for <a href="https://en.wikipedia.org/wiki/Portable_Game_Notation"><i>Portable Game Notation</i></a>) by using an
 <i>association list</i>, or a key-value list, where the keys are game IDs
-and the values are of type <code>string transfer</code>.  Let's write the handler
+and the values are of type <code>string transfer</code>.  Let&rsquo;s write the handler
 for the <code>Pgn_requested</code> message that is received when the user clicks
 a game link:
 </p>
@@ -668,7 +668,7 @@ a game link:
 
 <p>
 When the game ID is already found in the association list, no action
-is performed, but when it isn't, an HTTP request is issued and the
+is performed, but when it isn&rsquo;t, an HTTP request is issued and the
 game is added to the list with status <code>Loading</code>.  The other messages
 are handled as follows:
 </p>
@@ -696,7 +696,7 @@ are handled as follows:
 Finally, we add a PGN view and a list of tabs to switch between views.
 We need to handle the case of the ID not yet being found in the list
 because there is a short moment in time when the view has already
-been set to <code>Pgn id</code>, but the HTTP request hasn't yet been sent out.
+been set to <code>Pgn id</code>, but the HTTP request hasn&rsquo;t yet been sent out.
 </p>
 
 <div class="org-src-container">
@@ -734,7 +734,7 @@ been set to <code>Pgn id</code>, but the HTTP request hasn't yet been sent out.
 </div>
 
 <p>
-Don't forget to complete the <code>match</code> in the main <code>view</code> by adding a
+Don&rsquo;t forget to complete the <code>match</code> in the main <code>view</code> by adding a
 case:
 </p>
 <div class="org-src-container">
@@ -743,8 +743,8 @@ case:
 </div>
 
 <p>
-Head to your browser and click a game&#x2026; and be disappointed: "Game
-could not be loaded."  Check the developer tools and see this error:
+Head to your browser and click a game&#x2026; and be disappointed: &ldquo;Game
+could not be loaded.&rdquo;  Check the developer tools and see this error:
 </p>
 
 <pre class="example">
@@ -754,15 +754,15 @@ Cross-Origin Request Blocked: The Same Origin Policy disallows reading the remot
 <p>
 This part of the Lichess API is not configured to be accessed this way in order to
 prevent cross-site scripting security problems. There is a
-way around it (called JSONP), but it's painful.  I have an easier
-solution for the purpose of this tutorial: let's use a proxy server!
+way around it (called JSONP), but it&rsquo;s painful.  I have an easier
+solution for the purpose of this tutorial: let&rsquo;s use a proxy server!
 </p>
 
 <p>
 I recommend grabbing a copy of the <a href="https://github.com/Freeboard/thingproxy">Thingproxy</a> server and running it on
 your own computer.  You can also learn more about the underlying
 problem on their website. Since you already have Node.js and NPM or Yarn
-installed, it's a matter of 1-2-3:
+installed, it&rsquo;s a matter of 1-2-3:
 </p>
 
 <pre class="example">
@@ -773,15 +773,15 @@ node server.js
 
 <p>
 And the Thingproxy server is running on <code>http://localhost:3000</code>.  Just
-prefix any URL with <code>http://localhost:3000/fetch/</code> and you're good to
-go. If you don't have the patience, you can use a hosted proxy server
+prefix any URL with <code>http://localhost:3000/fetch/</code> and you&rsquo;re good to
+go. If you don&rsquo;t have the patience, you can use a hosted proxy server
 at <code>https://thingproxy.freeboard.io/fetch/</code>.  I put the following in
 my <code>src/Main.ml</code>, and everything worked like a charm.
 </p>
 
 <div class="org-src-container">
 <pre class="src src-ocaml"><span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">proxy</span> <span style="color: #a52a2a;">=</span> <span style="color: #008000;">"http://localhost:3000/fetch/"</span>
-  <span style="color: #a52a2a;">...</span>
+<span style="color: #8D8D84;">(* </span><span style="color: #8D8D84; font-style: italic;">... </span><span style="color: #8D8D84;">*)</span>
       <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">url</span> <span style="color: #a52a2a;">=</span>
         <span style="color: #6434A3;">Printf.</span>sprintf <span style="color: #008000;">"%shttps://lichess.org/game/export/%s.pgn"</span> proxy id <span style="color: #000000; font-weight: bold;">in</span>
 
@@ -790,7 +790,7 @@ my <code>src/Main.ml</code>, and everything worked like a charm.
 
 <p>
 Open lots of games, see them show up in tabs. If you open many tabs,
-the tab bar will be scrollable but it won't expand or wrap because of this CSS:
+the tab bar will be scrollable but it won&rsquo;t expand or wrap because of this CSS:
 </p>
 
 <div class="org-src-container">
@@ -803,10 +803,10 @@ the tab bar will be scrollable but it won't expand or wrap because of this CSS:
 </div>
 
 <p>
-That's it for today.  <a href="../day9/index.html">Tomorrow, we will learn how to parse the PGN
+That&rsquo;s it for today.  <a href="../day9/index.html">Tomorrow, we will learn how to parse the PGN
 format so that we can actually play through the games on the board
 instead of just seeing the game notation.</a>  We will use a very
-functional way, namely parser combinators.  Today's code is tag <code>day8</code>.
+functional way, namely parser combinators.  Today&rsquo;s code is tag <code>day8</code>.
 </p>
 </div>
 </div>

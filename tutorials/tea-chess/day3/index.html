@@ -3,7 +3,7 @@
 "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
 <head>
-<!-- 2017-12-31 Sun 00:13 -->
+<!-- 2018-01-01 Mon 01:04 -->
 <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Twelve Days of Christmas #3</title>
@@ -34,7 +34,7 @@ Yesterday, we learned about commands by implementing a chess board that makes ra
 <h2 id="org7a9d45f">Refactoring the board view</h2>
 <div class="outline-text-2" id="text-org7a9d45f">
 <p>
-Let's move the board view function into its own module <code>src/Board.ml</code>:
+Let&rsquo;s move the board view function into its own module <code>src/Board.ml</code>:
 </p>
 
 <div class="org-src-container">
@@ -107,11 +107,11 @@ Let's move the board view function into its own module <code>src/Board.ml</code>
 </div>
 
 <p>
-This code should look very familiar.  Its structure is the same as <code>src/Main.ml</code>.  We let the board define its own model, its own message type, its own update function and its own view.  I made a design choice here by letting the board manage its own orientation, but not the position, so that the board doesn't need to know about chess rules.
+This code should look very familiar.  Its structure is the same as <code>src/Main.ml</code>.  We let the board define its own model, its own message type, its own update function and its own view.  I made a design choice here by letting the board manage its own orientation, but not the position, so that the board doesn&rsquo;t need to know about chess rules.
 </p>
 
 <p>
-Nowever, when we try to use the board view inside of <code>src/Main.ml</code>, we run into a problem.  Let's say we adjust our model, and we have the following <code>view</code> function (ignore <code>msg</code> and <code>update</code> for now):
+Nowever, when we try to use the board view inside of <code>src/Main.ml</code>, we run into a problem.  Let&rsquo;s say we adjust our model, and we have the following <code>view</code> function (ignore <code>msg</code> and <code>update</code> for now):
 </p>
 
 <div class="org-src-container">
@@ -211,7 +211,7 @@ When a message from the board comes in, we need to relay the message back to <co
 </div>
 
 <p>
-The rest can be left unchanged as it doesn't deal with the board.  If nothing went wrong, your program should be functional again and display the same board as before, with the difference that now the "flip board" button is handled inside <code>src/Board.ml</code>.
+The rest can be left unchanged as it doesn&rsquo;t deal with the board.  If nothing went wrong, your program should be functional again and display the same board as before, with the difference that now the &ldquo;flip board&rdquo; button is handled inside <code>src/Board.ml</code>.
 </p>
 </div>
 </div>
@@ -220,7 +220,7 @@ The rest can be left unchanged as it doesn't deal with the board.  If nothing we
 <h2 id="org4ddd23b">A list of independent board views</h2>
 <div class="outline-text-2" id="text-org4ddd23b">
 <p>
-Let's go a little crazy and replace our chessboard by a list of chessboard views, where every board can be fipped independently, but all share the same position and are updated when the "random move" button is clicked.  Let's change our model and add some messages:
+Let&rsquo;s go a little crazy and replace our chessboard by a list of chessboard views, where every board can be fipped independently, but all share the same position and are updated when the &ldquo;random move&rdquo; button is clicked.  Let&rsquo;s change our model and add some messages:
 </p>
 
 <div class="org-src-container">
@@ -271,20 +271,20 @@ Notice that we use <code>List.mapi</code> to enumerate the boards as well as the
 </p>
 
 <p>
-Your program should compile like this, but the build script will complain that you didn't handle all the cases in the <code>update</code> function.  You can always put a "catch-all" case at the end of the <code>match</code> construct like this when you decide you will implement functionality later, like this:
+Your program should compile like this, but the build script will complain that you didn&rsquo;t handle all the cases in the <code>update</code> function.  You can always put a &ldquo;catch-all&rdquo; case at the end of the <code>match</code> construct like this when you decide you will implement functionality later, like this:
 </p>
 
 <div class="org-src-container">
 <pre class="src src-ocaml"><span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">update</span><span style="color: #BA36A5;"> model</span> <span style="color: #a52a2a;">=</span> <span style="color: #0000FF;">function</span>
 
-  <span style="color: #a52a2a;">...</span>
+<span style="color: #8D8D84;">(* </span><span style="color: #8D8D84; font-style: italic;">... </span><span style="color: #8D8D84;">*)</span>
 
   <span style="color: #a52a2a;">|</span> _ <span style="color: #a52a2a;">-&gt;</span> model<span style="color: #a52a2a;">,</span> <span style="color: #6434A3;">Cmd.</span>none
 </pre>
 </div>
 
 <p>
-But let's just handle the remaining cases right now.  
+But let&rsquo;s just handle the remaining cases right now.  
 For relaying of board messages and deletion of boards, we need some simple helper functions:
 </p>
 
@@ -306,7 +306,7 @@ For relaying of board messages and deletion of boards, we need some simple helpe
       boards <span style="color: #a52a2a;">=</span> replace_nth i board' model.boards
     <span style="color: #a52a2a;">},</span> <span style="color: #6434A3;">Cmd.</span>map <span style="color: #a52a2a;">(</span>board_msg i<span style="color: #a52a2a;">)</span> cmd
 
-  <span style="color: #a52a2a;">...</span>
+<span style="color: #8D8D84;">(* </span><span style="color: #8D8D84; font-style: italic;">... </span><span style="color: #8D8D84;">*)</span>
 
   <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Add_board</span> <span style="color: #a52a2a;">-&gt;</span>
     <span style="color: #a52a2a;">{</span> model <span style="color: #0000FF;">with</span>
@@ -322,7 +322,7 @@ For relaying of board messages and deletion of boards, we need some simple helpe
 <p>
 Head to your browser and add some boards, flip their orientation
 around, make random moves and watch them appear on all boards
-simultaneously.  This concludes today's part of the tutorial.  I
+simultaneously.  This concludes today&rsquo;s part of the tutorial.  I
 implemented the board list in its own <a href="https://github.com/quernd/tea-chess/tree/boardlist"><code>boardlist</code> branch</a> in my repository, because tomorrow we will go back to only one board.  <a href="../day4/index.html">We will implement drag and drop so you can finally make moves yourself.</a>
 </p>
 </div>

@@ -3,7 +3,7 @@
 "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
 <head>
-<!-- 2017-12-31 Sun 00:13 -->
+<!-- 2018-01-01 Mon 01:04 -->
 <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Twelve Days of Christmas #4</title>
@@ -41,7 +41,7 @@ repository.
 The first thing we will do is to enable the board to track the drag
 and drop state.  When a piece is picked up, the board needs to track
 the coordinates on the screen, and also the source and target squares.
-Let's first define a <code>square</code> type in <code>src/Chess.ml</code> to make our code
+Let&rsquo;s first define a <code>square</code> type in <code>src/Chess.ml</code> to make our code
 more explicit:
 </p>
 
@@ -57,7 +57,7 @@ more explicit:
 Now we can define some appropriate types in <code>src/Board.ml</code>.  I
 introduced the notion <code>move'</code> because there is one case
 where a move is not completed by dropping a piece on its target
-square: pawn promotion.  Whenever a pawn reaches the opponent's back
+square: pawn promotion.  Whenever a pawn reaches the opponent&rsquo;s back
 rank, it has to be promoted to a different piece.  Of course, we will
 take care of that.  The board will now be managing orientation and its
 status, which is either <code>Dragging</code> or <code>Nothing</code>.  When <code>Dragging</code>,
@@ -146,7 +146,7 @@ drag-and-drop-related messages with <code>Internal_msg</code>.
 We do this because we will notify the main app by emitting a message
 <code>Move</code>.  This way, the parent <code>update</code> function can handle <code>Move</code>
 specifically and relay all board-internal messages without having to
-examine them.  Don't forget to update the button's <code>onClick</code>:
+examine them.  Don&rsquo;t forget to update the button&rsquo;s <code>onClick</code>:
 </p>
 
 <div class="org-src-container">
@@ -162,7 +162,7 @@ examine them.  Don't forget to update the button's <code>onClick</code>:
 <h2 id="org8f4162d">JSON decoders</h2>
 <div class="outline-text-2" id="text-org8f4162d">
 <p>
-Now let's try to wire the mouse events.  You might be tempted to use
+Now let&rsquo;s try to wire the mouse events.  You might be tempted to use
 an <code>onMouseDown</code> attribute on the <code>cb-piece</code> node, but unfortunately,
 the resulting message will not contain the event that occurred &#x2013; it
 will only tell you that a mousedown event occurred, but we need the
@@ -177,7 +177,7 @@ string -&gt; string -&gt; (Web.Node.event -&gt; 'a option) -&gt; 'a Vdom.propert
 (used for DOM diffing, we can disregard it for the moment), and a
 callback function that takes an event and returns an optional message.
 (We know <code>'a</code> is a message type because <code>'a Vdom.property</code> needs to be
-message-parameterized.)  Let's try to write a function that
+message-parameterized.)  Let&rsquo;s try to write a function that
 extracts the relevant information from the mousedown event.  We use
 <code>Tea.Json.Decoder</code> to turn Javascript objects into OCaml records:
 </p>
@@ -214,7 +214,7 @@ extracts the relevant information from the mousedown event.  We use
 </div>
 
 <p>
-Let's go through this code function by function.  The most important
+Let&rsquo;s go through this code function by function.  The most important
 thing you need to know about JSON decoders is that they are either
 primitive decoders (such as the predefined <code>int</code> and <code>string</code>), or <code>field</code>
 decoders on JSON objects that need to know
@@ -231,9 +231,9 @@ extracts these two fields as integers and wraps them in an OCaml record of type
 We use <code>cartesian_decoder</code> as a building block
 in <code>offset_page_size</code>, where we use it twice to get the screen
 coordinates and the offset coordinates.  We also nest decoders by
-applying the decoder size to the result of getting the field "target"
-from the event in order to know the board's current square size.  (I
-prefer that to hardcoding the square size or keeping it in the board's
+applying the decoder size to the result of getting the field &ldquo;target&rdquo;
+from the event in order to know the board&rsquo;s current square size.  (I
+prefer that to hardcoding the square size or keeping it in the board&rsquo;s
 model so that we can use CSS to make the website responsive.)
 </p>
 
@@ -248,7 +248,7 @@ consulted the <a href="https://developer.mozilla.org/en-US/docs/Web/API/MouseEve
 <p>
 Finally, we have a handler function that takes a decoder, a message
 and an event, and tries to apply the decoder on the event.  Mind you,
-this might fail if the JSON structure doesn't match the expectations.
+this might fail if the JSON structure doesn&rsquo;t match the expectations.
 In this case, <code>None</code> is returned.  The type constructors <code>Ok</code> and
 <code>Error</code> are defined in <code>Tea.Result</code>.  OCaml 4.03 actually has a
 built-in result type, but Bucklescript is still using 4.02.3.
@@ -293,13 +293,13 @@ as follows:
     <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Not_interactable</span> <span style="color: #a52a2a;">-&gt;</span> <span style="color: #000000; background-color: #FFFFFF;">None</span>
   <span style="color: #000000; font-weight: bold;">in</span>
 
-  <span style="color: #a52a2a;">...</span>
+<span style="color: #8D8D84;">(* </span><span style="color: #8D8D84; font-style: italic;">... </span><span style="color: #8D8D84;">*)</span>
 </pre>
 </div>
 <p>
 The returned function sets up a <code>Move_start</code> message with an initial
-<code>dragging</code> record.  (We're using a shorthand technique called "field
-punning" here that allows us to just write the variable name if it
+<code>dragging</code> record.  (We&rsquo;re using a shorthand technique called &ldquo;field
+punning&rdquo; here that allows us to just write the variable name if it
 coincides with the record field name.) Together with <code>filter_targets</code>, defined as:
 </p>
 <div class="org-src-container">
@@ -310,9 +310,9 @@ coincides with the record field name.) Together with <code>filter_targets</code>
 </div>
 <p>
 it will restrict the legal target squares to only those that match the
-source square.  Finally, the function <code>coordinate_pairs</code> is a "boring"
-function that just turns O'Chess moves into pairs of coordinates as
-well as information about the "completion" status of the moves:
+source square.  Finally, the function <code>coordinate_pairs</code> is a &ldquo;boring&rdquo;
+function that just turns O&rsquo;Chess moves into pairs of coordinates as
+well as information about the &ldquo;completion&rdquo; status of the moves:
 </p>
 
 <div class="org-src-container">
@@ -337,7 +337,7 @@ well as information about the "completion" status of the moves:
 </div>
 
 <p>
-We're now ready to emit <code>Move_start</code> messages when a piece is touched
+We&rsquo;re now ready to emit <code>Move_start</code> messages when a piece is touched
 that belongs to the player whose turn it is, by injecting the event
 listener into the <code>cb-piece</code> node:
 </p>
@@ -367,7 +367,7 @@ listener into the <code>cb-piece</code> node:
 </div>
 
 <p>
-Switch to <code>src/Main.ml</code>, and make sure the board knows that it's
+Switch to <code>src/Main.ml</code>, and make sure the board knows that it&rsquo;s
 interactable by changing the <code>view</code> function accordingly:
 </p>
 
@@ -392,7 +392,7 @@ interactable by changing the <code>view</code> function accordingly:
 </div>
 
 <p>
-For kicks, let's see if we can log the <code>Move_start</code> message in the
+For kicks, let&rsquo;s see if we can log the <code>Move_start</code> message in the
 developer console.  Bucklescript defines <code>Js.log</code> for that purpose.
 It returns a unit value, so it should be used for its side effect
 only, followed by another expression.
@@ -418,7 +418,7 @@ click a black piece, nothing happens unless you make a random move
 first.  Unfortunately, the output is the internal representation of
 the <code>dragging</code> record in Bucklescript, and it is optimized and not
 easily readable.  All variant types have been replaced by numbers, and
-the entire record is an array now!  Since this is not much help, let's
+the entire record is an array now!  Since this is not much help, let&rsquo;s
 do something actually useful when <code>Move_start</code> is received and track
 the status:
 </p>
@@ -451,7 +451,7 @@ the status:
 Now whenever the user moves the mouse, a global event is fired.
 Sadly, we cannot track mouse movement locally because the events are only
 available to the topmost DOM element under the cursor. We
-can intercept global events by setting up <i>subscriptions</i>.  Let's add
+can intercept global events by setting up <i>subscriptions</i>.  Let&rsquo;s add
 subscriptions whenever our board model is in <code>Dragging</code> state:
 </p>
 
@@ -516,7 +516,7 @@ square are updated.  When the <code>Move_drop</code> message is received, we
 match the target with the list of legal targets to find the intended
 move and use <code>Cmd.msg</code> to issue a command that sends back a message.
 This enables us to talk to the parent update function which will
-intercept this message.  This is <code>src/Board.ml</code>'s <code>update</code> function.
+intercept this message.  This is <code>src/Board.ml</code>&rsquo;s <code>update</code> function.
 We ignore the problem of pawn promotion for now and just make cancel
 the move whenever that happens!
 </p>
@@ -560,10 +560,10 @@ the move whenever that happens!
 
 <p>
 In <code>src/Main.ml</code>, we need to listen to the <code>Move</code> message from the
-board. For simplicity, I lumped it together with <code>Random_move</code> because we don't expect
-any commands and we don't have to relay the message to the <code>Board</code>
+board. For simplicity, I lumped it together with <code>Random_move</code> because we don&rsquo;t expect
+any commands and we don&rsquo;t have to relay the message to the <code>Board</code>
 module.  But notice how we need to capture the commands issued by the
-board's internal messages and tag them, since we actually make use of
+board&rsquo;s internal messages and tag them, since we actually make use of
 a command when a move has been completed.
 </p>
 
@@ -593,7 +593,7 @@ a command when a move has been completed.
 
 <p>
 This is tag <code>day4</code> in my repository. Now try to make some moves on the chessboard.  It can be a little
-tricky if you don't know the rules because you don't get any feedback
+tricky if you don&rsquo;t know the rules because you don&rsquo;t get any feedback
 about what moves you can make!  <a href="../day5/index.html">Tomorrow, we will make the piece
 follow along with the mouse pointer and also highlight legal target
 squares.  Also, we will implement proper pawn promotion handling.</a>
