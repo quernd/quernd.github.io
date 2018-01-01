@@ -2663,23 +2663,6 @@ function assoc(x, _param) {
   }
 }
 
-function mem_assoc(x, _param) {
-  while(true) {
-    var param = _param;
-    if (param) {
-      if (caml_compare(param[0][0], x)) {
-        _param = param[1];
-        continue ;
-        
-      } else {
-        return /* true */1;
-      }
-    } else {
-      return /* false */0;
-    }
-  }
-}
-
 function remove_assoc(x, param) {
   if (param) {
     var l = param[1];
@@ -10133,12 +10116,6 @@ function span($staropt$star, $staropt$star$1, props, nodes) {
   return fullnode("", "span", key, unique, props, nodes);
 }
 
-function pre($staropt$star, $staropt$star$1, props, nodes) {
-  var key = $staropt$star ? $staropt$star[0] : "";
-  var unique = $staropt$star$1 ? $staropt$star$1[0] : "";
-  return fullnode("", "pre", key, unique, props, nodes);
-}
-
 function a($staropt$star, $staropt$star$1, props, nodes) {
   var key = $staropt$star ? $staropt$star[0] : "";
   var unique = $staropt$star$1 ? $staropt$star$1[0] : "";
@@ -14381,58 +14358,71 @@ function update(model, param) {
                 ];
       case 6 : 
           var id = param[0];
-          if (mem_assoc(id, model[/* pgn */5])) {
-            return /* tuple */[
-                    model,
-                    none
-                  ];
-          } else {
-            var url = _2(sprintf(/* Format */[
-                      /* String */__(2, [
-                          /* No_padding */0,
-                          /* String_literal */__(11, [
-                              "https://lichess.org/game/export/",
-                              /* String */__(2, [
-                                  /* No_padding */0,
-                                  /* String_literal */__(11, [
-                                      ".pgn",
-                                      /* End_of_format */0
-                                    ])
-                                ])
-                            ])
-                        ]),
-                      "%shttps://lichess.org/game/export/%s.pgn"
-                    ]), proxy, id);
-            var cmd = send((function (param) {
-                    return /* Pgn_data */__(7, [
-                              id,
-                              param
-                            ]);
-                  }), getString(url));
-            return /* tuple */[
-                    /* record */[
-                      /* position */model[/* position */0],
-                      /* board */model[/* board */1],
-                      /* moves */model[/* moves */2],
-                      /* ply */model[/* ply */3],
-                      /* tournament */model[/* tournament */4],
-                      /* pgn : :: */[
-                        /* tuple */[
-                          id,
-                          /* Loading */0
+          try {
+            var match$11 = assoc(id, model[/* pgn */5]);
+            if (typeof match$11 === "number") {
+              return /* tuple */[
+                      model,
+                      none
+                    ];
+            } else {
+              return /* tuple */[
+                      model,
+                      msg(/* Validate_pgn */__(9, [match$11[0]]))
+                    ];
+            }
+          }
+          catch (exn$1){
+            if (exn$1 === not_found) {
+              var url = _2(sprintf(/* Format */[
+                        /* String */__(2, [
+                            /* No_padding */0,
+                            /* String_literal */__(11, [
+                                "https://lichess.org/game/export/",
+                                /* String */__(2, [
+                                    /* No_padding */0,
+                                    /* String_literal */__(11, [
+                                        ".pgn",
+                                        /* End_of_format */0
+                                      ])
+                                  ])
+                              ])
+                          ]),
+                        "%shttps://lichess.org/game/export/%s.pgn"
+                      ]), proxy, id);
+              var cmd = send((function (param) {
+                      return /* Pgn_data */__(7, [
+                                id,
+                                param
+                              ]);
+                    }), getString(url));
+              return /* tuple */[
+                      /* record */[
+                        /* position */model[/* position */0],
+                        /* board */model[/* board */1],
+                        /* moves */model[/* moves */2],
+                        /* ply */model[/* ply */3],
+                        /* tournament */model[/* tournament */4],
+                        /* pgn : :: */[
+                          /* tuple */[
+                            id,
+                            /* Loading */0
+                          ],
+                          model[/* pgn */5]
                         ],
-                        model[/* pgn */5]
+                        /* route : Pgn */[id]
                       ],
-                      /* route : Pgn */[id]
-                    ],
-                    cmd
-                  ];
+                      cmd
+                    ];
+            } else {
+              throw exn$1;
+            }
           }
           break;
       case 7 : 
-          var match$11 = param[1];
+          var match$12 = param[1];
           var id$1$$1 = param[0];
-          if (match$11.tag) {
+          if (match$12.tag) {
             var newrecord$4 = model.slice();
             return /* tuple */[
                     (newrecord$4[/* pgn */5] = /* :: */[
@@ -14445,7 +14435,7 @@ function update(model, param) {
                     none
                   ];
           } else {
-            var data = match$11[0];
+            var data = match$12[0];
             var newrecord$5 = model.slice();
             return /* tuple */[
                     (newrecord$5[/* pgn */5] = /* :: */[
@@ -14476,13 +14466,13 @@ function update(model, param) {
                 ];
       case 9 : 
           try {
-            var match$12 = game_of_string(param[0]);
+            var match$13 = game_of_string(param[0]);
             return /* tuple */[
                     /* record */[
-                      /* position */match$12[0],
+                      /* position */match$13[0],
                       /* board */model[/* board */1],
-                      /* moves */match$12[2],
-                      /* ply */match$12[1],
+                      /* moves */match$13[2],
+                      /* ply */match$13[1],
                       /* tournament */model[/* tournament */4],
                       /* pgn */model[/* pgn */5],
                       /* route */model[/* route */6]
@@ -14779,9 +14769,9 @@ function tournament_view(tournament) {
   }
 }
 
-function pgn_view(id, pgn) {
+function pgn_view(id, model) {
   try {
-    var match = assoc(id, pgn);
+    var match = assoc(id, model[/* pgn */5]);
     if (typeof match === "number") {
       if (match !== 0) {
         return text$1("Game could not be loaded.");
@@ -14789,13 +14779,7 @@ function pgn_view(id, pgn) {
         return text$1("Loading PGN game...");
       }
     } else {
-      return pre(/* None */0, /* None */0, /* :: */[
-                  style$2("white-space", "pre-wrap"),
-                  /* [] */0
-                ], /* :: */[
-                  text$1(match[0]),
-                  /* [] */0
-                ]);
+      return move_list_view(model[/* ply */3], model[/* moves */2]);
     }
   }
   catch (exn){
@@ -14915,7 +14899,7 @@ function view(model) {
                             ], /* :: */[
                               typeof match === "number" ? (
                                   match !== 0 ? tournament_view(model[/* tournament */4]) : move_list_view(model[/* ply */3], model[/* moves */2])
-                                ) : pgn_view(match[0], model[/* pgn */5]),
+                                ) : pgn_view(match[0], model),
                               /* [] */0
                             ]),
                         /* [] */0
