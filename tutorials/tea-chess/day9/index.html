@@ -3,7 +3,7 @@
 "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
 <head>
-<!-- 2018-01-01 Mon 12:23 -->
+<!-- 2018-01-01 Mon 23:42 -->
 <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Twelve Days of Christmas #9</title>
@@ -294,20 +294,310 @@ We define a <code>maybe</code> combinator that returns an <code>option</code>.
 
 <p>
 For the header, the specification
-says that a tag pair &ldquo;is composed of four consecutive tokens: a left bracket token, a
-symbol token, a string token, and a right bracket token.&rdquo;  So we have:
+says that a tag pair (or key/value pair) &ldquo;is composed of four consecutive tokens: a left bracket token, a
+symbol token, a string token, and a right bracket token.&rdquo;  A string is
+(slightly simplified) anything between a pair of quotation marks, so we have:
 </p>
 
 <div class="org-src-container">
-<pre class="src src-ocaml">
+<pre class="src src-ocaml"><span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">pgn_string</span> <span style="color: #a52a2a;">=</span> none_of <span style="color: #a52a2a;">[</span><span style="color: #008000;">'"'</span><span style="color: #a52a2a;">]</span> <span style="color: #a52a2a;">|&gt;</span> many
+<span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">pgn_tag_key</span> <span style="color: #a52a2a;">=</span> none_of <span style="color: #a52a2a;">[</span><span style="color: #008000;">' '</span><span style="color: #a52a2a;">]</span> <span style="color: #a52a2a;">|&gt;</span> many1
+<span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">pgn_tag_value</span> <span style="color: #a52a2a;">=</span> exactly <span style="color: #008000;">'"'</span> <span style="color: #a52a2a;">&gt;&gt;</span> pgn_string <span style="color: #a52a2a;">&lt;&lt;</span> exactly <span style="color: #008000;">'"'</span>
+</pre>
+</div>
+
+<p>
+And then the pair of key and value is obtained by using <code>implode</code>
+(turning a list of characters into a string).
+</p>
+
+<div class="org-src-container">
+<pre class="src src-ocaml"><span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">pgn_tag_key_value</span> <span style="color: #a52a2a;">=</span>
+  pgn_tag_key <span style="color: #a52a2a;">&lt;&lt;</span> many1 space <span style="color: #a52a2a;">&gt;&gt;=</span> <span style="color: #0000FF;">fun</span> <span style="color: #BA36A5;">tag_key</span> <span style="color: #a52a2a;">-&gt;</span>
+  pgn_tag_value <span style="color: #a52a2a;">&gt;&gt;=</span> <span style="color: #0000FF;">fun</span> <span style="color: #BA36A5;">tag_value</span> <span style="color: #a52a2a;">-&gt;</span>
+  return <span style="color: #a52a2a;">(</span>tag_key <span style="color: #a52a2a;">|&gt;</span> implode<span style="color: #a52a2a;">,</span> tag_value <span style="color: #a52a2a;">|&gt;</span> implode<span style="color: #a52a2a;">)</span>
+
+<span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">pgn_tag</span> <span style="color: #a52a2a;">=</span> exactly <span style="color: #008000;">'['</span> <span style="color: #a52a2a;">&gt;&gt;</span> pgn_tag_key_value <span style="color: #a52a2a;">&lt;&lt;</span> exactly <span style="color: #008000;">']'</span>
+<span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">pgn_header</span> <span style="color: #a52a2a;">=</span> many <span style="color: #a52a2a;">(</span>pgn_tag <span style="color: #a52a2a;">&lt;&lt;</span> newline<span style="color: #a52a2a;">)</span>
+</pre>
+</div>
+
+<p>
+In order to parse moves, we need some simple parsers:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-ocaml"><span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">pgn_piece</span> <span style="color: #a52a2a;">=</span>
+  one_of <span style="color: #a52a2a;">[</span><span style="color: #008000;">'K'</span><span style="color: #a52a2a;">;</span> <span style="color: #008000;">'Q'</span><span style="color: #a52a2a;">;</span> <span style="color: #008000;">'R'</span><span style="color: #a52a2a;">;</span> <span style="color: #008000;">'B'</span><span style="color: #a52a2a;">;</span> <span style="color: #008000;">'N'</span><span style="color: #a52a2a;">;</span> <span style="color: #008000;">'P'</span><span style="color: #a52a2a;">]</span> <span style="color: #a52a2a;">=&gt;</span> <span style="color: #6434A3;">Chess.</span>piece_type_of_char
+
+<span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">pgn_file</span> <span style="color: #a52a2a;">=</span>
+  <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">files</span> <span style="color: #a52a2a;">=</span> <span style="color: #a52a2a;">[</span><span style="color: #008000;">'a'</span><span style="color: #a52a2a;">;</span> <span style="color: #008000;">'b'</span><span style="color: #a52a2a;">;</span> <span style="color: #008000;">'c'</span><span style="color: #a52a2a;">;</span> <span style="color: #008000;">'d'</span><span style="color: #a52a2a;">;</span> <span style="color: #008000;">'e'</span><span style="color: #a52a2a;">;</span> <span style="color: #008000;">'f'</span><span style="color: #a52a2a;">;</span> <span style="color: #008000;">'g'</span><span style="color: #a52a2a;">;</span> <span style="color: #008000;">'h'</span><span style="color: #a52a2a;">]</span> <span style="color: #000000; font-weight: bold;">in</span>
+  <span style="color: #6434A3;">List.</span>mapi <span style="color: #a52a2a;">(</span><span style="color: #0000FF;">fun</span> <span style="color: #BA36A5;">i file</span> <span style="color: #a52a2a;">-&gt;</span> <span style="color: #a52a2a;">(</span>exactly file <span style="color: #a52a2a;">&gt;&gt;</span> return i<span style="color: #a52a2a;">))</span> files <span style="color: #a52a2a;">|&gt;</span> choice
+
+<span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">pgn_rank</span> <span style="color: #a52a2a;">=</span>
+  <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">ranks</span> <span style="color: #a52a2a;">=</span> <span style="color: #a52a2a;">[</span><span style="color: #008000;">'1'</span><span style="color: #a52a2a;">;</span> <span style="color: #008000;">'2'</span><span style="color: #a52a2a;">;</span> <span style="color: #008000;">'3'</span><span style="color: #a52a2a;">;</span> <span style="color: #008000;">'4'</span><span style="color: #a52a2a;">;</span> <span style="color: #008000;">'5'</span><span style="color: #a52a2a;">;</span> <span style="color: #008000;">'6'</span><span style="color: #a52a2a;">;</span> <span style="color: #008000;">'7'</span><span style="color: #a52a2a;">;</span> <span style="color: #008000;">'8'</span><span style="color: #a52a2a;">]</span> <span style="color: #000000; font-weight: bold;">in</span>
+  <span style="color: #6434A3;">List.</span>mapi <span style="color: #a52a2a;">(</span><span style="color: #0000FF;">fun</span> <span style="color: #BA36A5;">i file</span> <span style="color: #a52a2a;">-&gt;</span> <span style="color: #a52a2a;">(</span>exactly file <span style="color: #a52a2a;">&gt;&gt;</span> return i<span style="color: #a52a2a;">))</span> ranks <span style="color: #a52a2a;">|&gt;</span> choice
+
+<span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">pgn_square</span> <span style="color: #a52a2a;">=</span>
+  pgn_file <span style="color: #a52a2a;">&gt;&gt;=</span> <span style="color: #0000FF;">fun</span> <span style="color: #BA36A5;">file</span> <span style="color: #a52a2a;">-&gt;</span> 
+  pgn_rank <span style="color: #a52a2a;">&gt;&gt;=</span> <span style="color: #0000FF;">fun</span> <span style="color: #BA36A5;">rank</span> <span style="color: #a52a2a;">-&gt;</span> return <span style="color: #a52a2a;">(</span>file<span style="color: #a52a2a;">,</span> rank<span style="color: #a52a2a;">)</span>
+
+<span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">pgn_capture</span> <span style="color: #a52a2a;">=</span> exactly <span style="color: #008000;">'x'</span>
+<span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">pgn_check</span> <span style="color: #a52a2a;">=</span> exactly <span style="color: #008000;">'+'</span>
+<span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">pgn_checkmate</span> <span style="color: #a52a2a;">=</span> exactly <span style="color: #008000;">'#'</span>
+
+<span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">pgn_promotion</span> <span style="color: #a52a2a;">=</span> <span style="color: #a52a2a;">(</span>maybe <span style="color: #a52a2a;">(</span>exactly <span style="color: #008000;">'='</span><span style="color: #a52a2a;">))</span> <span style="color: #a52a2a;">&gt;&gt;</span> pgn_piece
+<span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">pgn_nag</span> <span style="color: #a52a2a;">=</span> <span style="color: #a52a2a;">(</span>exactly <span style="color: #008000;">'$'</span> <span style="color: #a52a2a;">&gt;&gt;</span> <span style="color: #a52a2a;">(</span>many1 digit <span style="color: #a52a2a;">=&gt;</span> implode<span style="color: #a52a2a;">))</span> <span style="color: #a52a2a;">&lt;|&gt;</span>
+              <span style="color: #a52a2a;">(</span>many1 <span style="color: #a52a2a;">(</span>one_of <span style="color: #a52a2a;">[</span><span style="color: #008000;">'!'</span><span style="color: #a52a2a;">;</span><span style="color: #008000;">'?'</span><span style="color: #a52a2a;">])</span> <span style="color: #a52a2a;">=&gt;</span> implode<span style="color: #a52a2a;">)</span>
+</pre>
+</div>
+
+<p>
+As well as some complicated ones:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-ocaml"><span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">pgn_castle</span> <span style="color: #a52a2a;">=</span>
+  <span style="color: #a52a2a;">(</span>token <span style="color: #008000;">"O-O-O"</span> <span style="color: #a52a2a;">&lt;|&gt;</span> token <span style="color: #008000;">"0-0-0"</span> <span style="color: #a52a2a;">&gt;&gt;</span> return <span style="color: #000000; background-color: #FFFFFF;">Queenside_castle</span><span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">&lt;|&gt;</span>
+  <span style="color: #a52a2a;">(</span>token <span style="color: #008000;">"O-O"</span> <span style="color: #a52a2a;">&lt;|&gt;</span> token <span style="color: #008000;">"0-0"</span> <span style="color: #a52a2a;">&gt;&gt;</span> return <span style="color: #000000; background-color: #FFFFFF;">Kingside_castle</span><span style="color: #a52a2a;">)</span>
+
+<span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">pgn_disambiguated_move</span> <span style="color: #a52a2a;">=</span>
+  pgn_piece <span style="color: #a52a2a;">&gt;&gt;=</span> <span style="color: #0000FF;">fun</span> <span style="color: #BA36A5;">piece</span> <span style="color: #a52a2a;">-&gt;</span>
+  maybe pgn_file <span style="color: #a52a2a;">&gt;&gt;=</span> <span style="color: #0000FF;">fun</span> <span style="color: #BA36A5;">file</span> <span style="color: #a52a2a;">-&gt;</span>
+  maybe pgn_rank <span style="color: #a52a2a;">&gt;&gt;=</span> <span style="color: #0000FF;">fun</span> <span style="color: #BA36A5;">rank</span> <span style="color: #a52a2a;">-&gt;</span>
+  optional pgn_capture <span style="color: #a52a2a;">&gt;&gt;</span>
+  pgn_square <span style="color: #a52a2a;">=&gt;</span> <span style="color: #0000FF;">fun</span> <span style="color: #BA36A5;">destination</span> <span style="color: #a52a2a;">-&gt;</span>
+    <span style="color: #000000; background-color: #FFFFFF;">Piece_move</span> <span style="color: #a52a2a;">(</span>piece<span style="color: #a52a2a;">,</span> file<span style="color: #a52a2a;">,</span> rank<span style="color: #a52a2a;">,</span> destination<span style="color: #a52a2a;">)</span>
+
+<span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">pgn_normal_move</span> <span style="color: #a52a2a;">=</span>
+  pgn_piece <span style="color: #a52a2a;">&gt;&gt;=</span> <span style="color: #0000FF;">fun</span> <span style="color: #BA36A5;">piece</span> <span style="color: #a52a2a;">-&gt;</span>
+  optional pgn_capture <span style="color: #a52a2a;">&gt;&gt;</span>
+  pgn_square <span style="color: #a52a2a;">=&gt;</span> <span style="color: #0000FF;">fun</span> <span style="color: #BA36A5;">destination</span> <span style="color: #a52a2a;">-&gt;</span>
+    <span style="color: #000000; background-color: #FFFFFF;">Piece_move</span> <span style="color: #a52a2a;">(</span>piece<span style="color: #a52a2a;">,</span> <span style="color: #000000; background-color: #FFFFFF;">None</span><span style="color: #a52a2a;">,</span> <span style="color: #000000; background-color: #FFFFFF;">None</span><span style="color: #a52a2a;">,</span> destination<span style="color: #a52a2a;">)</span>
+
+<span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">pgn_pawn_move</span> <span style="color: #a52a2a;">=</span>
+  pgn_square <span style="color: #a52a2a;">&gt;&gt;=</span> <span style="color: #0000FF;">fun</span> <span style="color: #BA36A5;">destination</span> <span style="color: #a52a2a;">-&gt;</span>
+  maybe pgn_promotion <span style="color: #a52a2a;">=&gt;</span> <span style="color: #0000FF;">fun</span> <span style="color: #BA36A5;">promotion</span> <span style="color: #a52a2a;">-&gt;</span>
+    <span style="color: #000000; background-color: #FFFFFF;">Pawn_move</span> <span style="color: #a52a2a;">(</span><span style="color: #000000; background-color: #FFFFFF;">None</span><span style="color: #a52a2a;">,</span> destination<span style="color: #a52a2a;">,</span> promotion<span style="color: #a52a2a;">)</span>
+
+<span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">pgn_pawn_capture_move</span> <span style="color: #a52a2a;">=</span>
+  maybe pgn_file <span style="color: #a52a2a;">&gt;&gt;=</span> <span style="color: #0000FF;">fun</span> <span style="color: #BA36A5;">source_file</span> <span style="color: #a52a2a;">-&gt;</span>
+  optional pgn_capture <span style="color: #a52a2a;">&gt;&gt;</span>
+  pgn_square <span style="color: #a52a2a;">&gt;&gt;=</span> <span style="color: #0000FF;">fun</span> <span style="color: #BA36A5;">destination</span> <span style="color: #a52a2a;">-&gt;</span>
+  maybe pgn_promotion <span style="color: #a52a2a;">=&gt;</span> <span style="color: #0000FF;">fun</span> <span style="color: #BA36A5;">promotion</span> <span style="color: #a52a2a;">-&gt;</span>
+    <span style="color: #000000; background-color: #FFFFFF;">Pawn_move</span> <span style="color: #a52a2a;">(</span>source_file<span style="color: #a52a2a;">,</span> destination<span style="color: #a52a2a;">,</span> promotion<span style="color: #a52a2a;">)</span>
+
+<span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">pgn_san</span> <span style="color: #a52a2a;">=</span>
+  <span style="color: #a52a2a;">(</span>pgn_castle <span style="color: #a52a2a;">&lt;|&gt;</span>
+   pgn_disambiguated_move <span style="color: #a52a2a;">&lt;|&gt;</span>
+   pgn_normal_move <span style="color: #a52a2a;">&lt;|&gt;</span>
+   pgn_pawn_move <span style="color: #a52a2a;">&lt;|&gt;</span>
+   pgn_pawn_capture_move<span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">&lt;&lt;</span>
+  optional <span style="color: #a52a2a;">(</span>pgn_check <span style="color: #a52a2a;">&lt;|&gt;</span> pgn_checkmate<span style="color: #a52a2a;">)</span>
+</pre>
+</div>
+
+<p>
+The order of parsers to try in <code>pgn_san</code> is actually important, since
+otherwise the parser could get stuck when successfully parsing an SAN string
+that is a prefix of another SAN string (e.g. <code>Qh8</code> as a prefix of the
+disambiguated move <code>Qg7h8</code>.  We have to try the most specific parser
+first to avoid this trap.  There are parser combinator libraries that
+work around this problem by allowing backtracking, but Opal is not one
+of those.
+</p>
+
+<p>
+A comment is just anything between curly braces:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-ocaml"><span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">pgn_comment</span> <span style="color: #a52a2a;">=</span>
+  <span style="color: #a52a2a;">(</span>exactly <span style="color: #008000;">'{'</span> <span style="color: #a52a2a;">&gt;&gt;</span> many <span style="color: #a52a2a;">(</span>none_of <span style="color: #a52a2a;">[</span><span style="color: #008000;">'}'</span><span style="color: #a52a2a;">])</span> <span style="color: #a52a2a;">&lt;&lt;</span> exactly <span style="color: #008000;">'}'</span><span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">=&gt;</span> implode
+
+<span style="color: #8D8D84;">(* </span><span style="color: #8D8D84; font-style: italic;">nonstandard `. ...` </span><span style="color: #8D8D84;">*)</span>
+<span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">pgn_number</span> <span style="color: #a52a2a;">=</span>
+  many1 digit <span style="color: #a52a2a;">&lt;&lt;</span> <span style="color: #a52a2a;">(</span>token <span style="color: #008000;">". ..."</span> <span style="color: #a52a2a;">&lt;|&gt;</span> token <span style="color: #008000;">"..."</span> <span style="color: #a52a2a;">&lt;|&gt;</span> token <span style="color: #008000;">"."</span><span style="color: #a52a2a;">)</span>
 </pre>
 </div>
 </div>
 </div>
 
-
 <div id="outline-container-orgf5006b9" class="outline-2">
 <h2 id="orgf5006b9">A parser for PGN</h2>
+<div class="outline-text-2" id="text-orgf5006b9">
+<p>
+The last few definitions are tricky because they are <i>mutually
+recursive</i>.  Since PGN allows recursive variations, a move can contain
+a list of move sequences, so it needs to be defined recursively.
+Here&rsquo;s the parser:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-ocaml"><span style="color: #000000; font-weight: bold;">let</span> <span style="color: #000000; font-weight: bold;">rec</span> <span style="color: #006699;">pgn_rav</span><span style="color: #BA36A5;"> </span><span style="color: #a52a2a;">()</span> <span style="color: #a52a2a;">=</span>
+  <span style="color: #a52a2a;">(</span>exactly <span style="color: #008000;">'('</span><span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">&gt;&gt;</span>
+  lexeme <span style="color: #a52a2a;">(</span>pgn_line <span style="color: #a52a2a;">())</span> <span style="color: #a52a2a;">&lt;&lt;</span>
+  lexeme <span style="color: #a52a2a;">(</span>exactly <span style="color: #008000;">')'</span><span style="color: #a52a2a;">)</span>
+
+<span style="color: #8D8D84;">(* </span><span style="color: #8D8D84; font-style: italic;">comments can be sequential </span><span style="color: #8D8D84;">*)</span>
+<span style="color: #8D8D84;">(* </span><span style="color: #8D8D84; font-style: italic;">TODO: semicolon until end-of-line comment </span><span style="color: #8D8D84;">*)</span>
+<span style="color: #000000; font-weight: bold;">and</span> <span style="color: #006699;">pgn_move</span><span style="color: #BA36A5;"> </span><span style="color: #a52a2a;">()</span> <span style="color: #a52a2a;">=</span>
+  many <span style="color: #a52a2a;">(</span>lexeme pgn_comment<span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">&gt;&gt;=</span> <span style="color: #0000FF;">fun</span> <span style="color: #BA36A5;">pre_comment</span> <span style="color: #a52a2a;">-&gt;</span>
+  maybe <span style="color: #a52a2a;">(</span>lexeme pgn_number<span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">&gt;&gt;</span> lexeme pgn_san <span style="color: #a52a2a;">&gt;&gt;=</span> <span style="color: #0000FF;">fun</span> <span style="color: #BA36A5;">move</span> <span style="color: #a52a2a;">-&gt;</span>
+  many <span style="color: #a52a2a;">(</span>lexeme pgn_nag<span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">&gt;&gt;=</span> <span style="color: #0000FF;">fun</span> <span style="color: #BA36A5;">nags</span> <span style="color: #a52a2a;">-&gt;</span>
+  many <span style="color: #a52a2a;">(</span>lexeme pgn_comment<span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">&gt;&gt;=</span> <span style="color: #0000FF;">fun</span> <span style="color: #BA36A5;">post_comment</span> <span style="color: #a52a2a;">-&gt;</span>
+  many <span style="color: #a52a2a;">(</span>lexeme <span style="color: #a52a2a;">(</span>pgn_rav <span style="color: #a52a2a;">()))</span> <span style="color: #a52a2a;">&gt;&gt;=</span> <span style="color: #0000FF;">fun</span> <span style="color: #BA36A5;">rav</span> <span style="color: #a52a2a;">-&gt;</span>
+  return <span style="color: #a52a2a;">{</span>pre_comment<span style="color: #a52a2a;">;</span> move<span style="color: #a52a2a;">;</span> nags<span style="color: #a52a2a;">;</span> rav<span style="color: #a52a2a;">;</span> post_comment<span style="color: #a52a2a;">}</span>
+
+<span style="color: #000000; font-weight: bold;">and</span> <span style="color: #006699;">pgn_line</span><span style="color: #BA36A5;"> </span><span style="color: #a52a2a;">()</span> <span style="color: #a52a2a;">=</span>
+  sep_by <span style="color: #a52a2a;">(</span>pgn_move <span style="color: #a52a2a;">())</span> space
+
+<span style="color: #8D8D84;">(* </span><span style="color: #8D8D84; font-style: italic;">nonstandard 1/2 </span><span style="color: #8D8D84;">*)</span>
+<span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">pgn_result</span> <span style="color: #a52a2a;">=</span>
+  <span style="color: #a52a2a;">(</span>token <span style="color: #008000;">"1-0"</span> <span style="color: #a52a2a;">&gt;&gt;</span> return <span style="color: #a52a2a;">(</span><span style="color: #000000; background-color: #FFFFFF;">Some</span> <span style="color: #a52a2a;">(</span><span style="color: #000000; background-color: #FFFFFF;">Win</span> <span style="color: #000000; background-color: #FFFFFF;">White</span><span style="color: #a52a2a;">)))</span> <span style="color: #a52a2a;">&lt;|&gt;</span>
+  <span style="color: #a52a2a;">(</span>token <span style="color: #008000;">"1/2-1/2"</span> <span style="color: #a52a2a;">&gt;&gt;</span> return <span style="color: #a52a2a;">(</span><span style="color: #000000; background-color: #FFFFFF;">Some</span> <span style="color: #000000; background-color: #FFFFFF;">Draw</span><span style="color: #a52a2a;">))</span> <span style="color: #a52a2a;">&lt;|&gt;</span>
+  <span style="color: #a52a2a;">(</span>token <span style="color: #008000;">"1/2"</span> <span style="color: #a52a2a;">&gt;&gt;</span> return <span style="color: #a52a2a;">(</span><span style="color: #000000; background-color: #FFFFFF;">Some</span> <span style="color: #000000; background-color: #FFFFFF;">Draw</span><span style="color: #a52a2a;">))</span> <span style="color: #a52a2a;">&lt;|&gt;</span>
+  <span style="color: #a52a2a;">(</span>token <span style="color: #008000;">"0-1"</span> <span style="color: #a52a2a;">&gt;&gt;</span> return <span style="color: #a52a2a;">(</span><span style="color: #000000; background-color: #FFFFFF;">Some</span> <span style="color: #a52a2a;">(</span><span style="color: #000000; background-color: #FFFFFF;">Win</span> <span style="color: #000000; background-color: #FFFFFF;">White</span><span style="color: #a52a2a;">)))</span> <span style="color: #a52a2a;">&lt;|&gt;</span>
+  <span style="color: #a52a2a;">(</span>token <span style="color: #008000;">"*"</span> <span style="color: #a52a2a;">&gt;&gt;</span> return <span style="color: #000000; background-color: #FFFFFF;">None</span><span style="color: #a52a2a;">)</span>
+
+<span style="color: #8D8D84;">(* </span><span style="color: #8D8D84; font-style: italic;">nonstandard non-required newline </span><span style="color: #8D8D84;">*)</span>
+<span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">pgn_game</span> <span style="color: #a52a2a;">=</span>
+  lexeme pgn_header <span style="color: #a52a2a;">&lt;&lt;</span> <span style="color: #a52a2a;">(</span>maybe newline<span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">&gt;&gt;=</span> <span style="color: #0000FF;">fun</span> <span style="color: #BA36A5;">header</span> <span style="color: #a52a2a;">-&gt;</span>
+  pgn_line <span style="color: #a52a2a;">()</span> <span style="color: #a52a2a;">&lt;&lt;</span> spaces <span style="color: #a52a2a;">&gt;&gt;=</span> <span style="color: #0000FF;">fun</span> <span style="color: #BA36A5;">movetext</span> <span style="color: #a52a2a;">-&gt;</span>
+  pgn_result <span style="color: #a52a2a;">&gt;&gt;=</span> <span style="color: #0000FF;">fun</span> <span style="color: #BA36A5;">result</span> <span style="color: #a52a2a;">-&gt;</span> return <span style="color: #a52a2a;">(</span>header<span style="color: #a52a2a;">,</span> movetext<span style="color: #a52a2a;">,</span> result<span style="color: #a52a2a;">)</span>
+</pre>
+</div>
+
+<p>
+You might be wondering, why do some parsers need an additional <code>()</code>
+unit argument?  Try and see what happens if you leave it out.  OCaml
+will complain that you cannot define your parsers this way.  The
+easiest way to see this is to try to substitute a parser definition in
+the right-hand side of another parser definition.  The parser
+<code>pgn_rav</code> relies on <code>pgn_line</code>, so you could try to inline that.  But
+then <code>pgn_line</code> relies on <code>pgn_move</code>, and <code>pgn_move</code> is defined in
+terms of <code>pgn_rav</code>.  You&rsquo;re caught in an infinite loop!  By giving the
+parsers an additional argument, you delay the evaluation, and the
+definition is sound.
+</p>
+</div>
+</div>
+
+<div id="outline-container-org1825759" class="outline-2">
+<h2 id="org1825759">From PGN to game zipper</h2>
+<div class="outline-text-2" id="text-org1825759">
+<p>
+Finally we need a function that turns the parsed PGN into a game
+zipper.  In order to compute a move from an SAN, we compute all the
+moves that the SAN is compatible with.  If that&rsquo;s more than one, we
+raise an exception because the move is ambiguous.  If it&rsquo;s zero, then
+the move is illegal.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-ocaml"><span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">unify_moves</span><span style="color: #BA36A5;"> </span><span style="color: #a52a2a;">(</span><span style="color: #BA36A5;">position</span><span style="color: #a52a2a;">:</span><span style="color: #6434A3;">Chess.</span><span style="color: #6434A3;">position</span><span style="color: #a52a2a;">)</span><span style="color: #BA36A5;"> pgn_move move</span> <span style="color: #a52a2a;">=</span>
+  <span style="color: #0000FF;">match</span> pgn_move<span style="color: #a52a2a;">,</span> move <span style="color: #0000FF;">with</span>
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Queenside_castle</span><span style="color: #a52a2a;">,</span> <span style="color: #6434A3;">Chess.</span><span style="color: #000000; background-color: #FFFFFF;">Queenside_castle</span> <span style="color: #a52a2a;">-&gt;</span> <span style="color: #D0372D;">true</span>
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Kingside_castle</span><span style="color: #a52a2a;">,</span> <span style="color: #6434A3;">Chess.</span><span style="color: #000000; background-color: #FFFFFF;">Kingside_castle</span> <span style="color: #a52a2a;">-&gt;</span> <span style="color: #D0372D;">true</span>
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Pawn_move</span> <span style="color: #a52a2a;">(</span>s_file<span style="color: #a52a2a;">,</span> <span style="color: #a52a2a;">(</span>t_file<span style="color: #a52a2a;">,</span> t_rank<span style="color: #a52a2a;">),</span> <span style="color: #000000; background-color: #FFFFFF;">Some</span> p_type<span style="color: #a52a2a;">),</span>
+    <span style="color: #000000; background-color: #FFFFFF;">Promotion</span> <span style="color: #a52a2a;">(</span>p_type'<span style="color: #a52a2a;">,</span> s_file'<span style="color: #a52a2a;">,</span> t_file'<span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">-&gt;</span>
+    <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">promo_rank</span> <span style="color: #a52a2a;">=</span>
+      <span style="color: #0000FF;">match</span> position.turn <span style="color: #0000FF;">with</span> <span style="color: #000000; background-color: #FFFFFF;">Black</span> <span style="color: #a52a2a;">-&gt;</span> 0 <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">White</span> <span style="color: #a52a2a;">-&gt;</span> 7
+    <span style="color: #000000; font-weight: bold;">and</span> <span style="color: #BA36A5;">s_rank'</span> <span style="color: #a52a2a;">=</span>
+      <span style="color: #0000FF;">match</span> position.turn <span style="color: #0000FF;">with</span> <span style="color: #000000; background-color: #FFFFFF;">Black</span> <span style="color: #a52a2a;">-&gt;</span> 1 <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">White</span> <span style="color: #a52a2a;">-&gt;</span> 6 <span style="color: #000000; font-weight: bold;">in</span>
+    position.ar.<span style="color: #a52a2a;">(</span>s_file'<span style="color: #a52a2a;">)</span>.<span style="color: #a52a2a;">(</span>s_rank'<span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">=</span> <span style="color: #6434A3;">Chess.</span><span style="color: #000000; background-color: #FFFFFF;">Piece</span> <span style="color: #a52a2a;">(</span><span style="color: #6434A3;">Chess.</span><span style="color: #000000; background-color: #FFFFFF;">Pawn</span><span style="color: #a52a2a;">,</span> position.turn<span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">&amp;&amp;</span>
+    <span style="color: #6434A3;">Chess.</span>unify s_file' s_file <span style="color: #a52a2a;">&amp;&amp;</span> t_file' <span style="color: #a52a2a;">=</span> t_file <span style="color: #a52a2a;">&amp;&amp;</span>
+    promo_rank <span style="color: #a52a2a;">=</span> t_rank <span style="color: #a52a2a;">&amp;&amp;</span> p_type' <span style="color: #a52a2a;">=</span> p_type
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Pawn_move</span> <span style="color: #a52a2a;">(</span>s_file<span style="color: #a52a2a;">,</span> <span style="color: #a52a2a;">(</span>t_file<span style="color: #a52a2a;">,</span> t_rank<span style="color: #a52a2a;">),</span> <span style="color: #000000; background-color: #FFFFFF;">None</span><span style="color: #a52a2a;">),</span>
+    <span style="color: #000000; background-color: #FFFFFF;">Move</span> <span style="color: #a52a2a;">(</span>s_file'<span style="color: #a52a2a;">,</span> s_rank'<span style="color: #a52a2a;">,</span> t_file'<span style="color: #a52a2a;">,</span> t_rank'<span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">-&gt;</span>
+    position.ar.<span style="color: #a52a2a;">(</span>s_file'<span style="color: #a52a2a;">)</span>.<span style="color: #a52a2a;">(</span>s_rank'<span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">=</span> <span style="color: #6434A3;">Chess.</span><span style="color: #000000; background-color: #FFFFFF;">Piece</span> <span style="color: #a52a2a;">(</span><span style="color: #6434A3;">Chess.</span><span style="color: #000000; background-color: #FFFFFF;">Pawn</span><span style="color: #a52a2a;">,</span> position.turn<span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">&amp;&amp;</span>
+    <span style="color: #6434A3;">Chess.</span>unify s_file' s_file <span style="color: #a52a2a;">&amp;&amp;</span> t_file' <span style="color: #a52a2a;">=</span> t_file <span style="color: #a52a2a;">&amp;&amp;</span> t_rank' <span style="color: #a52a2a;">=</span> t_rank
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Piece_move</span> <span style="color: #a52a2a;">(</span>p_type<span style="color: #a52a2a;">,</span> s_file<span style="color: #a52a2a;">,</span> s_rank<span style="color: #a52a2a;">,</span> <span style="color: #a52a2a;">(</span>t_file<span style="color: #a52a2a;">,</span> t_rank<span style="color: #a52a2a;">)),</span>
+    <span style="color: #000000; background-color: #FFFFFF;">Move</span> <span style="color: #a52a2a;">(</span>s_file'<span style="color: #a52a2a;">,</span> s_rank'<span style="color: #a52a2a;">,</span> t_file'<span style="color: #a52a2a;">,</span> t_rank'<span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">-&gt;</span>
+    position.ar.<span style="color: #a52a2a;">(</span>s_file'<span style="color: #a52a2a;">)</span>.<span style="color: #a52a2a;">(</span>s_rank'<span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">=</span>
+    <span style="color: #6434A3;">Chess.</span><span style="color: #000000; background-color: #FFFFFF;">Piece</span> <span style="color: #a52a2a;">(</span>p_type<span style="color: #a52a2a;">,</span> position.turn<span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">&amp;&amp;</span>
+    <span style="color: #6434A3;">Chess.</span>unify s_file' s_file <span style="color: #a52a2a;">&amp;&amp;</span> <span style="color: #6434A3;">Chess.</span>unify s_rank' s_rank <span style="color: #a52a2a;">&amp;&amp;</span>
+    t_file' <span style="color: #a52a2a;">=</span> t_file <span style="color: #a52a2a;">&amp;&amp;</span> t_rank' <span style="color: #a52a2a;">=</span> t_rank    
+  <span style="color: #a52a2a;">|</span> _ <span style="color: #a52a2a;">-&gt;</span> <span style="color: #D0372D;">false</span>
+
+
+<span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">move_of_pgn_move</span><span style="color: #BA36A5;"> position move</span> <span style="color: #a52a2a;">=</span>
+  <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">moves</span> <span style="color: #a52a2a;">=</span> <span style="color: #6434A3;">Chess.</span>legal_moves position <span style="color: #000000; font-weight: bold;">in</span>
+  <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">possible_moves</span> <span style="color: #a52a2a;">=</span> <span style="color: #6434A3;">List.</span>filter <span style="color: #a52a2a;">(</span>unify_moves position move<span style="color: #a52a2a;">)</span> moves <span style="color: #000000; font-weight: bold;">in</span>
+  <span style="color: #0000FF;">match</span> possible_moves <span style="color: #0000FF;">with</span>
+  <span style="color: #a52a2a;">|</span> <span style="color: #a52a2a;">[]</span> <span style="color: #a52a2a;">-&gt;</span> <span style="color: #006FE0;">raise</span> <span style="color: #6434A3;">Chess.</span><span style="color: #000000; background-color: #FFFFFF;">Illegal_move</span>
+  <span style="color: #a52a2a;">|</span> <span style="color: #a52a2a;">[</span>move'<span style="color: #a52a2a;">]</span> <span style="color: #a52a2a;">-&gt;</span> move'
+  <span style="color: #a52a2a;">|</span> _ <span style="color: #a52a2a;">-&gt;</span> <span style="color: #006FE0;">raise</span> Ambiguous_move
+</pre>
+</div>
+
+<p>
+A game zipper is easily obtained by just following along the move
+list, carrying the position and the ply number in an accumulator:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-ocaml"><span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">game_of_string</span><span style="color: #BA36A5;"> string</span> <span style="color: #a52a2a;">=</span>
+  <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #000000; font-weight: bold;">open </span><span style="color: #6434A3;">Game</span> <span style="color: #000000; font-weight: bold;">in</span>
+
+  <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">advance</span><span style="color: #BA36A5;"> </span><span style="color: #a52a2a;">(</span><span style="color: #BA36A5;">position</span><span style="color: #a52a2a;">,</span><span style="color: #BA36A5;"> ply</span><span style="color: #a52a2a;">,</span><span style="color: #BA36A5;"> acc</span><span style="color: #a52a2a;">)</span><span style="color: #BA36A5;"> </span><span style="color: #a52a2a;">(</span><span style="color: #BA36A5;">move</span><span style="color: #a52a2a;">:</span><span style="color: #6434A3;">pgn_move</span><span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">=</span>
+    <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">move'</span> <span style="color: #a52a2a;">=</span> move_of_pgn_move position move.move <span style="color: #000000; font-weight: bold;">in</span>
+    <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">position'</span> <span style="color: #a52a2a;">=</span> <span style="color: #6434A3;">Chess.</span>make_move position move' <span style="color: #000000; font-weight: bold;">in</span>
+    <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">san</span> <span style="color: #a52a2a;">=</span> <span style="color: #6434A3;">Chess.</span>san_of_move position move' <span style="color: #000000; font-weight: bold;">in</span>
+    <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">acc'</span> <span style="color: #a52a2a;">=</span> <span style="color: #a52a2a;">(</span>move'<span style="color: #a52a2a;">,</span> san<span style="color: #a52a2a;">)::</span>acc <span style="color: #000000; font-weight: bold;">in</span>
+    <span style="color: #a52a2a;">(</span>position'<span style="color: #a52a2a;">,</span> ply <span style="color: #a52a2a;">+</span> 1<span style="color: #a52a2a;">,</span> acc'<span style="color: #a52a2a;">)</span>
+  <span style="color: #000000; font-weight: bold;">in</span>
+
+  <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">pgn</span> <span style="color: #a52a2a;">=</span> <span style="color: #6434A3;">LazyStream.</span>of_string string <span style="color: #a52a2a;">|&gt;</span> parse pgn_game <span style="color: #000000; font-weight: bold;">in</span>
+  <span style="color: #0000FF;">match</span> pgn <span style="color: #0000FF;">with</span>
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Some</span> <span style="color: #a52a2a;">(</span>_<span style="color: #a52a2a;">,</span> pgn'<span style="color: #a52a2a;">,</span> _<span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">-&gt;</span>
+    <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">position</span><span style="color: #a52a2a;">,</span><span style="color: #BA36A5;"> ply</span><span style="color: #a52a2a;">,</span><span style="color: #BA36A5;"> past</span> <span style="color: #a52a2a;">=</span>
+      <span style="color: #6434A3;">List.</span>fold_left advance <span style="color: #a52a2a;">(</span><span style="color: #6434A3;">Chess.</span>init_position<span style="color: #a52a2a;">,</span> 0<span style="color: #a52a2a;">,</span> <span style="color: #a52a2a;">[])</span> pgn' <span style="color: #000000; font-weight: bold;">in</span>
+    <span style="color: #a52a2a;">{</span>position<span style="color: #a52a2a;">;</span> ply<span style="color: #a52a2a;">;</span> moves <span style="color: #a52a2a;">=</span> <span style="color: #a52a2a;">(</span>past<span style="color: #a52a2a;">,</span> <span style="color: #a52a2a;">[])}</span>
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">None</span> <span style="color: #a52a2a;">-&gt;</span> <span style="color: #006FE0;">raise</span> Parse_error
+</pre>
+</div>
+
+<p>
+Now let&rsquo;s add some basic functionality to <code>src/Main.ml</code>.  We will
+parse the Lichess PGN and display it in the move list.  Let&rsquo;s define
+one message <code>Validate_pgn of string</code> and handle it the following way:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-ocaml"><span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Pgn_data</span> <span style="color: #a52a2a;">(</span>id<span style="color: #a52a2a;">,</span> <span style="color: #6434A3;">Result.</span><span style="color: #000000; background-color: #FFFFFF;">Ok</span> data<span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">-&gt;</span>
+  <span style="color: #a52a2a;">{</span> model <span style="color: #0000FF;">with</span>
+    pgn <span style="color: #a52a2a;">=</span> <span style="color: #a52a2a;">(</span>id<span style="color: #a52a2a;">,</span> <span style="color: #000000; background-color: #FFFFFF;">Received</span> data<span style="color: #a52a2a;">)::</span><span style="color: #6434A3;">List.</span>remove_assoc id model.pgn
+  <span style="color: #a52a2a;">},</span> <span style="color: #6434A3;">Cmd.</span>msg <span style="color: #a52a2a;">(</span><span style="color: #000000; background-color: #FFFFFF;">Validate_pgn</span> data<span style="color: #a52a2a;">)</span>
+<span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Validate_pgn</span> pgn <span style="color: #a52a2a;">-&gt;</span>
+  <span style="color: #0000FF;">try</span> <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">position</span><span style="color: #a52a2a;">,</span><span style="color: #BA36A5;"> ply</span><span style="color: #a52a2a;">,</span><span style="color: #BA36A5;"> moves</span> <span style="color: #a52a2a;">=</span> <span style="color: #6434A3;">Pgn.</span>game_of_string pgn <span style="color: #000000; font-weight: bold;">in</span>
+    <span style="color: #a52a2a;">{</span>model <span style="color: #0000FF;">with</span> position<span style="color: #a52a2a;">;</span> ply<span style="color: #a52a2a;">;</span> moves<span style="color: #a52a2a;">},</span> <span style="color: #6434A3;">Cmd.</span>none
+  <span style="color: #0000FF;">with</span> _e <span style="color: #a52a2a;">-&gt;</span> <span style="color: #6434A3;">Js.</span>log _e <span style="color: #a52a2a;">;</span> model<span style="color: #a52a2a;">,</span> <span style="color: #6434A3;">Cmd.</span>none
+</pre>
+</div>
+
+<p>
+Also <code>pgn_view</code> needs to be adapted:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-ocaml"><span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">pgn_view</span><span style="color: #BA36A5;"> id model</span> <span style="color: #a52a2a;">=</span>
+  <span style="color: #0000FF;">try</span> <span style="color: #0000FF;">match</span> <span style="color: #6434A3;">List.</span>assoc id model.pgn <span style="color: #0000FF;">with</span>
+    <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Loading</span> <span style="color: #a52a2a;">-&gt;</span> text <span style="color: #008000;">"Loading PGN game..."</span>
+    <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Received</span> _ <span style="color: #a52a2a;">-&gt;</span> move_list_view model.ply model.moves
+    <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Failed</span> <span style="color: #a52a2a;">-&gt;</span> text <span style="color: #008000;">"Game could not be loaded."</span>             
+  <span style="color: #0000FF;">with</span> <span style="color: #006FE0;">Not_found</span> <span style="color: #a52a2a;">-&gt;</span> text <span style="color: #008000;">""</span>
+</pre>
+</div>
+
+<p>
+And that&rsquo;s it for today!  You can now replay games from Lichess.
+<a href="../day10/index.html">Tomorrow, we will add functionality to load several games at the same
+time, switch between them and store them in the browsers local
+storage.</a>  We will also learn about the <code>Map</code> functional data
+structures and two other functional programming techniques: lenses and functors.
+</p>
+</div>
 </div>
 </div>
 </body>
