@@ -3,7 +3,7 @@
 "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
 <head>
-<!-- 2018-01-01 Mon 12:23 -->
+<!-- 2018-01-02 Tue 16:54 -->
 <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Twelve Days of Christmas #10</title>
@@ -26,9 +26,495 @@ This is the tenth part of <a href="../index.html">a chess-themed tutorial</a> on
 <a href="https://github.com/OvermindDL1/bucklescript-tea">Bucklescript-TEA</a>.  After this part, your app will look similar to <a href="demo.html">this demo</a>.
 </p>
 
+<p>
+Yesterday, we wrote a parser for the PGN format so that users can
+browse games from a chess server.  Today, we will save games in the browser&rsquo;s local storage, and we will
+keep a <i>map</i> of currently opened games together with a <i>lens</i> that points to the
+active game.  We will also learn about <i>functors</i>.  Today is pretty
+heavy on functional programming, be warned!
+</p>
 
 <div id="outline-container-org5653382" class="outline-2">
 <h2 id="org5653382">First, some refactoring</h2>
+<div class="outline-text-2" id="text-org5653382">
+<p>
+Let&rsquo;s first refactor <code>src/Main.ml</code> because it&rsquo;s getting a little bit
+messy. We&rsquo;ll pull out the game logic into its own file <code>src/Game.ml</code>.
+By now, you know the deal: break out a part of the model, break out
+the views and the messages and the part of <code>update</code> that handles them,
+and make sure to tag messages and commands properly.
+</p>
+
+<p>
+Here are the type definitions and the <code>init</code> function.  A game model
+is now a record of moves, current position and ply. 
+</p>
+
+<div class="org-src-container">
+<pre class="src src-ocaml"><span style="color: #000000; font-weight: bold;">open </span><span style="color: #6434A3;">Tea</span>
+<span style="color: #000000; font-weight: bold;">open </span><span style="color: #6434A3;">Tea.Html</span>
+
+<span style="color: #000000; font-weight: bold;">type</span> <span style="color: #6434A3;">san</span> <span style="color: #a52a2a;">=</span> string
+
+<span style="color: #000000; font-weight: bold;">type</span> <span style="color: #6434A3;">move</span> <span style="color: #a52a2a;">=</span> <span style="color: #a52a2a;">(</span><span style="color: #6434A3;">Chess.</span>move <span style="color: #a52a2a;">*</span> san<span style="color: #a52a2a;">)</span>
+
+<span style="color: #000000; font-weight: bold;">type</span> <span style="color: #6434A3;">model</span> <span style="color: #a52a2a;">=</span>
+  <span style="color: #a52a2a;">{</span> moves <span style="color: #a52a2a;">:</span> move <span style="color: #6434A3;">Zipper.</span>tree_zipper
+  <span style="color: #a52a2a;">;</span> position <span style="color: #a52a2a;">:</span> <span style="color: #6434A3;">Chess.</span>position
+  <span style="color: #a52a2a;">;</span> ply <span style="color: #a52a2a;">:</span> int
+  <span style="color: #a52a2a;">}</span>
+
+<span style="color: #000000; font-weight: bold;">type</span> <span style="color: #6434A3;">msg</span> <span style="color: #a52a2a;">=</span>
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Random_button</span>
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Back_button</span>
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Fwd_button</span>
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Make_move</span> <span style="color: #0000FF;">of</span> <span style="color: #6434A3;">Chess.</span>move
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Jump</span> <span style="color: #0000FF;">of</span> int
+<span style="color: #808080;">[@@bs.deriving {accessors}]</span>
+
+
+<span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">init</span><span style="color: #BA36A5;"> </span><span style="color: #a52a2a;">()</span> <span style="color: #a52a2a;">=</span>
+  <span style="color: #a52a2a;">{</span> position <span style="color: #a52a2a;">=</span> <span style="color: #6434A3;">Ochess.</span>init_position
+  <span style="color: #a52a2a;">;</span> moves <span style="color: #a52a2a;">=</span> <span style="color: #6434A3;">Zipper.</span>tree_init <span style="color: #a52a2a;">()</span>
+  <span style="color: #a52a2a;">;</span> ply <span style="color: #a52a2a;">=</span> 0
+  <span style="color: #a52a2a;">}</span>
+</pre>
+</div>
+
+<p>
+The relevant messages are handled by <code>Game.update</code>.  We could keep the
+buttons in <code>Main.ml</code> and supply functions modifying the model instead.
+</p>
+
+<p>
+(Exercise: refactor further so that the model update logic is not
+contained in the <code>update</code> function and can accessed from the outside
+without involving messages.)
+</p>
+
+<div class="org-src-container">
+<pre class="src src-ocaml"><span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">update</span><span style="color: #BA36A5;"> model</span> <span style="color: #a52a2a;">=</span> <span style="color: #0000FF;">function</span>
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Random_button</span> <span style="color: #a52a2a;">-&gt;</span>
+    model<span style="color: #a52a2a;">,</span>
+    <span style="color: #000000; font-weight: bold;">begin</span> <span style="color: #0000FF;">match</span> <span style="color: #6434A3;">Chess.</span>game_status model.position <span style="color: #0000FF;">with</span>
+      <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Play</span> move_list <span style="color: #a52a2a;">-&gt;</span>
+        <span style="color: #6434A3;">List.</span>length move_list
+        <span style="color: #a52a2a;">|&gt;</span> <span style="color: #6434A3;">Random.</span>int 0
+        <span style="color: #a52a2a;">|&gt;</span> <span style="color: #6434A3;">Random.</span>generate
+          <span style="color: #a52a2a;">(</span><span style="color: #0000FF;">fun</span> <span style="color: #BA36A5;">random_number</span> <span style="color: #a52a2a;">-&gt;</span>
+             <span style="color: #6434A3;">List.</span>nth move_list random_number <span style="color: #a52a2a;">|&gt;</span> make_move<span style="color: #a52a2a;">)</span>
+      <span style="color: #a52a2a;">|</span> _ <span style="color: #a52a2a;">-&gt;</span> <span style="color: #6434A3;">Cmd.</span>none
+    <span style="color: #000000; font-weight: bold;">end</span>
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Make_move</span> move <span style="color: #a52a2a;">-&gt;</span>
+    <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">san</span> <span style="color: #a52a2a;">=</span> <span style="color: #6434A3;">Chess.</span>san_of_move model.position move <span style="color: #000000; font-weight: bold;">in</span>
+    <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">_</span><span style="color: #a52a2a;">,</span><span style="color: #BA36A5;"> moves</span> <span style="color: #a52a2a;">=</span> <span style="color: #6434A3;">Zipper.</span>tree_fwd' <span style="color: #a52a2a;">(</span>move<span style="color: #a52a2a;">,</span> san<span style="color: #a52a2a;">)</span> model.moves <span style="color: #000000; font-weight: bold;">in</span>
+    <span style="color: #a52a2a;">{</span> position <span style="color: #a52a2a;">=</span> <span style="color: #6434A3;">Chess.</span>make_move model.position move
+    <span style="color: #a52a2a;">;</span> moves
+    <span style="color: #a52a2a;">;</span> ply <span style="color: #a52a2a;">=</span> model.ply <span style="color: #a52a2a;">+</span> 1
+    <span style="color: #a52a2a;">},</span> <span style="color: #6434A3;">Cmd.</span>none
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Back_button</span> <span style="color: #a52a2a;">-&gt;</span>
+    <span style="color: #000000; font-weight: bold;">begin</span> <span style="color: #0000FF;">match</span> model.position.prev <span style="color: #0000FF;">with</span>
+      <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Some</span> position <span style="color: #a52a2a;">-&gt;</span>
+        <span style="color: #a52a2a;">{</span> moves <span style="color: #a52a2a;">=</span> <span style="color: #6434A3;">Zipper.</span>tree_back model.moves
+        <span style="color: #a52a2a;">;</span> position
+        <span style="color: #a52a2a;">;</span> ply <span style="color: #a52a2a;">=</span> model.ply <span style="color: #a52a2a;">-</span> 1<span style="color: #a52a2a;">}</span>
+      <span style="color: #a52a2a;">|</span> _ <span style="color: #a52a2a;">-&gt;</span> model
+    <span style="color: #000000; font-weight: bold;">end</span><span style="color: #a52a2a;">,</span> <span style="color: #6434A3;">Cmd.</span>none
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Fwd_button</span> <span style="color: #a52a2a;">-&gt;</span>
+    <span style="color: #000000; font-weight: bold;">begin</span> <span style="color: #0000FF;">try</span> <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #a52a2a;">(</span><span style="color: #BA36A5;">move</span><span style="color: #a52a2a;">,</span><span style="color: #BA36A5;"> _san</span><span style="color: #a52a2a;">),</span><span style="color: #BA36A5;"> moves</span> <span style="color: #a52a2a;">=</span> <span style="color: #6434A3;">Zipper.</span>tree_fwd model.moves <span style="color: #000000; font-weight: bold;">in</span>
+        <span style="color: #a52a2a;">{</span> position <span style="color: #a52a2a;">=</span> <span style="color: #6434A3;">Chess.</span>make_move model.position move
+        <span style="color: #a52a2a;">;</span> moves
+        <span style="color: #a52a2a;">;</span> ply <span style="color: #a52a2a;">=</span> model.ply <span style="color: #a52a2a;">+</span> 1
+        <span style="color: #a52a2a;">},</span> <span style="color: #6434A3;">Cmd.</span>none
+      <span style="color: #0000FF;">with</span> <span style="color: #6434A3;">Zipper.</span><span style="color: #000000; background-color: #FFFFFF;">End_of_list</span> <span style="color: #a52a2a;">-&gt;</span> model<span style="color: #a52a2a;">,</span> <span style="color: #6434A3;">Cmd.</span>none
+    <span style="color: #000000; font-weight: bold;">end</span>
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Jump</span> how_many <span style="color: #a52a2a;">-&gt;</span>
+    <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #000000; font-weight: bold;">rec</span> <span style="color: #006699;">jump_fwd</span><span style="color: #BA36A5;"> position zipper n</span> <span style="color: #a52a2a;">=</span>
+      <span style="color: #0000FF;">if</span> n <span style="color: #a52a2a;">&lt;=</span> 0 <span style="color: #0000FF;">then</span> position<span style="color: #a52a2a;">,</span> zipper
+      <span style="color: #0000FF;">else</span> <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #a52a2a;">(</span><span style="color: #BA36A5;">move</span><span style="color: #a52a2a;">,</span><span style="color: #BA36A5;"> _san</span><span style="color: #a52a2a;">),</span><span style="color: #BA36A5;"> zipper'</span> <span style="color: #a52a2a;">=</span> <span style="color: #6434A3;">Zipper.</span>tree_fwd zipper <span style="color: #000000; font-weight: bold;">in</span>
+        jump_fwd <span style="color: #a52a2a;">(</span><span style="color: #6434A3;">Chess.</span>make_move position move<span style="color: #a52a2a;">)</span> zipper' <span style="color: #a52a2a;">(</span>n <span style="color: #a52a2a;">-</span> 1<span style="color: #a52a2a;">)</span> <span style="color: #000000; font-weight: bold;">in</span>
+    <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #000000; font-weight: bold;">rec</span> <span style="color: #006699;">jump_back</span><span style="color: #BA36A5;"> </span><span style="color: #a52a2a;">(</span><span style="color: #BA36A5;">position</span><span style="color: #a52a2a;">:</span><span style="color: #6434A3;">Chess.</span><span style="color: #6434A3;">position</span><span style="color: #a52a2a;">)</span><span style="color: #BA36A5;"> zipper n</span> <span style="color: #a52a2a;">=</span>
+      <span style="color: #0000FF;">match</span> position.prev<span style="color: #a52a2a;">,</span> n <span style="color: #0000FF;">with</span>
+      <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Some</span> position'<span style="color: #a52a2a;">,</span> n <span style="color: #0000FF;">when</span> n <span style="color: #a52a2a;">&lt;</span> 0 <span style="color: #a52a2a;">-&gt;</span>
+        jump_back position' <span style="color: #a52a2a;">(</span><span style="color: #6434A3;">Zipper.</span>tree_back zipper<span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">(</span>n <span style="color: #a52a2a;">+</span> 1<span style="color: #a52a2a;">)</span>
+      <span style="color: #a52a2a;">|</span> _ <span style="color: #a52a2a;">-&gt;</span> position<span style="color: #a52a2a;">,</span> zipper <span style="color: #000000; font-weight: bold;">in</span>
+    <span style="color: #000000; font-weight: bold;">begin</span> <span style="color: #0000FF;">match</span> how_many <span style="color: #0000FF;">with</span>
+      <span style="color: #a52a2a;">|</span> 0 <span style="color: #a52a2a;">-&gt;</span> model<span style="color: #a52a2a;">,</span> <span style="color: #6434A3;">Cmd.</span>none
+      <span style="color: #a52a2a;">|</span> n <span style="color: #a52a2a;">-&gt;</span> <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">position</span><span style="color: #a52a2a;">,</span><span style="color: #BA36A5;"> moves</span> <span style="color: #a52a2a;">=</span>
+               <span style="color: #0000FF;">if</span> n <span style="color: #a52a2a;">&gt;</span> 0 <span style="color: #0000FF;">then</span> jump_fwd model.position model.moves n
+               <span style="color: #0000FF;">else</span> jump_back model.position model.moves n <span style="color: #000000; font-weight: bold;">in</span>
+        <span style="color: #a52a2a;">{</span>position<span style="color: #a52a2a;">;</span> moves<span style="color: #a52a2a;">;</span> ply <span style="color: #a52a2a;">=</span> model.ply <span style="color: #a52a2a;">+</span> n<span style="color: #a52a2a;">},</span> <span style="color: #6434A3;">Cmd.</span>none
+    <span style="color: #000000; font-weight: bold;">end</span>
+</pre>
+</div>
+
+<p>
+I also extracted the views:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-ocaml"><span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">buttons_view</span> <span style="color: #a52a2a;">=</span>
+  <span style="color: #a52a2a;">[</span> button <span style="color: #a52a2a;">[</span>onClick <span style="color: #000000; background-color: #FFFFFF;">Random_button</span><span style="color: #a52a2a;">]</span> <span style="color: #a52a2a;">[</span>text <span style="color: #008000;">"random move"</span><span style="color: #a52a2a;">]</span>
+  <span style="color: #a52a2a;">;</span> button <span style="color: #a52a2a;">[</span>onClick <span style="color: #000000; background-color: #FFFFFF;">Back_button</span><span style="color: #a52a2a;">]</span> <span style="color: #a52a2a;">[</span>text <span style="color: #008000;">"back"</span><span style="color: #a52a2a;">]</span>
+  <span style="color: #a52a2a;">;</span> button <span style="color: #a52a2a;">[</span>onClick <span style="color: #000000; background-color: #FFFFFF;">Fwd_button</span><span style="color: #a52a2a;">]</span> <span style="color: #a52a2a;">[</span>text <span style="color: #008000;">"forward"</span><span style="color: #a52a2a;">]</span>
+  <span style="color: #a52a2a;">]</span>
+
+
+<span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">move_view</span><span style="color: #BA36A5;"> </span><span style="color: #a52a2a;">?(</span><span style="color: #BA36A5;">highlight</span><span style="color: #a52a2a;">=</span><span style="color: #D0372D;">false</span><span style="color: #a52a2a;">)</span><span style="color: #BA36A5;"> current_ply offset</span>
+<span style="color: #BA36A5;">    </span><span style="color: #a52a2a;">(</span><span style="color: #6434A3;">Zipper.</span><span style="color: #000000; background-color: #FFFFFF;">Node</span><span style="color: #BA36A5;"> </span><span style="color: #a52a2a;">((</span><span style="color: #BA36A5;">_move</span><span style="color: #a52a2a;">,</span><span style="color: #BA36A5;"> san</span><span style="color: #a52a2a;">),</span><span style="color: #BA36A5;"> _var</span><span style="color: #a52a2a;">))</span> <span style="color: #a52a2a;">=</span>
+  <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">ply</span> <span style="color: #a52a2a;">=</span> current_ply <span style="color: #a52a2a;">+</span> offset <span style="color: #a52a2a;">+</span> 1 <span style="color: #000000; font-weight: bold;">in</span>
+  <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">number</span> <span style="color: #a52a2a;">=</span> ply <span style="color: #a52a2a;">/</span> 2
+  <span style="color: #000000; font-weight: bold;">and</span> <span style="color: #BA36A5;">w_move</span> <span style="color: #a52a2a;">=</span> ply <span style="color: #a52a2a;">mod</span> 2 <span style="color: #a52a2a;">=</span> 0 <span style="color: #000000; font-weight: bold;">in</span>
+  li <span style="color: #a52a2a;">[</span> classList <span style="color: #a52a2a;">[</span> <span style="color: #008000;">"move"</span><span style="color: #a52a2a;">,</span> <span style="color: #D0372D;">true</span>
+                 <span style="color: #a52a2a;">;</span> <span style="color: #008000;">"numbered"</span><span style="color: #a52a2a;">,</span> w_move
+                 <span style="color: #a52a2a;">;</span> <span style="color: #008000;">"highlight"</span><span style="color: #a52a2a;">,</span> highlight
+                 <span style="color: #a52a2a;">]</span> <span style="color: #a52a2a;">]</span>
+    <span style="color: #a52a2a;">[</span> span <span style="color: #a52a2a;">[</span>class' <span style="color: #008000;">"number"</span><span style="color: #a52a2a;">]</span> <span style="color: #a52a2a;">[</span>string_of_int number <span style="color: #a52a2a;">|&gt;</span> text<span style="color: #a52a2a;">]</span>
+    <span style="color: #a52a2a;">;</span> span
+        <span style="color: #a52a2a;">[</span> class' <span style="color: #008000;">"move"</span>
+        <span style="color: #a52a2a;">;</span> <span style="color: #0000FF;">if</span> offset <span style="color: #a52a2a;">&lt;&gt;</span> 0 <span style="color: #0000FF;">then</span> onClick <span style="color: #a52a2a;">(</span><span style="color: #000000; background-color: #FFFFFF;">Jump</span> offset<span style="color: #a52a2a;">)</span> <span style="color: #0000FF;">else</span> noProp
+        <span style="color: #a52a2a;">]</span> <span style="color: #a52a2a;">[</span>text san<span style="color: #a52a2a;">]</span>
+    <span style="color: #a52a2a;">]</span>
+
+<span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">home_view</span><span style="color: #BA36A5;"> </span><span style="color: #a52a2a;">~</span><span style="color: #BA36A5;">highlight current_ply</span> <span style="color: #a52a2a;">=</span>
+  li <span style="color: #a52a2a;">[</span> classList
+         <span style="color: #a52a2a;">[</span> <span style="color: #008000;">"move"</span><span style="color: #a52a2a;">,</span> <span style="color: #D0372D;">true</span>
+         <span style="color: #a52a2a;">;</span> <span style="color: #008000;">"highlight"</span><span style="color: #a52a2a;">,</span> highlight <span style="color: #a52a2a;">]</span> <span style="color: #a52a2a;">]</span>
+    <span style="color: #a52a2a;">[</span> span
+        <span style="color: #a52a2a;">[</span> class' <span style="color: #008000;">"move"</span>
+        <span style="color: #a52a2a;">;</span> onClick <span style="color: #a52a2a;">(</span><span style="color: #000000; background-color: #FFFFFF;">Jump</span> <span style="color: #a52a2a;">(-</span>current_ply<span style="color: #a52a2a;">))</span>
+        <span style="color: #a52a2a;">]</span> <span style="color: #a52a2a;">[</span>text <span style="color: #008000;">{js|\u2302|js}</span><span style="color: #a52a2a;">]</span>
+    <span style="color: #a52a2a;">]</span>
+
+<span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">move_list_future_view</span><span style="color: #BA36A5;"> ply future</span> <span style="color: #a52a2a;">=</span>
+  <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #000000; font-weight: bold;">rec</span> <span style="color: #006699;">loop</span><span style="color: #BA36A5;"> offset cont</span> <span style="color: #a52a2a;">=</span> <span style="color: #0000FF;">function</span>
+    <span style="color: #a52a2a;">|</span> <span style="color: #a52a2a;">[]</span> <span style="color: #a52a2a;">-&gt;</span> cont <span style="color: #a52a2a;">[]</span>
+    <span style="color: #a52a2a;">|</span> hd<span style="color: #a52a2a;">::</span>tl <span style="color: #a52a2a;">-&gt;</span>
+      loop <span style="color: #a52a2a;">(</span>offset <span style="color: #a52a2a;">+</span> 1<span style="color: #a52a2a;">)</span>
+        <span style="color: #a52a2a;">(</span><span style="color: #0000FF;">fun</span> <span style="color: #BA36A5;">acc</span> <span style="color: #a52a2a;">-&gt;</span> move_view ply offset hd<span style="color: #a52a2a;">::</span>acc
+                    <span style="color: #a52a2a;">|&gt;</span> cont<span style="color: #a52a2a;">)</span> tl
+  <span style="color: #000000; font-weight: bold;">in</span> loop 1 <span style="color: #a52a2a;">(</span><span style="color: #0000FF;">fun</span> <span style="color: #BA36A5;">x</span> <span style="color: #a52a2a;">-&gt;</span> x<span style="color: #a52a2a;">)</span> future
+
+<span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">move_list_view</span><span style="color: #BA36A5;"> ply </span><span style="color: #a52a2a;">(</span><span style="color: #BA36A5;">past</span><span style="color: #a52a2a;">,</span><span style="color: #BA36A5;"> future</span><span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">=</span>
+  <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #000000; font-weight: bold;">rec</span> <span style="color: #006699;">loop</span><span style="color: #BA36A5;"> offset acc</span> <span style="color: #a52a2a;">=</span> <span style="color: #0000FF;">function</span>
+    <span style="color: #a52a2a;">|</span> <span style="color: #a52a2a;">[]</span> <span style="color: #a52a2a;">-&gt;</span> acc
+    <span style="color: #a52a2a;">|</span> hd<span style="color: #a52a2a;">::</span>tl <span style="color: #a52a2a;">-&gt;</span>
+      loop <span style="color: #a52a2a;">(</span>offset <span style="color: #a52a2a;">-</span> 1<span style="color: #a52a2a;">)</span>
+        <span style="color: #a52a2a;">(</span>move_view <span style="color: #D0372D;">~highlight</span><span style="color: #a52a2a;">:(</span>offset <span style="color: #a52a2a;">=</span> 0<span style="color: #a52a2a;">)</span> ply offset hd<span style="color: #a52a2a;">::</span>acc<span style="color: #a52a2a;">)</span> tl
+  <span style="color: #000000; font-weight: bold;">in</span> home_view <span style="color: #D0372D;">~highlight</span><span style="color: #a52a2a;">:(</span>ply <span style="color: #a52a2a;">=</span> 0<span style="color: #a52a2a;">)</span> ply<span style="color: #a52a2a;">::</span>
+     loop 0 <span style="color: #a52a2a;">(</span>move_list_future_view ply future<span style="color: #a52a2a;">)</span> past
+
+<span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">view</span><span style="color: #BA36A5;"> model</span> <span style="color: #a52a2a;">=</span>
+  <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #a52a2a;">(</span><span style="color: #BA36A5;">_context</span><span style="color: #a52a2a;">,</span><span style="color: #BA36A5;"> past</span><span style="color: #a52a2a;">),</span><span style="color: #BA36A5;"> future</span> <span style="color: #a52a2a;">=</span> model.moves <span style="color: #000000; font-weight: bold;">in</span>
+  move_list_view model.ply <span style="color: #a52a2a;">(</span>past<span style="color: #a52a2a;">,</span> future<span style="color: #a52a2a;">)</span>
+  <span style="color: #a52a2a;">|&gt;</span> ul <span style="color: #a52a2a;">[</span>class' <span style="color: #008000;">"moves"</span><span style="color: #a52a2a;">]</span>
+</pre>
+</div>
+
+<p>
+Of course, you need to make sure <code>Main.ml</code> is up to date. Fortunately,
+OCaml will complain until you get everything right (type-wise at
+least).  I revamped the <code>view</code> function a little:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-ocaml"><span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">buttons_view</span> <span style="color: #a52a2a;">=</span>
+  nav <span style="color: #a52a2a;">[]</span>
+    <span style="color: #a52a2a;">[</span> button <span style="color: #a52a2a;">[</span>onClick <span style="color: #000000; background-color: #FFFFFF;">New_tab</span><span style="color: #a52a2a;">]</span> <span style="color: #a52a2a;">[</span>text <span style="color: #008000;">"new tab"</span><span style="color: #a52a2a;">]</span>
+    <span style="color: #a52a2a;">;</span> button <span style="color: #a52a2a;">[</span>onClick <span style="color: #000000; background-color: #FFFFFF;">Save_games</span><span style="color: #a52a2a;">]</span> <span style="color: #a52a2a;">[</span>text <span style="color: #008000;">"save all games in local storage"</span><span style="color: #a52a2a;">]</span>
+    <span style="color: #a52a2a;">;</span> button <span style="color: #a52a2a;">[</span>onClick <span style="color: #000000; background-color: #FFFFFF;">Clear_games</span><span style="color: #a52a2a;">]</span> <span style="color: #a52a2a;">[</span>text <span style="color: #008000;">"clear local storage"</span><span style="color: #a52a2a;">]</span>
+    <span style="color: #a52a2a;">;</span> button <span style="color: #a52a2a;">[</span>onClick <span style="color: #000000; background-color: #FFFFFF;">Load_tournament</span><span style="color: #a52a2a;">]</span> <span style="color: #a52a2a;">[</span>text <span style="color: #008000;">"load a game from Lichess"</span><span style="color: #a52a2a;">]</span>
+    <span style="color: #a52a2a;">]</span>
+
+<span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">scratch_view</span> <span style="color: #a52a2a;">=</span>
+  div <span style="color: #a52a2a;">[]</span>
+    <span style="color: #a52a2a;">[</span> buttons_view
+    <span style="color: #a52a2a;">;</span> p <span style="color: #a52a2a;">[]</span>
+        <span style="color: #a52a2a;">[</span> text <span style="color: #008000;">"This is a scratch buffer.  Click \"new tab\" to open a new game in a separate tab."</span><span style="color: #a52a2a;">]</span>
+    <span style="color: #a52a2a;">]</span>
+
+<span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">view</span><span style="color: #BA36A5;"> model</span> <span style="color: #a52a2a;">=</span>
+  <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">game</span> <span style="color: #a52a2a;">=</span> model <span style="color: #a52a2a;">|</span>. model.game <span style="color: #000000; font-weight: bold;">in</span>
+  <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">game_view</span> <span style="color: #a52a2a;">=</span> <span style="color: #6434A3;">Game.</span>view game <span style="color: #a52a2a;">|&gt;</span> map game_msg <span style="color: #000000; font-weight: bold;">in</span>
+  <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">interactable</span> <span style="color: #a52a2a;">=</span>
+    <span style="color: #0000FF;">match</span> <span style="color: #6434A3;">Chess.</span>game_status game.position <span style="color: #0000FF;">with</span>
+    <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Play</span> move_list <span style="color: #a52a2a;">-&gt;</span>
+      <span style="color: #6434A3;">Board.</span><span style="color: #000000; background-color: #FFFFFF;">Interactable</span> <span style="color: #a52a2a;">(</span>game.position.turn<span style="color: #a52a2a;">,</span> move_list<span style="color: #a52a2a;">)</span>
+    <span style="color: #a52a2a;">|</span> _ <span style="color: #a52a2a;">-&gt;</span> <span style="color: #6434A3;">Board.</span><span style="color: #000000; background-color: #FFFFFF;">Not_interactable</span> <span style="color: #000000; font-weight: bold;">in</span>
+  main <span style="color: #a52a2a;">[]</span>
+    <span style="color: #a52a2a;">[</span> section <span style="color: #a52a2a;">[</span>id <span style="color: #008000;">"board"</span><span style="color: #a52a2a;">]</span>
+        <span style="color: #a52a2a;">[</span> header_nav_view
+        <span style="color: #a52a2a;">;</span> <span style="color: #6434A3;">Board.</span>view interactable game.position.ar model.board
+          <span style="color: #a52a2a;">|&gt;</span> map board_msg
+          <span style="color: #a52a2a;">;</span>
+          <span style="color: #6434A3;">List.</span>map <span style="color: #a52a2a;">(</span>map board_msg<span style="color: #a52a2a;">)</span> <span style="color: #6434A3;">Board.</span>buttons_view <span style="color: #a52a2a;">@</span>
+          <span style="color: #6434A3;">List.</span>map <span style="color: #a52a2a;">(</span>map game_msg<span style="color: #a52a2a;">)</span> <span style="color: #6434A3;">Game.</span>buttons_view
+          <span style="color: #a52a2a;">|&gt;</span> nav <span style="color: #a52a2a;">[</span>id <span style="color: #008000;">"buttons"</span><span style="color: #a52a2a;">]</span>
+          <span style="color: #8D8D84;">(* </span><span style="color: #8D8D84; font-style: italic;">; Board.result_view game_status </span><span style="color: #8D8D84;">*)</span>
+        <span style="color: #a52a2a;">]</span>
+    <span style="color: #a52a2a;">;</span> section <span style="color: #a52a2a;">[</span>id <span style="color: #008000;">"game"</span><span style="color: #a52a2a;">]</span>
+        <span style="color: #a52a2a;">[</span> game_nav_view model
+        <span style="color: #a52a2a;">;</span> section <span style="color: #a52a2a;">[</span>class' <span style="color: #008000;">"scroll"</span><span style="color: #a52a2a;">]</span>
+            <span style="color: #000000; font-weight: bold;">begin</span> <span style="color: #0000FF;">match</span> model.route <span style="color: #0000FF;">with</span>
+              <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Scratch</span> <span style="color: #a52a2a;">-&gt;</span> scratch_view<span style="color: #a52a2a;">::[</span>game_view<span style="color: #a52a2a;">]</span>
+              <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Tournament</span> <span style="color: #a52a2a;">-&gt;</span> <span style="color: #a52a2a;">[</span>tournament_view model.tournament<span style="color: #a52a2a;">]</span>
+              <span style="color: #a52a2a;">|</span> _ <span style="color: #a52a2a;">-&gt;</span> buttons_view<span style="color: #a52a2a;">::[</span>game_view<span style="color: #a52a2a;">]</span>
+            <span style="color: #000000; font-weight: bold;">end</span>
+        <span style="color: #a52a2a;">]</span>
+    <span style="color: #a52a2a;">]</span>
+</pre>
+</div>
+
+<p>
+The view for the default route will now be a &ldquo;Scratch&rdquo; buffer (can you
+tell I use Emacs?), and there will be a few buttons for interacting
+with the local storage and opening games.  
+</p>
+</div>
+</div>
+
+<div id="outline-container-orgf991f76" class="outline-2">
+<h2 id="orgf991f76">Lenses, Maps, and Functors</h2>
+<div class="outline-text-2" id="text-orgf991f76">
+<p>
+You probably stumbled over
+this part:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-ocaml"><span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">game</span> <span style="color: #a52a2a;">=</span> model <span style="color: #a52a2a;">|</span>. model.game <span style="color: #000000; font-weight: bold;">in</span>
+</pre>
+</div>
+
+<p>
+Maybe you checked the OCaml documentation, unable to find the <code>|.</code>
+operator?  The secret is that this operator is defined by the <i>Lens</i>
+library.  Get the file <code>lens.ml</code> from <a href="https://github.com/pdonadeo/ocaml-lens">astrada&rsquo;s lens library</a> and put
+in in your <code>src</code> directory.
+</p>
+
+<p>
+A lens is like a functional getter/setter.  Say we have list of games, and we are
+currently viewing and editing one of them.  A lens combines two functions:
+</p>
+
+<ul class="org-ul">
+<li><code>get</code>, a function that takes some data structure <code>a</code> and returns a part of <code>a</code></li>
+<li><code>set</code>, a function that takes some data structure <code>a</code> some data <code>b</code>, and
+replaces a part of <code>a</code> by <code>b</code>. (Such that <code>set a b |&gt; get = b</code>.)</li>
+</ul>
+
+<p>
+There are more laws that need to be fulfilled. If you want to learn
+more about lenses, check out <a href="https://artyom.me/#lens-over-tea">Artyom&rsquo;s &ldquo;lens over tea&rdquo;</a>.  For instance, here&rsquo;s a simple lens:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-ocaml"><span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">local_lens</span> <span style="color: #a52a2a;">=</span> <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #000000; font-weight: bold;">open </span><span style="color: #6434A3;">Lens</span> <span style="color: #000000; font-weight: bold;">in</span>
+  <span style="color: #a52a2a;">{</span> get <span style="color: #a52a2a;">=</span> <span style="color: #a52a2a;">(</span><span style="color: #0000FF;">fun</span> <span style="color: #BA36A5;">x</span> <span style="color: #a52a2a;">-&gt;</span> x.local_games<span style="color: #a52a2a;">)</span>
+  <span style="color: #a52a2a;">;</span> set <span style="color: #a52a2a;">=</span> <span style="color: #a52a2a;">(</span><span style="color: #0000FF;">fun</span> <span style="color: #BA36A5;">v x</span> <span style="color: #a52a2a;">-&gt;</span> <span style="color: #a52a2a;">{</span> x <span style="color: #0000FF;">with</span> local_games <span style="color: #a52a2a;">=</span> v <span style="color: #a52a2a;">})</span>
+  <span style="color: #a52a2a;">}</span>
+</pre>
+</div>
+
+<p>
+The getter returns the record field <code>local_games</code>, and the setter
+sets it to a new value.  We call the field <code>local_games</code> the <i>focus</i> of this lens.  The nice thing about lenses is that they can
+be composed.  This saves you from the nesting <code>{x with y = {x.y with a
+= b}}</code> ugliness.
+</p>
+
+<p>
+For instance, we could compose <code>local_lens</code> with <code>Lens.for_list 10</code> to
+obtain a list that accesses the 10th item of the <code>local_games</code> field
+of whatever record it is applied to.
+</p>
+
+<p>
+In our app, we use a lens to track the game that we&rsquo;re currently
+editing: the scratch game, or a game in the list of tabs.  The lens
+needs to be parameterized with the type that it works on,
+and the type that it focuses on. 
+</p>
+
+<div class="org-src-container">
+<pre class="src src-ocaml"><span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">lichess_lens</span> <span style="color: #a52a2a;">=</span> <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #000000; font-weight: bold;">open </span><span style="color: #6434A3;">Lens</span> <span style="color: #000000; font-weight: bold;">in</span>
+  <span style="color: #a52a2a;">{</span> get <span style="color: #a52a2a;">=</span> <span style="color: #a52a2a;">(</span><span style="color: #0000FF;">fun</span> <span style="color: #BA36A5;">x</span> <span style="color: #a52a2a;">-&gt;</span> x.lichess_games<span style="color: #a52a2a;">)</span>
+  <span style="color: #a52a2a;">;</span> set <span style="color: #a52a2a;">=</span> <span style="color: #a52a2a;">(</span><span style="color: #0000FF;">fun</span> <span style="color: #BA36A5;">v x</span> <span style="color: #a52a2a;">-&gt;</span> <span style="color: #a52a2a;">{</span> x <span style="color: #0000FF;">with</span> lichess_games <span style="color: #a52a2a;">=</span> v <span style="color: #a52a2a;">})</span>
+  <span style="color: #a52a2a;">}</span>
+<span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">scratch_lens</span> <span style="color: #a52a2a;">=</span> <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #000000; font-weight: bold;">open </span><span style="color: #6434A3;">Lens</span> <span style="color: #000000; font-weight: bold;">in</span>
+  <span style="color: #a52a2a;">{</span> get <span style="color: #a52a2a;">=</span> <span style="color: #a52a2a;">(</span><span style="color: #0000FF;">fun</span> <span style="color: #BA36A5;">x</span> <span style="color: #a52a2a;">-&gt;</span> x.scratch_game<span style="color: #a52a2a;">)</span>
+  <span style="color: #a52a2a;">;</span> set <span style="color: #a52a2a;">=</span> <span style="color: #a52a2a;">(</span><span style="color: #0000FF;">fun</span> <span style="color: #BA36A5;">v x</span> <span style="color: #a52a2a;">-&gt;</span> <span style="color: #a52a2a;">{</span> x <span style="color: #0000FF;">with</span> scratch_game <span style="color: #a52a2a;">=</span> v <span style="color: #a52a2a;">})</span>
+  <span style="color: #a52a2a;">}</span>
+
+<span style="color: #000000; font-weight: bold;">type</span> <span style="color: #6434A3;">'a transfer</span> <span style="color: #a52a2a;">=</span>
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Idle</span>
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Loading</span>
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Failed</span>
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Received</span> <span style="color: #0000FF;">of</span> 'a
+
+<span style="color: #000000; font-weight: bold;">type</span> <span style="color: #6434A3;">model</span> <span style="color: #a52a2a;">=</span>
+  <span style="color: #a52a2a;">{</span> game <span style="color: #a52a2a;">:</span> game_lens
+  <span style="color: #a52a2a;">;</span> board <span style="color: #a52a2a;">:</span> <span style="color: #6434A3;">Board.</span>model
+  <span style="color: #a52a2a;">;</span> scratch_game <span style="color: #a52a2a;">:</span> <span style="color: #6434A3;">Game.</span>model
+  <span style="color: #a52a2a;">;</span> local_games <span style="color: #a52a2a;">:</span> <span style="color: #6434A3;">Game.</span>model <span style="color: #6434A3;">IntMap.</span>t
+  <span style="color: #a52a2a;">;</span> tournament <span style="color: #a52a2a;">:</span> <span style="color: #a52a2a;">(</span>string <span style="color: #a52a2a;">*</span> string list<span style="color: #a52a2a;">)</span> list transfer
+  <span style="color: #a52a2a;">;</span> lichess_games <span style="color: #a52a2a;">:</span> int <span style="color: #6434A3;">StringMap.</span>t
+  <span style="color: #a52a2a;">;</span> route <span style="color: #a52a2a;">:</span> route
+  <span style="color: #a52a2a;">}</span>
+<span style="color: #000000; font-weight: bold;">and</span> <span style="color: #BA36A5;">game_lens</span> <span style="color: #a52a2a;">=</span> <span style="color: #a52a2a;">(</span>model<span style="color: #a52a2a;">,</span> <span style="color: #6434A3;">Game.</span>model<span style="color: #a52a2a;">)</span> <span style="color: #6434A3;">Lens.</span>t
+<span style="color: #000000; font-weight: bold;">and</span> <span style="color: #BA36A5;">route</span> <span style="color: #a52a2a;">=</span>
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Local</span> <span style="color: #0000FF;">of</span> int
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Lichess</span> <span style="color: #0000FF;">of</span> string
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Scratch</span>
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Tournament</span>
+
+<span style="color: #000000; font-weight: bold;">type</span> <span style="color: #6434A3;">msg</span> <span style="color: #a52a2a;">=</span>
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Board_msg</span> <span style="color: #0000FF;">of</span> <span style="color: #6434A3;">Board.</span>msg
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Game_msg</span> <span style="color: #0000FF;">of</span> <span style="color: #6434A3;">Game.</span>msg
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Key_pressed</span> <span style="color: #0000FF;">of</span> <span style="color: #6434A3;">Keyboard.</span>key_event
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">New_tab</span>
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Save_games</span>
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Clear_games</span>
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Games_loaded</span> <span style="color: #0000FF;">of</span> <span style="color: #a52a2a;">(</span>string <span style="color: #a52a2a;">*</span> string<span style="color: #a52a2a;">)</span> list
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Load_tournament</span>
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Tournament_data</span> <span style="color: #0000FF;">of</span> <span style="color: #a52a2a;">(</span>string<span style="color: #a52a2a;">,</span> string <span style="color: #6434A3;">Http.</span>error<span style="color: #a52a2a;">)</span> <span style="color: #6434A3;">Result.</span>t
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Location_change</span> <span style="color: #0000FF;">of</span> <span style="color: #6434A3;">Web.Location.</span>location  
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Pgn_requested</span> <span style="color: #0000FF;">of</span> string
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Pgn_data</span> <span style="color: #0000FF;">of</span> game_lens <span style="color: #a52a2a;">*</span> <span style="color: #a52a2a;">(</span>string<span style="color: #a52a2a;">,</span> string <span style="color: #6434A3;">Http.</span>error<span style="color: #a52a2a;">)</span> <span style="color: #6434A3;">Result.</span>t
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Close_tab</span> <span style="color: #0000FF;">of</span> string
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Validate_pgn</span> <span style="color: #0000FF;">of</span> string
+<span style="color: #808080;">[@@bs.deriving {accessors}]</span>
+</pre>
+</div>
+
+<p>
+I added an <code>Idle</code> state to the <code>transfer</code> type because we might not
+want to auto-load the tournament on startup.  Some more things have
+changed: we have <code>local_games : Game.model IntMap.t</code> and
+<code>lichess_games : int StringMap.t</code>.  The former is meant to map tab
+numbers to games, while the latter maps Lichess game IDs to tab
+numbers so that games don&rsquo;t have to be reloaded from the server if
+they already exist in memory.
+</p>
+
+<p>
+Unfortunately, <code>IntMap</code> and <code>StringMap</code> are not built-in.  However,
+OCaml ships with a much more general concept of a functional key/value
+map, but it needs to be initialized for the type of keys that you want
+to use.  This is your chance to learn about <i>functors</i>!  A functor
+maps a module to another module. Here&rsquo;s an example:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-ocaml"><span style="color: #000000; font-weight: bold;">module</span> <span style="color: #6434A3;">IntT</span> <span style="color: #a52a2a;">=</span> <span style="color: #000000; font-weight: bold;">struct</span>
+  <span style="color: #000000; font-weight: bold;">type</span> <span style="color: #6434A3;">t</span> <span style="color: #a52a2a;">=</span> int
+  <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">compare</span> <span style="color: #a52a2a;">=</span> compare
+<span style="color: #000000; font-weight: bold;">end</span>
+
+<span style="color: #000000; font-weight: bold;">module</span> <span style="color: #6434A3;">StringT</span> <span style="color: #a52a2a;">=</span> <span style="color: #000000; font-weight: bold;">struct</span>
+  <span style="color: #000000; font-weight: bold;">type</span> <span style="color: #6434A3;">t</span> <span style="color: #a52a2a;">=</span> string
+  <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">compare</span> <span style="color: #a52a2a;">=</span> compare
+<span style="color: #000000; font-weight: bold;">end</span>
+
+<span style="color: #000000; font-weight: bold;">module</span> <span style="color: #6434A3;">IntMap</span> <span style="color: #a52a2a;">=</span> <span style="color: #6434A3;">Map.Make</span><span style="color: #a52a2a;">(</span><span style="color: #6434A3;">IntT</span><span style="color: #a52a2a;">)</span>
+<span style="color: #000000; font-weight: bold;">module</span> <span style="color: #6434A3;">StringMap</span> <span style="color: #a52a2a;">=</span> <span style="color: #6434A3;">Map.Make</span><span style="color: #a52a2a;">(</span><span style="color: #6434A3;">StringT</span><span style="color: #a52a2a;">)</span>
+</pre>
+</div>
+
+<p>
+First, we define a module <code>IntT</code>, then we use the functor <code>Map.Make</code>
+that takes this module and returns the new module <code>IntMap</code>.  Of
+course, just like function arguments must have a certain type, the
+arguments of functors need to comply with certain expectations too:
+the module needs to have the right <i>signature</i>, meaning it must define
+certain types and functions.
+</p>
+
+<p>
+Here&rsquo;s the signature of <code>Map.Make</code> (I obtained it by using Merlin):
+</p>
+<div class="org-src-container">
+<pre class="src src-ocaml"><span style="color: #000000; font-weight: bold;">functor</span> <span style="color: #a52a2a;">(</span><span style="color: #BA36A5;">Ord</span> <span style="color: #a52a2a;">:</span><span style="color: #6434A3;"> </span><span style="color: #6434A3;">Map.</span><span style="color: #6434A3;">OrderedType</span><span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">-&gt;</span>
+  <span style="color: #000000; font-weight: bold;">sig</span>
+    <span style="color: #000000; font-weight: bold;">type</span> <span style="color: #6434A3;">key</span> <span style="color: #a52a2a;">=</span> <span style="color: #6434A3;">Ord.</span>t
+    <span style="color: #000000; font-weight: bold;">type</span> <span style="color: #a52a2a;">+</span><span style="color: #6434A3;">'a t</span>
+    <span style="color: #000000; font-weight: bold;">val</span> <span style="color: #006699;">empty</span> <span style="color: #a52a2a;">:</span> 'a t
+    <span style="color: #000000; font-weight: bold;">val</span> <span style="color: #006699;">is_empty</span> <span style="color: #a52a2a;">:</span> 'a t <span style="color: #a52a2a;">-&gt;</span> bool
+    <span style="color: #000000; font-weight: bold;">val</span> <span style="color: #006699;">mem</span> <span style="color: #a52a2a;">:</span> key <span style="color: #a52a2a;">-&gt;</span> 'a t <span style="color: #a52a2a;">-&gt;</span> bool
+    <span style="color: #000000; font-weight: bold;">val</span> <span style="color: #006699;">add</span> <span style="color: #a52a2a;">:</span> key <span style="color: #a52a2a;">-&gt;</span> 'a <span style="color: #a52a2a;">-&gt;</span> 'a t <span style="color: #a52a2a;">-&gt;</span> 'a t
+    <span style="color: #000000; font-weight: bold;">val</span> <span style="color: #006699;">singleton</span> <span style="color: #a52a2a;">:</span> key <span style="color: #a52a2a;">-&gt;</span> 'a <span style="color: #a52a2a;">-&gt;</span> 'a t
+    <span style="color: #000000; font-weight: bold;">val</span> <span style="color: #006699;">remove</span> <span style="color: #a52a2a;">:</span> key <span style="color: #a52a2a;">-&gt;</span> 'a t <span style="color: #a52a2a;">-&gt;</span> 'a t
+    <span style="color: #000000; font-weight: bold;">val</span> <span style="color: #006699;">merge</span> <span style="color: #a52a2a;">:</span>
+      <span style="color: #a52a2a;">(</span>key <span style="color: #a52a2a;">-&gt;</span> 'a option <span style="color: #a52a2a;">-&gt;</span> 'b option <span style="color: #a52a2a;">-&gt;</span> 'c option<span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">-&gt;</span> 'a t <span style="color: #a52a2a;">-&gt;</span> 'b t <span style="color: #a52a2a;">-&gt;</span> 'c t
+    <span style="color: #000000; font-weight: bold;">val</span> <span style="color: #006699;">compare</span> <span style="color: #a52a2a;">:</span> <span style="color: #a52a2a;">(</span>'a <span style="color: #a52a2a;">-&gt;</span> 'a <span style="color: #a52a2a;">-&gt;</span> int<span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">-&gt;</span> 'a t <span style="color: #a52a2a;">-&gt;</span> 'a t <span style="color: #a52a2a;">-&gt;</span> int
+    <span style="color: #000000; font-weight: bold;">val</span> <span style="color: #006699;">equal</span> <span style="color: #a52a2a;">:</span> <span style="color: #a52a2a;">(</span>'a <span style="color: #a52a2a;">-&gt;</span> 'a <span style="color: #a52a2a;">-&gt;</span> bool<span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">-&gt;</span> 'a t <span style="color: #a52a2a;">-&gt;</span> 'a t <span style="color: #a52a2a;">-&gt;</span> bool
+    <span style="color: #000000; font-weight: bold;">val</span> <span style="color: #006699;">iter</span> <span style="color: #a52a2a;">:</span> <span style="color: #a52a2a;">(</span>key <span style="color: #a52a2a;">-&gt;</span> 'a <span style="color: #a52a2a;">-&gt;</span> unit<span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">-&gt;</span> 'a t <span style="color: #a52a2a;">-&gt;</span> unit
+    <span style="color: #000000; font-weight: bold;">val</span> <span style="color: #006699;">fold</span> <span style="color: #a52a2a;">:</span> <span style="color: #a52a2a;">(</span>key <span style="color: #a52a2a;">-&gt;</span> 'a <span style="color: #a52a2a;">-&gt;</span> 'b <span style="color: #a52a2a;">-&gt;</span> 'b<span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">-&gt;</span> 'a t <span style="color: #a52a2a;">-&gt;</span> 'b <span style="color: #a52a2a;">-&gt;</span> 'b
+    <span style="color: #000000; font-weight: bold;">val</span> <span style="color: #006699;">for_all</span> <span style="color: #a52a2a;">:</span> <span style="color: #a52a2a;">(</span>key <span style="color: #a52a2a;">-&gt;</span> 'a <span style="color: #a52a2a;">-&gt;</span> bool<span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">-&gt;</span> 'a t <span style="color: #a52a2a;">-&gt;</span> bool
+    <span style="color: #000000; font-weight: bold;">val</span> <span style="color: #006699;">exists</span> <span style="color: #a52a2a;">:</span> <span style="color: #a52a2a;">(</span>key <span style="color: #a52a2a;">-&gt;</span> 'a <span style="color: #a52a2a;">-&gt;</span> bool<span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">-&gt;</span> 'a t <span style="color: #a52a2a;">-&gt;</span> bool
+    <span style="color: #000000; font-weight: bold;">val</span> <span style="color: #006699;">filter</span> <span style="color: #a52a2a;">:</span> <span style="color: #a52a2a;">(</span>key <span style="color: #a52a2a;">-&gt;</span> 'a <span style="color: #a52a2a;">-&gt;</span> bool<span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">-&gt;</span> 'a t <span style="color: #a52a2a;">-&gt;</span> 'a t
+    <span style="color: #000000; font-weight: bold;">val</span> <span style="color: #006699;">partition</span> <span style="color: #a52a2a;">:</span> <span style="color: #a52a2a;">(</span>key <span style="color: #a52a2a;">-&gt;</span> 'a <span style="color: #a52a2a;">-&gt;</span> bool<span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">-&gt;</span> 'a t <span style="color: #a52a2a;">-&gt;</span> 'a t <span style="color: #a52a2a;">*</span> 'a t
+    <span style="color: #000000; font-weight: bold;">val</span> <span style="color: #006699;">cardinal</span> <span style="color: #a52a2a;">:</span> 'a t <span style="color: #a52a2a;">-&gt;</span> int
+    <span style="color: #000000; font-weight: bold;">val</span> <span style="color: #006699;">bindings</span> <span style="color: #a52a2a;">:</span> 'a t <span style="color: #a52a2a;">-&gt;</span> <span style="color: #a52a2a;">(</span>key <span style="color: #a52a2a;">*</span> 'a<span style="color: #a52a2a;">)</span> list
+    <span style="color: #000000; font-weight: bold;">val</span> <span style="color: #006699;">min_binding</span> <span style="color: #a52a2a;">:</span> 'a t <span style="color: #a52a2a;">-&gt;</span> key <span style="color: #a52a2a;">*</span> 'a
+    <span style="color: #000000; font-weight: bold;">val</span> <span style="color: #006699;">max_binding</span> <span style="color: #a52a2a;">:</span> 'a t <span style="color: #a52a2a;">-&gt;</span> key <span style="color: #a52a2a;">*</span> 'a
+    <span style="color: #000000; font-weight: bold;">val</span> <span style="color: #006699;">choose</span> <span style="color: #a52a2a;">:</span> 'a t <span style="color: #a52a2a;">-&gt;</span> key <span style="color: #a52a2a;">*</span> 'a
+    <span style="color: #000000; font-weight: bold;">val</span> <span style="color: #006699;">split</span> <span style="color: #a52a2a;">:</span> key <span style="color: #a52a2a;">-&gt;</span> 'a t <span style="color: #a52a2a;">-&gt;</span> 'a t <span style="color: #a52a2a;">*</span> 'a option <span style="color: #a52a2a;">*</span> 'a t
+    <span style="color: #000000; font-weight: bold;">val</span> <span style="color: #006699;">find</span> <span style="color: #a52a2a;">:</span> key <span style="color: #a52a2a;">-&gt;</span> 'a t <span style="color: #a52a2a;">-&gt;</span> 'a
+    <span style="color: #000000; font-weight: bold;">val</span> <span style="color: #006699;">map</span> <span style="color: #a52a2a;">:</span> <span style="color: #a52a2a;">(</span>'a <span style="color: #a52a2a;">-&gt;</span> 'b<span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">-&gt;</span> 'a t <span style="color: #a52a2a;">-&gt;</span> 'b t
+    <span style="color: #000000; font-weight: bold;">val</span> <span style="color: #006699;">mapi</span> <span style="color: #a52a2a;">:</span> <span style="color: #a52a2a;">(</span>key <span style="color: #a52a2a;">-&gt;</span> 'a <span style="color: #a52a2a;">-&gt;</span> 'b<span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">-&gt;</span> 'a t <span style="color: #a52a2a;">-&gt;</span> 'b t
+  <span style="color: #000000; font-weight: bold;">end</span>
+</pre>
+</div>
+
+<p>
+You see all the functions that will be exposed by the new module
+returned by <code>Map.Make</code> (such as <code>add</code> and <code>find</code>), and you also see that it expects a module that complies with <code>Map.OrderedType</code>, which is
+defined as:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-ocaml"><span style="color: #000000; font-weight: bold;">sig</span> <span style="color: #000000; font-weight: bold;">type</span> <span style="color: #6434A3;">t</span> <span style="color: #000000; font-weight: bold;">val</span> <span style="color: #006699;">compare</span> <span style="color: #a52a2a;">:</span> t <span style="color: #a52a2a;">-&gt;</span> t <span style="color: #a52a2a;">-&gt;</span> int <span style="color: #000000; font-weight: bold;">end</span>
+</pre>
+</div>
+
+<p>
+And you see that&rsquo;s exactly what we implemented in <code>IntT</code> and
+<code>StringT</code>: an interface with a type <code>t</code> and a function <code>compare</code> that
+takes two <code>t</code> arguments and returns an <code>int</code> to express which argument
+is considered &ldquo;greater&rdquo;. (Key/value maps rely on an ordering of the keys.) We used the built-in
+<code>compare</code> function that takes arbitrary types and compares them
+structurally, but you could define your own if you wanted.
+</p>
+
+<p>
+Let&rsquo;s take this one step further:  The Lens library doesn&rsquo;t supply any
+lenses for <code>IntMap</code> and <code>StringMap</code>.  Let&rsquo;s roll our own functor:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-ocaml"><span style="color: #000000; font-weight: bold;">module</span> <span style="color: #6434A3;">MapLens</span><span style="color: #a52a2a;">(</span><span style="color: #BA36A5;">Key </span><span style="color: #a52a2a;">:</span><span style="color: #6434A3;"> </span><span style="color: #6434A3;">Map.</span><span style="color: #6434A3;">OrderedType</span><span style="color: #a52a2a;">)</span><span style="color: #BA36A5;"> </span><span style="color: #a52a2a;">=</span> <span style="color: #000000; font-weight: bold;">struct</span>
+  <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">for_key</span><span style="color: #BA36A5;"> key</span> <span style="color: #a52a2a;">=</span>
+    <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #000000; font-weight: bold;">module</span> <span style="color: #6434A3;">M</span> <span style="color: #a52a2a;">=</span> <span style="color: #6434A3;">Map.Make</span><span style="color: #a52a2a;">(</span><span style="color: #6434A3;">Key</span><span style="color: #a52a2a;">)</span> <span style="color: #000000; font-weight: bold;">in</span>
+    <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #000000; font-weight: bold;">open </span><span style="color: #6434A3;">Lens</span> <span style="color: #000000; font-weight: bold;">in</span>
+    <span style="color: #a52a2a;">{</span> get <span style="color: #a52a2a;">=</span> <span style="color: #6434A3;">M.</span>find key
+    <span style="color: #a52a2a;">;</span> set <span style="color: #a52a2a;">=</span> <span style="color: #6434A3;">M.</span>add key
+    <span style="color: #a52a2a;">}</span>
+<span style="color: #000000; font-weight: bold;">end</span>
+
+<span style="color: #000000; font-weight: bold;">module</span> <span style="color: #6434A3;">IntMapLens</span> <span style="color: #a52a2a;">=</span> <span style="color: #6434A3;">MapLens</span><span style="color: #a52a2a;">(</span><span style="color: #6434A3;">IntT</span><span style="color: #a52a2a;">)</span>
+<span style="color: #000000; font-weight: bold;">module</span> <span style="color: #6434A3;">StringMapLens</span> <span style="color: #a52a2a;">=</span> <span style="color: #6434A3;">MapLens</span><span style="color: #a52a2a;">(</span><span style="color: #6434A3;">StringT</span><span style="color: #a52a2a;">)</span>
+</pre>
+</div>
+
+<p>
+For any <code>Map.OrderedType</code> we can now derive a module <code>MapLens</code> with a
+function <code>for_key</code> that returns a lens.  This example might seem a
+little overengineered, but we will use it for great effect in today&rsquo;s
+code, and it shows the power of OCaml&rsquo;s module system.
+</p>
+</div>
 </div>
 </div>
 </body>
