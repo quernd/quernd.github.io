@@ -3,7 +3,7 @@
 "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
 <head>
-<!-- 2018-01-02 Tue 16:54 -->
+<!-- 2018-01-02 Tue 19:24 -->
 <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Twelve Days of Christmas #10</title>
@@ -395,7 +395,9 @@ changed: we have <code>local_games : Game.model IntMap.t</code> and
 <code>lichess_games : int StringMap.t</code>.  The former is meant to map tab
 numbers to games, while the latter maps Lichess game IDs to tab
 numbers so that games don&rsquo;t have to be reloaded from the server if
-they already exist in memory.
+they already exist in memory.  Let&rsquo;s use key/value maps instead of the
+association lists we used before because they offer reasonably fast
+random access and insertion.
 </p>
 
 <p>
@@ -513,6 +515,219 @@ For any <code>Map.OrderedType</code> we can now derive a module <code>MapLens</c
 function <code>for_key</code> that returns a lens.  This example might seem a
 little overengineered, but we will use it for great effect in today&rsquo;s
 code, and it shows the power of OCaml&rsquo;s module system.
+</p>
+</div>
+</div>
+
+<div id="outline-container-orga85543e" class="outline-2">
+<h2 id="orga85543e">Lenses at work</h2>
+<div class="outline-text-2" id="text-orga85543e">
+<p>
+We define two complementary functions <code>route_of_location</code> and
+<code>location_of_route</code> and do the bulk of the route handling in
+<code>update_route</code>.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-ocaml"><span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">route_of_location</span><span style="color: #BA36A5;"> location</span> <span style="color: #a52a2a;">=</span>
+  <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #000000; font-weight: bold;">open </span><span style="color: #6434A3;">Web.Location</span> <span style="color: #000000; font-weight: bold;">in</span>
+  <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">route</span> <span style="color: #a52a2a;">=</span> <span style="color: #6434A3;">Chess.</span>split_on_char <span style="color: #008000;">'/'</span> location.hash <span style="color: #000000; font-weight: bold;">in</span>
+  <span style="color: #0000FF;">match</span> route <span style="color: #0000FF;">with</span>
+  <span style="color: #a52a2a;">|</span> <span style="color: #a52a2a;">[</span><span style="color: #008000;">"#"</span><span style="color: #a52a2a;">;</span> <span style="color: #008000;">""</span><span style="color: #a52a2a;">]</span> <span style="color: #a52a2a;">-&gt;</span> <span style="color: #000000; background-color: #FFFFFF;">Scratch</span>
+  <span style="color: #a52a2a;">|</span> <span style="color: #a52a2a;">[</span><span style="color: #008000;">"#"</span><span style="color: #a52a2a;">;</span> <span style="color: #008000;">"tournament"</span><span style="color: #a52a2a;">]</span> <span style="color: #a52a2a;">-&gt;</span> <span style="color: #000000; background-color: #FFFFFF;">Tournament</span>
+  <span style="color: #a52a2a;">|</span> <span style="color: #a52a2a;">[</span><span style="color: #008000;">"#"</span><span style="color: #a52a2a;">;</span> <span style="color: #008000;">"local"</span><span style="color: #a52a2a;">;</span> id<span style="color: #a52a2a;">]</span> <span style="color: #a52a2a;">-&gt;</span> <span style="color: #000000; background-color: #FFFFFF;">Local</span> <span style="color: #a52a2a;">(</span>int_of_string id<span style="color: #a52a2a;">)</span>
+  <span style="color: #a52a2a;">|</span> <span style="color: #a52a2a;">[</span><span style="color: #008000;">"#"</span><span style="color: #a52a2a;">;</span> <span style="color: #008000;">"lichess"</span><span style="color: #a52a2a;">;</span> id<span style="color: #a52a2a;">]</span> <span style="color: #a52a2a;">-&gt;</span> <span style="color: #000000; background-color: #FFFFFF;">Lichess</span> id
+  <span style="color: #a52a2a;">|</span> _ <span style="color: #a52a2a;">-&gt;</span> <span style="color: #000000; background-color: #FFFFFF;">Scratch</span>
+
+<span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">location_of_route</span> <span style="color: #a52a2a;">=</span> <span style="color: #0000FF;">function</span>
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Local</span> id <span style="color: #a52a2a;">-&gt;</span> <span style="color: #6434A3;">Printf.</span>sprintf <span style="color: #008000;">"#/local/%d"</span> id
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Lichess</span> id <span style="color: #a52a2a;">-&gt;</span> <span style="color: #6434A3;">Printf.</span>sprintf <span style="color: #008000;">"#/lichess/%s"</span> id
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Scratch</span> <span style="color: #a52a2a;">-&gt;</span> <span style="color: #008000;">"#/"</span>
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Tournament</span> <span style="color: #a52a2a;">-&gt;</span> <span style="color: #008000;">"#/tournament"</span>
+</pre>
+</div>
+
+<p>
+The function <code>update_route</code> will be called from within <code>update</code> to
+update the route when the location changes, and to trigger any side
+effects.  The most interesting part is the construction of lenses by
+composition using the <code>|--</code> operator. When a local game is requested,
+the route is simply updated, and the lens is set to focus on the game
+with the given ID.  If the ID cannot be found, the scratch buffer is
+shown.
+</p>
+
+<p>
+(Excercise: Implement a &ldquo;404&rdquo; page.)
+</p>
+
+<p>
+When a Lichess game is requested, either it can be
+found in the map, and the route is updated, or it is added to the map
+by getting the largest key of the map using <code>IntMap.max_binding</code> and
+adding 1 to it.  This way, keys are guaranteed to be unique.  Then, an
+empty game is added to the map of local games, the key is added to the
+Lichess games map, and an HTTP request is sent.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-ocaml"><span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">update_route</span><span style="color: #BA36A5;"> model route</span> <span style="color: #a52a2a;">=</span>
+  <span style="color: #0000FF;">if</span> model.route <span style="color: #a52a2a;">=</span> route <span style="color: #0000FF;">then</span> model<span style="color: #a52a2a;">,</span> <span style="color: #6434A3;">Cmd.</span>none
+  <span style="color: #0000FF;">else</span>
+    <span style="color: #0000FF;">match</span> route <span style="color: #0000FF;">with</span>
+    <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Local</span> id <span style="color: #0000FF;">when</span> <span style="color: #6434A3;">IntMap.</span>mem id model.local_games <span style="color: #a52a2a;">-&gt;</span>
+      <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">game</span> <span style="color: #a52a2a;">=</span> local_lens <span style="color: #a52a2a;">|--</span> <span style="color: #6434A3;">IntMapLens.</span>for_key id <span style="color: #000000; font-weight: bold;">in</span>
+      <span style="color: #a52a2a;">{</span>model <span style="color: #0000FF;">with</span> route<span style="color: #a52a2a;">;</span> game<span style="color: #a52a2a;">},</span>
+      location_of_route route <span style="color: #a52a2a;">|&gt;</span> <span style="color: #6434A3;">Navigation.</span>modifyUrl
+    <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Local</span> _ <span style="color: #a52a2a;">-&gt;</span> <span style="color: #a52a2a;">{</span>model <span style="color: #0000FF;">with</span> route <span style="color: #a52a2a;">=</span> <span style="color: #000000; background-color: #FFFFFF;">Scratch</span><span style="color: #a52a2a;">},</span>
+                 location_of_route <span style="color: #000000; background-color: #FFFFFF;">Scratch</span> <span style="color: #a52a2a;">|&gt;</span> <span style="color: #6434A3;">Navigation.</span>modifyUrl
+    <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Lichess</span> game_id <span style="color: #a52a2a;">-&gt;</span>
+      <span style="color: #000000; font-weight: bold;">begin</span> <span style="color: #0000FF;">try</span>
+          <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">id</span> <span style="color: #a52a2a;">=</span> <span style="color: #6434A3;">StringMap.</span>find game_id model.lichess_games <span style="color: #000000; font-weight: bold;">in</span>
+          <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">game</span> <span style="color: #a52a2a;">=</span> local_lens <span style="color: #a52a2a;">|--</span> <span style="color: #6434A3;">IntMapLens.</span>for_key id <span style="color: #000000; font-weight: bold;">in</span>
+          <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">route</span> <span style="color: #a52a2a;">=</span> <span style="color: #000000; background-color: #FFFFFF;">Local</span> id <span style="color: #000000; font-weight: bold;">in</span>
+          <span style="color: #a52a2a;">{</span>model <span style="color: #0000FF;">with</span> route<span style="color: #a52a2a;">;</span> game<span style="color: #a52a2a;">},</span>
+          location_of_route route <span style="color: #a52a2a;">|&gt;</span> <span style="color: #6434A3;">Navigation.</span>modifyUrl
+        <span style="color: #0000FF;">with</span> <span style="color: #006FE0;">Not_found</span> <span style="color: #a52a2a;">-&gt;</span>
+          <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">key</span> <span style="color: #a52a2a;">=</span> <span style="color: #000000; font-weight: bold;">begin</span> <span style="color: #0000FF;">try</span> <span style="color: #a52a2a;">(</span><span style="color: #6434A3;">IntMap.</span>max_binding model.local_games <span style="color: #a52a2a;">|&gt;</span> fst<span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">+</span> 1
+            <span style="color: #0000FF;">with</span> <span style="color: #006FE0;">Not_found</span> <span style="color: #a52a2a;">-&gt;</span> 1 <span style="color: #000000; font-weight: bold;">end</span> <span style="color: #000000; font-weight: bold;">in</span>
+          <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">game</span> <span style="color: #a52a2a;">=</span> local_lens <span style="color: #a52a2a;">|--</span> <span style="color: #6434A3;">IntMapLens.</span>for_key key <span style="color: #000000; font-weight: bold;">in</span>
+          <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">route</span> <span style="color: #a52a2a;">=</span> <span style="color: #000000; background-color: #FFFFFF;">Local</span> key <span style="color: #000000; font-weight: bold;">in</span>
+          <span style="color: #a52a2a;">{</span> model <span style="color: #0000FF;">with</span>
+            route
+          <span style="color: #a52a2a;">;</span> local_games <span style="color: #a52a2a;">=</span> <span style="color: #6434A3;">IntMap.</span>add key <span style="color: #a52a2a;">(</span><span style="color: #6434A3;">Game.</span>init <span style="color: #a52a2a;">())</span> model.local_games
+          <span style="color: #a52a2a;">;</span> game
+          <span style="color: #a52a2a;">;</span> lichess_games <span style="color: #a52a2a;">=</span> <span style="color: #6434A3;">StringMap.</span>add game_id key model.lichess_games <span style="color: #a52a2a;">},</span>
+          <span style="color: #6434A3;">Cmd.</span>batch
+            <span style="color: #a52a2a;">[</span> location_of_route route <span style="color: #a52a2a;">|&gt;</span> <span style="color: #6434A3;">Navigation.</span>modifyUrl
+            <span style="color: #a52a2a;">;</span> <span style="color: #6434A3;">Printf.</span>sprintf
+                <span style="color: #008000;">"%shttps://lichess.org/game/export/%s.pgn"</span> proxy game_id
+              <span style="color: #a52a2a;">|&gt;</span> <span style="color: #6434A3;">Http.</span>getString
+              <span style="color: #a52a2a;">|&gt;</span> <span style="color: #6434A3;">Http.</span>send <span style="color: #a52a2a;">(</span>pgn_data game<span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">]</span>
+      <span style="color: #000000; font-weight: bold;">end</span>
+    <span style="color: #a52a2a;">|</span> _ <span style="color: #a52a2a;">-&gt;</span> <span style="color: #a52a2a;">{</span>model <span style="color: #0000FF;">with</span> route <span style="color: #a52a2a;">=</span> <span style="color: #000000; background-color: #FFFFFF;">Scratch</span><span style="color: #a52a2a;">;</span> game <span style="color: #a52a2a;">=</span> scratch_lens<span style="color: #a52a2a;">},</span> <span style="color: #6434A3;">Cmd.</span>none
+</pre>
+</div>
+
+<p>
+Here&rsquo;s the <code>update</code> function.  When we relay the <code>Board</code> and <code>Game</code>
+messages, we make extensive use of lenses.  We use syntactic sugar
+from the <code>Lens.Infix</code> module:
+</p>
+
+<ul class="org-ul">
+<li><code>model |. model.game</code> is equivalent to <code>Lens._get model model.game</code></li>
+<li><code>model |&gt; model.game ^= game</code> is equivalent to <code>Lens._set game model model.game</code></li>
+</ul>
+
+<div class="org-src-container">
+<pre class="src src-ocaml"><span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">update</span><span style="color: #BA36A5;"> model</span> <span style="color: #a52a2a;">=</span> <span style="color: #0000FF;">function</span>
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Board_msg</span> <span style="color: #a52a2a;">(</span><span style="color: #000000; background-color: #FFFFFF;">Move</span> move<span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">-&gt;</span>
+    <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">game</span><span style="color: #a52a2a;">,</span><span style="color: #BA36A5;"> cmd</span> <span style="color: #a52a2a;">=</span> <span style="color: #6434A3;">Game.</span>update <span style="color: #a52a2a;">(</span>model <span style="color: #a52a2a;">|</span>. model.game<span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">(</span><span style="color: #6434A3;">Game.</span><span style="color: #000000; background-color: #FFFFFF;">Make_move</span> move<span style="color: #a52a2a;">)</span> <span style="color: #000000; font-weight: bold;">in</span>
+    model <span style="color: #a52a2a;">|&gt;</span> model.game <span style="color: #a52a2a;">^=</span> game<span style="color: #a52a2a;">,</span> <span style="color: #6434A3;">Cmd.</span>map game_msg cmd
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Board_msg</span> msg <span style="color: #a52a2a;">-&gt;</span>
+    <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">board</span><span style="color: #a52a2a;">,</span><span style="color: #BA36A5;"> cmd</span> <span style="color: #a52a2a;">=</span> <span style="color: #6434A3;">Board.</span>update model.board msg <span style="color: #000000; font-weight: bold;">in</span>
+    <span style="color: #a52a2a;">{</span>model <span style="color: #0000FF;">with</span> board<span style="color: #a52a2a;">},</span> <span style="color: #6434A3;">Cmd.</span>map board_msg cmd
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Game_msg</span> msg <span style="color: #a52a2a;">-&gt;</span>
+    <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">game</span><span style="color: #a52a2a;">,</span><span style="color: #BA36A5;"> cmd</span> <span style="color: #a52a2a;">=</span> <span style="color: #6434A3;">Game.</span>update <span style="color: #a52a2a;">(</span>model <span style="color: #a52a2a;">|</span>. model.game<span style="color: #a52a2a;">)</span> msg <span style="color: #000000; font-weight: bold;">in</span>
+    model <span style="color: #a52a2a;">|&gt;</span> model.game <span style="color: #a52a2a;">^=</span> game<span style="color: #a52a2a;">,</span> <span style="color: #6434A3;">Cmd.</span>map game_msg cmd
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Key_pressed</span> key_event <span style="color: #a52a2a;">-&gt;</span>
+    model<span style="color: #a52a2a;">,</span>
+    <span style="color: #000000; font-weight: bold;">begin</span> <span style="color: #0000FF;">match</span> key_event.ctrl<span style="color: #a52a2a;">,</span> key_event.key_code <span style="color: #0000FF;">with</span>
+      <span style="color: #a52a2a;">|</span> _<span style="color: #a52a2a;">,</span> 37 <span style="color: #8D8D84;">(* </span><span style="color: #8D8D84; font-style: italic;">left </span><span style="color: #8D8D84;">*)</span> <span style="color: #a52a2a;">|</span> <span style="color: #D0372D;">true</span><span style="color: #a52a2a;">,</span> 66 <span style="color: #8D8D84;">(* </span><span style="color: #8D8D84; font-style: italic;">Ctrl-b </span><span style="color: #8D8D84;">*)</span> <span style="color: #a52a2a;">-&gt;</span>
+        <span style="color: #6434A3;">Cmd.</span>msg <span style="color: #a52a2a;">(</span><span style="color: #000000; background-color: #FFFFFF;">Game_msg</span> <span style="color: #000000; background-color: #FFFFFF;">Back_button</span><span style="color: #a52a2a;">)</span>
+      <span style="color: #a52a2a;">|</span> _<span style="color: #a52a2a;">,</span> 39 <span style="color: #8D8D84;">(* </span><span style="color: #8D8D84; font-style: italic;">right </span><span style="color: #8D8D84;">*)</span> <span style="color: #a52a2a;">|</span> <span style="color: #D0372D;">true</span><span style="color: #a52a2a;">,</span> 70 <span style="color: #8D8D84;">(* </span><span style="color: #8D8D84; font-style: italic;">Ctrl-f </span><span style="color: #8D8D84;">*)</span> <span style="color: #a52a2a;">-&gt;</span>
+        <span style="color: #6434A3;">Cmd.</span>msg <span style="color: #a52a2a;">(</span><span style="color: #000000; background-color: #FFFFFF;">Game_msg</span> <span style="color: #000000; background-color: #FFFFFF;">Fwd_button</span><span style="color: #a52a2a;">)</span>
+      <span style="color: #a52a2a;">|</span> <span style="color: #D0372D;">true</span><span style="color: #a52a2a;">,</span> 82 <span style="color: #8D8D84;">(* </span><span style="color: #8D8D84; font-style: italic;">Ctrl-r </span><span style="color: #8D8D84;">*)</span> <span style="color: #a52a2a;">-&gt;</span> <span style="color: #6434A3;">Cmd.</span>msg <span style="color: #a52a2a;">(</span><span style="color: #000000; background-color: #FFFFFF;">Game_msg</span> <span style="color: #000000; background-color: #FFFFFF;">Random_button</span><span style="color: #a52a2a;">)</span>
+      <span style="color: #a52a2a;">|</span> <span style="color: #D0372D;">true</span><span style="color: #a52a2a;">,</span> 84 <span style="color: #8D8D84;">(* </span><span style="color: #8D8D84; font-style: italic;">Ctrl-t </span><span style="color: #8D8D84;">*)</span> <span style="color: #a52a2a;">-&gt;</span> <span style="color: #6434A3;">Cmd.</span>msg <span style="color: #a52a2a;">(</span><span style="color: #000000; background-color: #FFFFFF;">Game_msg</span> <span style="color: #000000; background-color: #FFFFFF;">Back_button</span><span style="color: #a52a2a;">)</span>
+      <span style="color: #a52a2a;">|</span> _ <span style="color: #a52a2a;">-&gt;</span> <span style="color: #6434A3;">Cmd.</span>none
+    <span style="color: #000000; font-weight: bold;">end</span>
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">New_tab</span> <span style="color: #a52a2a;">-&gt;</span>
+    <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">key</span> <span style="color: #a52a2a;">=</span> <span style="color: #0000FF;">try</span> <span style="color: #a52a2a;">(</span><span style="color: #6434A3;">IntMap.</span>max_binding model.local_games <span style="color: #a52a2a;">|&gt;</span> fst<span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">+</span> 1
+      <span style="color: #0000FF;">with</span> <span style="color: #006FE0;">Not_found</span> <span style="color: #a52a2a;">-&gt;</span> 1 <span style="color: #000000; font-weight: bold;">in</span>
+    update_route
+      <span style="color: #a52a2a;">{</span> model <span style="color: #0000FF;">with</span>
+        local_games <span style="color: #a52a2a;">=</span> <span style="color: #6434A3;">IntMap.</span>add key <span style="color: #a52a2a;">(</span><span style="color: #6434A3;">Game.</span>init <span style="color: #a52a2a;">())</span> model.local_games
+      <span style="color: #a52a2a;">;</span> scratch_game <span style="color: #a52a2a;">=</span> <span style="color: #6434A3;">Game.</span>init <span style="color: #a52a2a;">()</span>
+      <span style="color: #a52a2a;">}</span> <span style="color: #a52a2a;">(</span><span style="color: #000000; background-color: #FFFFFF;">Local</span> key<span style="color: #a52a2a;">)</span>
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Load_tournament</span> <span style="color: #a52a2a;">-&gt;</span>
+    <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">url</span> <span style="color: #a52a2a;">=</span> <span style="color: #008000;">"https://lichess.org/api/tournament/GToVqkC9"</span> <span style="color: #000000; font-weight: bold;">in</span>
+    <span style="color: #a52a2a;">{</span>model <span style="color: #0000FF;">with</span> route <span style="color: #a52a2a;">=</span> <span style="color: #000000; background-color: #FFFFFF;">Tournament</span><span style="color: #a52a2a;">;</span> tournament <span style="color: #a52a2a;">=</span> <span style="color: #000000; background-color: #FFFFFF;">Loading</span><span style="color: #a52a2a;">},</span>
+    <span style="color: #6434A3;">Http.</span>getString url <span style="color: #a52a2a;">|&gt;</span> <span style="color: #6434A3;">Http.</span>send tournament_data
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Tournament_data</span> <span style="color: #a52a2a;">(</span><span style="color: #000000; background-color: #FFFFFF;">Error</span> _e<span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">-&gt;</span>
+    <span style="color: #a52a2a;">{</span>model <span style="color: #0000FF;">with</span> tournament <span style="color: #a52a2a;">=</span> <span style="color: #000000; background-color: #FFFFFF;">Failed</span><span style="color: #a52a2a;">},</span> <span style="color: #6434A3;">Cmd.</span>none
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Tournament_data</span> <span style="color: #a52a2a;">(</span><span style="color: #000000; background-color: #FFFFFF;">Ok</span> data<span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">-&gt;</span> 
+    <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #000000; font-weight: bold;">open </span><span style="color: #6434A3;">Json.Decoder</span> <span style="color: #000000; font-weight: bold;">in</span>
+    <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">players_decoder</span> <span style="color: #a52a2a;">=</span> list string <span style="color: #000000; font-weight: bold;">in</span>
+    <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">pairing_decoder</span> <span style="color: #a52a2a;">=</span> map2 <span style="color: #a52a2a;">(</span><span style="color: #0000FF;">fun</span> <span style="color: #BA36A5;">x y</span> <span style="color: #a52a2a;">-&gt;</span> x<span style="color: #a52a2a;">,</span> y<span style="color: #a52a2a;">)</span>
+        <span style="color: #a52a2a;">(</span>field <span style="color: #008000;">"id"</span> string<span style="color: #a52a2a;">)</span>
+        <span style="color: #a52a2a;">(</span>field <span style="color: #008000;">"u"</span> players_decoder<span style="color: #a52a2a;">)</span> <span style="color: #000000; font-weight: bold;">in</span>
+    <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">list_decoder</span> <span style="color: #a52a2a;">=</span> list pairing_decoder <span style="color: #000000; font-weight: bold;">in</span>
+    <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">pairings_decoder</span> <span style="color: #a52a2a;">=</span> field <span style="color: #008000;">"pairings"</span> list_decoder <span style="color: #000000; font-weight: bold;">in</span>
+    <span style="color: #a52a2a;">{</span>model <span style="color: #0000FF;">with</span>
+     tournament <span style="color: #a52a2a;">=</span> <span style="color: #0000FF;">match</span> decodeString pairings_decoder data <span style="color: #0000FF;">with</span>
+       <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Ok</span> tournament <span style="color: #a52a2a;">-&gt;</span> <span style="color: #000000; background-color: #FFFFFF;">Received</span> tournament
+       <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Error</span> _ <span style="color: #a52a2a;">-&gt;</span> <span style="color: #000000; background-color: #FFFFFF;">Failed</span>
+    <span style="color: #a52a2a;">},</span> <span style="color: #6434A3;">Cmd.</span>none
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Pgn_data</span> <span style="color: #a52a2a;">(</span>lens<span style="color: #a52a2a;">,</span> <span style="color: #a52a2a;">(</span><span style="color: #000000; background-color: #FFFFFF;">Ok</span> data<span style="color: #a52a2a;">))</span> <span style="color: #a52a2a;">-&gt;</span>
+    <span style="color: #000000; font-weight: bold;">begin</span> <span style="color: #0000FF;">try</span>
+        <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">game</span> <span style="color: #a52a2a;">=</span> <span style="color: #6434A3;">Pgn.</span>game_of_string data <span style="color: #000000; font-weight: bold;">in</span>
+        model <span style="color: #a52a2a;">|&gt;</span> lens <span style="color: #a52a2a;">^=</span> game<span style="color: #a52a2a;">,</span> <span style="color: #6434A3;">Cmd.</span>none
+      <span style="color: #0000FF;">with</span> _e <span style="color: #a52a2a;">-&gt;</span> model<span style="color: #a52a2a;">,</span> <span style="color: #6434A3;">Cmd.</span>none <span style="color: #000000; font-weight: bold;">end</span>
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Location_change</span> location <span style="color: #a52a2a;">-&gt;</span>
+    route_of_location location <span style="color: #a52a2a;">|&gt;</span> update_route model
+  <span style="color: #a52a2a;">|</span> _ <span style="color: #a52a2a;">-&gt;</span> model<span style="color: #a52a2a;">,</span> <span style="color: #6434A3;">Cmd.</span>none
+</pre>
+</div>
+
+<p>
+We now only need the remaining views:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-ocaml"><span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">tournament_view</span><span style="color: #BA36A5;"> tournament</span> <span style="color: #a52a2a;">=</span>
+  <span style="color: #0000FF;">match</span> tournament <span style="color: #0000FF;">with</span>
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Idle</span> <span style="color: #a52a2a;">-&gt;</span> text <span style="color: #008000;">""</span>
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Loading</span> <span style="color: #a52a2a;">-&gt;</span> text <span style="color: #008000;">"Loading tournament..."</span>
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Received</span> tournament' <span style="color: #a52a2a;">-&gt;</span>
+    <span style="color: #6434A3;">List.</span>map
+      <span style="color: #a52a2a;">(</span><span style="color: #0000FF;">fun</span> <span style="color: #a52a2a;">(</span><span style="color: #BA36A5;">id</span><span style="color: #a52a2a;">,</span><span style="color: #BA36A5;"> players</span><span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">-&gt;</span>
+         td <span style="color: #a52a2a;">[]</span> <span style="color: #a52a2a;">[</span> a <span style="color: #a52a2a;">[</span>href <span style="color: #a52a2a;">(</span><span style="color: #6434A3;">Printf.</span>sprintf <span style="color: #008000;">"#/lichess/%s"</span> id<span style="color: #a52a2a;">)]</span> <span style="color: #a52a2a;">[</span>text id<span style="color: #a52a2a;">]]::</span>
+         <span style="color: #a52a2a;">(</span><span style="color: #6434A3;">List.</span>map <span style="color: #a52a2a;">(</span><span style="color: #0000FF;">fun</span> <span style="color: #BA36A5;">player</span> <span style="color: #a52a2a;">-&gt;</span> td <span style="color: #a52a2a;">[]</span> <span style="color: #a52a2a;">[</span>text player<span style="color: #a52a2a;">])</span> players<span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">|&gt;</span> tr <span style="color: #a52a2a;">[])</span>
+      tournament'
+    <span style="color: #a52a2a;">|&gt;</span> table <span style="color: #a52a2a;">[]</span>
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Failed</span> <span style="color: #a52a2a;">-&gt;</span> text <span style="color: #008000;">"Tournament could not be loaded."</span>
+
+<span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">game_nav_view</span><span style="color: #BA36A5;"> model</span> <span style="color: #a52a2a;">=</span>
+  <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">game_nav_item</span><span style="color: #BA36A5;"> current link label</span> <span style="color: #a52a2a;">=</span>
+    li <span style="color: #a52a2a;">[</span> <span style="color: #0000FF;">if</span> current <span style="color: #0000FF;">then</span> class' <span style="color: #008000;">"current"</span> <span style="color: #0000FF;">else</span> noProp <span style="color: #a52a2a;">]</span>
+      <span style="color: #a52a2a;">[</span> <span style="color: #0000FF;">if</span> current <span style="color: #0000FF;">then</span> text label <span style="color: #0000FF;">else</span> a <span style="color: #a52a2a;">[</span>href link<span style="color: #a52a2a;">]</span> <span style="color: #a52a2a;">[</span>text label<span style="color: #a52a2a;">]</span> <span style="color: #a52a2a;">]</span> <span style="color: #000000; font-weight: bold;">in</span>
+
+  <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">g</span><span style="color: #BA36A5;"> id _game k</span> <span style="color: #a52a2a;">=</span>
+    <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">item</span> <span style="color: #a52a2a;">=</span> game_nav_item 
+        <span style="color: #a52a2a;">(</span>model.route <span style="color: #a52a2a;">=</span> <span style="color: #000000; background-color: #FFFFFF;">Local</span> id<span style="color: #a52a2a;">)</span>
+        <span style="color: #a52a2a;">(</span><span style="color: #6434A3;">Printf.</span>sprintf <span style="color: #008000;">"#/local/%d"</span> id<span style="color: #a52a2a;">)</span>
+        <span style="color: #a52a2a;">(</span><span style="color: #6434A3;">Printf.</span>sprintf <span style="color: #008000;">"Game %d"</span> id<span style="color: #a52a2a;">)</span>
+    <span style="color: #000000; font-weight: bold;">in</span> <span style="color: #0000FF;">fun</span> <span style="color: #BA36A5;">tl</span> <span style="color: #a52a2a;">-&gt;</span> k <span style="color: #a52a2a;">(</span>item<span style="color: #a52a2a;">::</span>tl<span style="color: #a52a2a;">)</span> <span style="color: #000000; font-weight: bold;">in</span>
+</pre>
+</div>
+
+<p>
+You should now be able to open new tabs, and to load Lichess games.
+</p>
+
+<p>
+(Exercise: Add the &ldquo;close tab&rdquo; button again.)
+</p>
+</div>
+</div>
+
+<div id="outline-container-org475aa58" class="outline-2">
+<h2 id="org475aa58">Local browser storage</h2>
+<div class="outline-text-2" id="text-org475aa58">
+<p>
+Let&rsquo;s make the games persistent between sessions by storing them in
+the browser&rsquo;s local storage. 
 </p>
 </div>
 </div>
