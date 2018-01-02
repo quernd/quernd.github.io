@@ -3,7 +3,7 @@
 "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
 <head>
-<!-- 2018-01-02 Tue 19:47 -->
+<!-- 2018-01-02 Tue 22:07 -->
 <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Twelve Days of Christmas #11</title>
@@ -26,13 +26,305 @@ This is the eleventh part of <a href="../index.html">a chess-themed tutorial</a>
 <a href="https://github.com/OvermindDL1/bucklescript-tea">Bucklescript-TEA</a>.  After this part, your app will look similar to <a href="demo.html">this demo</a>.
 </p>
 
-
 <div id="outline-container-orga511e7f" class="outline-2">
 <h2 id="orga511e7f">Tree zippers</h2>
+<div class="outline-text-2" id="text-orga511e7f">
+<p>
+Today, we&rsquo;ll add support for alternative moves to the move list,
+effectively turning it into a move tree! Since we have been using list
+zippers to make navigation easier, we will implement tree zippers now.
+Tree zippers are much like list zippers in that they are a pair of a
+context and an inner tree.  (Remember that list zippers were a pair of
+a context [&ldquo;past&rdquo;] and a list [&ldquo;future&rdquo;].)  For trees, the situation
+is a little trickier.
+</p>
+
+<p>
+Let&rsquo;s first see what a game tree should look like:  A node of this
+tree is a move together with a list of alternative variations.  A
+variation is a move together with a list of followup moves. Taken
+together, this gives us a recursive type:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-ocaml"><span style="color: #000000; font-weight: bold;">type</span> <span style="color: #6434A3;">'a node</span> <span style="color: #a52a2a;">=</span> <span style="color: #000000; background-color: #FFFFFF;">Node</span> <span style="color: #0000FF;">of</span> 'a <span style="color: #a52a2a;">*</span> 'a variation list
+<span style="color: #000000; font-weight: bold;">and</span> 'a variation <span style="color: #a52a2a;">=</span> <span style="color: #000000; background-color: #FFFFFF;">Var</span> <span style="color: #0000FF;">of</span> 'a <span style="color: #a52a2a;">*</span> 'a line
+<span style="color: #000000; font-weight: bold;">and</span> 'a line <span style="color: #a52a2a;">=</span> 'a node list
+</pre>
+</div>
+
+<p>
+A tree context is a context that points to the beginning of a line (a
+<i>line context</i>),
+together with a context within that line (the <i>past</i>).  A line context
+tells you what line you&rsquo;re in: it&rsquo;s either the main line of the game,
+or a pointer to a node (that&rsquo;s a tree context), plus the future that
+would follow that context (including the main line move), and then we
+dive into the variations, zipping the variations before and the
+variations after. I&rsquo;ll make an illustration one day, I promise :-)
+</p>
+
+<div class="org-src-container">
+<pre class="src src-ocaml"><span style="color: #000000; font-weight: bold;">type</span> <span style="color: #6434A3;">'a tree_context</span> <span style="color: #a52a2a;">=</span> 'a line_context  <span style="color: #8D8D84;">(* </span><span style="color: #8D8D84; font-style: italic;">outer context </span><span style="color: #8D8D84;">*)</span>
+                       <span style="color: #a52a2a;">*</span> 'a line        <span style="color: #8D8D84;">(* </span><span style="color: #8D8D84; font-style: italic;">past </span><span style="color: #8D8D84;">*)</span>
+
+<span style="color: #000000; font-weight: bold;">and</span> 'a line_context <span style="color: #a52a2a;">=</span>
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Main_line</span>
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Var_line</span> <span style="color: #0000FF;">of</span> 'a tree_context       <span style="color: #8D8D84;">(* </span><span style="color: #8D8D84; font-style: italic;">outer context with past </span><span style="color: #8D8D84;">*)</span>
+                <span style="color: #a52a2a;">*</span> 'a                  <span style="color: #8D8D84;">(* </span><span style="color: #8D8D84; font-style: italic;">main line move </span><span style="color: #8D8D84;">*)</span>
+                <span style="color: #a52a2a;">*</span> 'a variation list   <span style="color: #8D8D84;">(* </span><span style="color: #8D8D84; font-style: italic;">variations before </span><span style="color: #8D8D84;">*)</span>
+                <span style="color: #a52a2a;">*</span> 'a                  <span style="color: #8D8D84;">(* </span><span style="color: #8D8D84; font-style: italic;">move starting this variation </span><span style="color: #8D8D84;">*)</span>
+                <span style="color: #a52a2a;">*</span> 'a variation list   <span style="color: #8D8D84;">(* </span><span style="color: #8D8D84; font-style: italic;">variations after </span><span style="color: #8D8D84;">*)</span>
+                <span style="color: #a52a2a;">*</span> 'a line             <span style="color: #8D8D84;">(* </span><span style="color: #8D8D84; font-style: italic;">future </span><span style="color: #8D8D84;">*)</span>
+</pre>
+</div>
+
+<p>
+Together, that defines our zipper:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-ocaml"><span style="color: #000000; font-weight: bold;">type</span> <span style="color: #6434A3;">'a tree_zipper</span> <span style="color: #a52a2a;">=</span> 'a tree_context <span style="color: #a52a2a;">*</span> 'a line
+</pre>
+</div>
+</div>
+</div>
+
+<div id="outline-container-org7ea4b86" class="outline-2">
+<h2 id="org7ea4b86">Navigating the tree zipper</h2>
+<div class="outline-text-2" id="text-org7ea4b86">
+<p>
+Some of the functions to navigate the tree zipper are surprisingly similar to
+the list zipper:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-ocaml"><span style="color: #0000FF;">exception</span> <span style="color: #BA36A5;">No_variations</span>
+<span style="color: #0000FF;">exception</span> <span style="color: #BA36A5;">No_next_variation</span>
+<span style="color: #0000FF;">exception</span> <span style="color: #BA36A5;">No_prev_variation</span>
+<span style="color: #0000FF;">exception</span> <span style="color: #BA36A5;">Not_in_variation</span>
+<span style="color: #0000FF;">exception</span> <span style="color: #BA36A5;">Not_beginning_of_list</span>
+
+<span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">tree_fwd</span><span style="color: #BA36A5;"> </span><span style="color: #a52a2a;">((</span><span style="color: #BA36A5;">context</span><span style="color: #a52a2a;">,</span><span style="color: #BA36A5;"> past</span><span style="color: #a52a2a;">),</span><span style="color: #BA36A5;"> future</span><span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">=</span>
+  <span style="color: #0000FF;">match</span> future <span style="color: #0000FF;">with</span>
+  <span style="color: #a52a2a;">|</span> <span style="color: #a52a2a;">[]</span> <span style="color: #a52a2a;">-&gt;</span> <span style="color: #006FE0;">raise</span> <span style="color: #000000; background-color: #FFFFFF;">End_of_list</span>
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Node</span><span style="color: #a52a2a;">(</span>item<span style="color: #a52a2a;">,</span> _<span style="color: #a52a2a;">)</span> <span style="color: #0000FF;">as</span> hd<span style="color: #a52a2a;">::</span>future' <span style="color: #a52a2a;">-&gt;</span> item<span style="color: #a52a2a;">,</span> <span style="color: #a52a2a;">((</span>context<span style="color: #a52a2a;">,</span> hd<span style="color: #a52a2a;">::</span>past<span style="color: #a52a2a;">),</span> future'<span style="color: #a52a2a;">)</span>
+
+<span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">tree_back</span><span style="color: #BA36A5;"> </span><span style="color: #a52a2a;">((</span><span style="color: #BA36A5;">context</span><span style="color: #a52a2a;">,</span><span style="color: #BA36A5;"> past</span><span style="color: #a52a2a;">),</span><span style="color: #BA36A5;"> future</span><span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">=</span>
+  <span style="color: #0000FF;">match</span> context<span style="color: #a52a2a;">,</span> past <span style="color: #0000FF;">with</span>
+  <span style="color: #a52a2a;">|</span> context<span style="color: #a52a2a;">,</span> hd<span style="color: #a52a2a;">::</span>past' <span style="color: #a52a2a;">-&gt;</span> <span style="color: #a52a2a;">(</span>context<span style="color: #a52a2a;">,</span> past'<span style="color: #a52a2a;">),</span> hd<span style="color: #a52a2a;">::</span>future
+  <span style="color: #a52a2a;">|</span> _<span style="color: #a52a2a;">,</span> <span style="color: #a52a2a;">[]</span> <span style="color: #a52a2a;">-&gt;</span> <span style="color: #006FE0;">raise</span> <span style="color: #000000; background-color: #FFFFFF;">Beginning_of_list</span>
+
+</pre>
+</div>
+
+<p>
+The functions to move into a variation, out of a variation and to the
+next and previous variation (provided one is at the start of a line)
+come down to some intricate pattern matching.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-ocaml"><span style="color: #8D8D84;">(* </span><span style="color: #8D8D84; font-style: italic;">rewinds one step and jumps into the first variation </span><span style="color: #8D8D84;">*)</span>
+<span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">tree_down</span><span style="color: #BA36A5;"> </span><span style="color: #a52a2a;">((</span><span style="color: #BA36A5;">context</span><span style="color: #a52a2a;">,</span><span style="color: #BA36A5;"> past</span><span style="color: #a52a2a;">),</span><span style="color: #BA36A5;"> future</span><span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">=</span>
+  <span style="color: #0000FF;">match</span> past <span style="color: #0000FF;">with</span>
+  <span style="color: #a52a2a;">|</span> <span style="color: #a52a2a;">[]</span> <span style="color: #a52a2a;">-&gt;</span> <span style="color: #006FE0;">raise</span> <span style="color: #000000; background-color: #FFFFFF;">Beginning_of_list</span>
+  <span style="color: #a52a2a;">|</span> node<span style="color: #a52a2a;">::</span>past' <span style="color: #a52a2a;">-&gt;</span>
+    <span style="color: #0000FF;">match</span> node <span style="color: #0000FF;">with</span>
+    <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Node</span> <span style="color: #a52a2a;">(</span>_<span style="color: #a52a2a;">,</span> <span style="color: #a52a2a;">[])</span> <span style="color: #a52a2a;">-&gt;</span> <span style="color: #006FE0;">raise</span> <span style="color: #000000; background-color: #FFFFFF;">No_variations</span>
+    <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Node</span> <span style="color: #a52a2a;">(</span>main<span style="color: #a52a2a;">,</span> <span style="color: #000000; background-color: #FFFFFF;">Var</span> <span style="color: #a52a2a;">(</span>var<span style="color: #a52a2a;">,</span> line<span style="color: #a52a2a;">)::</span>variations<span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">-&gt;</span>
+      <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">context'</span> <span style="color: #a52a2a;">=</span>
+        <span style="color: #000000; background-color: #FFFFFF;">Var_line</span> <span style="color: #a52a2a;">((</span>context<span style="color: #a52a2a;">,</span> past'<span style="color: #a52a2a;">),</span> main<span style="color: #a52a2a;">,</span> <span style="color: #a52a2a;">[],</span> var<span style="color: #a52a2a;">,</span> variations<span style="color: #a52a2a;">,</span> future<span style="color: #a52a2a;">)</span> <span style="color: #000000; font-weight: bold;">in</span>
+      var<span style="color: #a52a2a;">,</span> <span style="color: #a52a2a;">((</span>context'<span style="color: #a52a2a;">,</span> <span style="color: #a52a2a;">[]),</span> line<span style="color: #a52a2a;">)</span>
+
+<span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">tree_next</span><span style="color: #BA36A5;"> </span><span style="color: #a52a2a;">((</span><span style="color: #BA36A5;">context</span><span style="color: #a52a2a;">,</span><span style="color: #BA36A5;"> past</span><span style="color: #a52a2a;">),</span><span style="color: #BA36A5;"> future</span><span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">=</span>
+  <span style="color: #0000FF;">match</span> past<span style="color: #a52a2a;">,</span> context <span style="color: #0000FF;">with</span>
+  <span style="color: #a52a2a;">|</span> <span style="color: #a52a2a;">[],</span> <span style="color: #000000; background-color: #FFFFFF;">Main_line</span> <span style="color: #a52a2a;">-&gt;</span> <span style="color: #006FE0;">raise</span> <span style="color: #000000; background-color: #FFFFFF;">No_next_variation</span>
+  <span style="color: #a52a2a;">|</span> <span style="color: #a52a2a;">[],</span> <span style="color: #000000; background-color: #FFFFFF;">Var_line</span> <span style="color: #a52a2a;">(</span>_<span style="color: #a52a2a;">,</span> _<span style="color: #a52a2a;">,</span> _<span style="color: #a52a2a;">,</span> _<span style="color: #a52a2a;">,</span> <span style="color: #a52a2a;">[],</span> _<span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">-&gt;</span> <span style="color: #006FE0;">raise</span> <span style="color: #000000; background-color: #FFFFFF;">No_next_variation</span>
+  <span style="color: #a52a2a;">|</span> <span style="color: #a52a2a;">[],</span> <span style="color: #000000; background-color: #FFFFFF;">Var_line</span> <span style="color: #a52a2a;">(</span>context'<span style="color: #a52a2a;">,</span> main<span style="color: #a52a2a;">,</span> left<span style="color: #a52a2a;">,</span> var<span style="color: #a52a2a;">,</span> <span style="color: #000000; background-color: #FFFFFF;">Var</span> <span style="color: #a52a2a;">(</span>next<span style="color: #a52a2a;">,</span> line<span style="color: #a52a2a;">)::</span>right<span style="color: #a52a2a;">,</span> future'<span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">-&gt;</span>
+    <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">var'</span> <span style="color: #a52a2a;">=</span> <span style="color: #000000; background-color: #FFFFFF;">Var_line</span>
+        <span style="color: #a52a2a;">(</span>context'<span style="color: #a52a2a;">,</span> main<span style="color: #a52a2a;">,</span> <span style="color: #000000; background-color: #FFFFFF;">Var</span> <span style="color: #a52a2a;">(</span>var<span style="color: #a52a2a;">,</span> future<span style="color: #a52a2a;">)::</span>left<span style="color: #a52a2a;">,</span> next<span style="color: #a52a2a;">,</span> right<span style="color: #a52a2a;">,</span> future'<span style="color: #a52a2a;">)</span> <span style="color: #000000; font-weight: bold;">in</span>
+    next<span style="color: #a52a2a;">,</span> <span style="color: #a52a2a;">(</span>var'<span style="color: #a52a2a;">,</span> <span style="color: #a52a2a;">[]),</span> line
+  <span style="color: #a52a2a;">|</span> _ <span style="color: #a52a2a;">-&gt;</span> <span style="color: #006FE0;">raise</span> <span style="color: #000000; background-color: #FFFFFF;">Not_beginning_of_list</span>
+
+<span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">tree_prev</span><span style="color: #BA36A5;"> </span><span style="color: #a52a2a;">((</span><span style="color: #BA36A5;">context</span><span style="color: #a52a2a;">,</span><span style="color: #BA36A5;"> past</span><span style="color: #a52a2a;">),</span><span style="color: #BA36A5;"> future</span><span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">=</span>
+  <span style="color: #0000FF;">match</span> past<span style="color: #a52a2a;">,</span> context <span style="color: #0000FF;">with</span>
+  <span style="color: #a52a2a;">|</span> <span style="color: #a52a2a;">[],</span> <span style="color: #000000; background-color: #FFFFFF;">Main_line</span> <span style="color: #a52a2a;">-&gt;</span> <span style="color: #006FE0;">raise</span> <span style="color: #000000; background-color: #FFFFFF;">No_prev_variation</span>
+  <span style="color: #a52a2a;">|</span> <span style="color: #a52a2a;">[],</span> <span style="color: #000000; background-color: #FFFFFF;">Var_line</span> <span style="color: #a52a2a;">(</span>_<span style="color: #a52a2a;">,</span> _<span style="color: #a52a2a;">,</span> <span style="color: #a52a2a;">[],</span> _<span style="color: #a52a2a;">,</span> _<span style="color: #a52a2a;">,</span> _<span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">-&gt;</span> <span style="color: #006FE0;">raise</span> <span style="color: #000000; background-color: #FFFFFF;">No_prev_variation</span>
+  <span style="color: #a52a2a;">|</span> <span style="color: #a52a2a;">[],</span> <span style="color: #000000; background-color: #FFFFFF;">Var_line</span> <span style="color: #a52a2a;">(</span>context'<span style="color: #a52a2a;">,</span> main<span style="color: #a52a2a;">,</span> <span style="color: #000000; background-color: #FFFFFF;">Var</span> <span style="color: #a52a2a;">(</span>prev<span style="color: #a52a2a;">,</span> line<span style="color: #a52a2a;">)::</span>left<span style="color: #a52a2a;">,</span> var<span style="color: #a52a2a;">,</span> right<span style="color: #a52a2a;">,</span> future'<span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">-&gt;</span>
+    <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">var'</span> <span style="color: #a52a2a;">=</span> <span style="color: #000000; background-color: #FFFFFF;">Var_line</span>
+        <span style="color: #a52a2a;">(</span>context'<span style="color: #a52a2a;">,</span> main<span style="color: #a52a2a;">,</span> left<span style="color: #a52a2a;">,</span> prev<span style="color: #a52a2a;">,</span> <span style="color: #000000; background-color: #FFFFFF;">Var</span> <span style="color: #a52a2a;">(</span>var<span style="color: #a52a2a;">,</span> future<span style="color: #a52a2a;">)::</span>right<span style="color: #a52a2a;">,</span> future'<span style="color: #a52a2a;">)</span> <span style="color: #000000; font-weight: bold;">in</span>
+    prev<span style="color: #a52a2a;">,</span> <span style="color: #a52a2a;">(</span>var'<span style="color: #a52a2a;">,</span> <span style="color: #a52a2a;">[]),</span> line
+  <span style="color: #a52a2a;">|</span> _ <span style="color: #a52a2a;">-&gt;</span> <span style="color: #006FE0;">raise</span> <span style="color: #000000; background-color: #FFFFFF;">Not_beginning_of_list</span>
+
+<span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">tree_up</span><span style="color: #BA36A5;"> </span><span style="color: #a52a2a;">((</span><span style="color: #BA36A5;">context</span><span style="color: #a52a2a;">,</span><span style="color: #BA36A5;"> past</span><span style="color: #a52a2a;">),</span><span style="color: #BA36A5;"> future</span><span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">=</span>
+  <span style="color: #0000FF;">match</span> past<span style="color: #a52a2a;">,</span> context <span style="color: #0000FF;">with</span>
+  <span style="color: #a52a2a;">|</span> <span style="color: #a52a2a;">[],</span> <span style="color: #000000; background-color: #FFFFFF;">Main_line</span> <span style="color: #a52a2a;">-&gt;</span> <span style="color: #006FE0;">raise</span> <span style="color: #000000; background-color: #FFFFFF;">Not_in_variation</span>
+  <span style="color: #a52a2a;">|</span> <span style="color: #a52a2a;">[],</span> <span style="color: #000000; background-color: #FFFFFF;">Var_line</span> <span style="color: #a52a2a;">((</span>context'<span style="color: #a52a2a;">,</span> past'<span style="color: #a52a2a;">),</span> main<span style="color: #a52a2a;">,</span> left<span style="color: #a52a2a;">,</span> var<span style="color: #a52a2a;">,</span> right<span style="color: #a52a2a;">,</span> future'<span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">-&gt;</span>
+    <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">variations</span> <span style="color: #a52a2a;">=</span> <span style="color: #6434A3;">List.</span>rev_append left <span style="color: #a52a2a;">(</span><span style="color: #000000; background-color: #FFFFFF;">Var</span> <span style="color: #a52a2a;">(</span>var<span style="color: #a52a2a;">,</span> future<span style="color: #a52a2a;">)::</span>right<span style="color: #a52a2a;">)</span> <span style="color: #000000; font-weight: bold;">in</span>
+    <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">main_node</span> <span style="color: #a52a2a;">=</span> <span style="color: #000000; background-color: #FFFFFF;">Node</span> <span style="color: #a52a2a;">(</span>main<span style="color: #a52a2a;">,</span> variations<span style="color: #a52a2a;">)</span> <span style="color: #000000; font-weight: bold;">in</span>
+    main<span style="color: #a52a2a;">,</span> <span style="color: #a52a2a;">((</span>context'<span style="color: #a52a2a;">,</span> main_node<span style="color: #a52a2a;">::</span>past'<span style="color: #a52a2a;">),</span> future'<span style="color: #a52a2a;">)</span>
+  <span style="color: #a52a2a;">|</span> _ <span style="color: #a52a2a;">-&gt;</span> <span style="color: #006FE0;">raise</span> Not_beginning_of_list
+</pre>
+</div>
+
+<p>
+This is the trickiest: trying to insert a move into the zipper may
+move within the existing line or jump into a variation. We return 0 or
+1, respectively, to keep track of the depth. (That will become
+useful later on.)
+</p>
+
+<div class="org-src-container">
+<pre class="src src-ocaml"><span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">tree_fwd'</span><span style="color: #BA36A5;"> item </span><span style="color: #a52a2a;">((</span><span style="color: #BA36A5;">context</span><span style="color: #a52a2a;">,</span><span style="color: #BA36A5;"> past</span><span style="color: #a52a2a;">),</span><span style="color: #BA36A5;"> future</span><span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">=</span>
+  <span style="color: #0000FF;">match</span> future <span style="color: #0000FF;">with</span>
+  <span style="color: #a52a2a;">|</span> <span style="color: #a52a2a;">[]</span> <span style="color: #a52a2a;">-&gt;</span> 0<span style="color: #a52a2a;">,</span> <span style="color: #a52a2a;">((</span>context<span style="color: #a52a2a;">,</span> <span style="color: #a52a2a;">(</span><span style="color: #000000; background-color: #FFFFFF;">Node</span> <span style="color: #a52a2a;">(</span>item<span style="color: #a52a2a;">,</span> <span style="color: #a52a2a;">[])::</span>past<span style="color: #a52a2a;">)),</span> <span style="color: #a52a2a;">[])</span>
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Node</span> <span style="color: #a52a2a;">(</span>main<span style="color: #a52a2a;">,</span> _<span style="color: #a52a2a;">)</span> <span style="color: #0000FF;">as</span> hd<span style="color: #a52a2a;">::</span>future' <span style="color: #0000FF;">when</span> main <span style="color: #a52a2a;">=</span> item <span style="color: #a52a2a;">-&gt;</span>
+    1<span style="color: #a52a2a;">,</span> <span style="color: #a52a2a;">((</span>context<span style="color: #a52a2a;">,</span> hd<span style="color: #a52a2a;">::</span>past<span style="color: #a52a2a;">),</span> future'<span style="color: #a52a2a;">)</span>
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Node</span> <span style="color: #a52a2a;">(</span>main<span style="color: #a52a2a;">,</span> variations<span style="color: #a52a2a;">)::</span>future' <span style="color: #a52a2a;">-&gt;</span>
+
+    <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #000000; font-weight: bold;">rec</span> <span style="color: #006699;">tree_fwd_var</span><span style="color: #BA36A5;"> item left right</span> <span style="color: #a52a2a;">=</span>
+      <span style="color: #0000FF;">match</span> right <span style="color: #0000FF;">with</span>
+      <span style="color: #a52a2a;">|</span> <span style="color: #a52a2a;">[]</span> <span style="color: #a52a2a;">-&gt;</span>
+        <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">inner_context</span> <span style="color: #a52a2a;">=</span> <span style="color: #a52a2a;">(</span>context<span style="color: #a52a2a;">,</span> past<span style="color: #a52a2a;">)</span> <span style="color: #000000; font-weight: bold;">in</span>
+        <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">context'</span> <span style="color: #a52a2a;">=</span>
+          <span style="color: #000000; background-color: #FFFFFF;">Var_line</span> <span style="color: #a52a2a;">(</span>inner_context<span style="color: #a52a2a;">,</span> main<span style="color: #a52a2a;">,</span> left<span style="color: #a52a2a;">,</span> item<span style="color: #a52a2a;">,</span> right<span style="color: #a52a2a;">,</span> future'<span style="color: #a52a2a;">)</span> <span style="color: #000000; font-weight: bold;">in</span>
+        <span style="color: #a52a2a;">(</span>context'<span style="color: #a52a2a;">,</span> <span style="color: #a52a2a;">[]),</span> <span style="color: #a52a2a;">[]</span>
+      <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Var</span> <span style="color: #a52a2a;">(</span>var<span style="color: #a52a2a;">,</span> line<span style="color: #a52a2a;">)::</span>right' <span style="color: #0000FF;">when</span> item <span style="color: #a52a2a;">=</span> var <span style="color: #a52a2a;">-&gt;</span>
+        <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">inner_context</span> <span style="color: #a52a2a;">=</span> <span style="color: #a52a2a;">(</span>context<span style="color: #a52a2a;">,</span> past<span style="color: #a52a2a;">)</span> <span style="color: #000000; font-weight: bold;">in</span>
+        <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">context'</span> <span style="color: #a52a2a;">=</span>
+          <span style="color: #000000; background-color: #FFFFFF;">Var_line</span> <span style="color: #a52a2a;">(</span>inner_context<span style="color: #a52a2a;">,</span> main<span style="color: #a52a2a;">,</span> left<span style="color: #a52a2a;">,</span> var<span style="color: #a52a2a;">,</span> right'<span style="color: #a52a2a;">,</span> future'<span style="color: #a52a2a;">)</span> <span style="color: #000000; font-weight: bold;">in</span>
+        <span style="color: #a52a2a;">(</span>context'<span style="color: #a52a2a;">,</span> <span style="color: #a52a2a;">[]),</span> line
+      <span style="color: #a52a2a;">|</span> variation<span style="color: #a52a2a;">::</span>right' <span style="color: #a52a2a;">-&gt;</span> tree_fwd_var item <span style="color: #a52a2a;">(</span>variation<span style="color: #a52a2a;">::</span>left<span style="color: #a52a2a;">)</span> right' <span style="color: #000000; font-weight: bold;">in</span>
+
+    1<span style="color: #a52a2a;">,</span> <span style="color: #a52a2a;">(</span>tree_fwd_var item <span style="color: #a52a2a;">[]</span> variations<span style="color: #a52a2a;">)</span>
+</pre>
+</div>
+
+<p>
+Our tree zipper is ready to be used :-)
+</p>
+
+<div class="org-src-container">
+<pre class="src src-ocaml"><span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">tree_init</span><span style="color: #BA36A5;"> </span><span style="color: #a52a2a;">()</span> <span style="color: #a52a2a;">=</span> <span style="color: #a52a2a;">(</span><span style="color: #000000; background-color: #FFFFFF;">Main_line</span><span style="color: #a52a2a;">,</span> <span style="color: #a52a2a;">[]),</span> <span style="color: #a52a2a;">[]</span>  <span style="color: #8D8D84;">(* </span><span style="color: #8D8D84; font-style: italic;">outer context + past + future </span><span style="color: #8D8D84;">*)</span>
+</pre>
+</div>
+</div>
 </div>
 
 <div id="outline-container-org4757cb7" class="outline-2">
 <h2 id="org4757cb7">Fixing the move list view temporarily</h2>
+<div class="outline-text-2" id="text-org4757cb7">
+<p>
+To conclude today&rsquo;s tutorial part, let&rsquo;s fix the move list view
+temporarily so that it displays the main line. Tomorrow, we will take
+car of variations.
+</p>
+
+<p>
+In <code>src/Game.ml</code>, make the following changes:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-ocaml"><span style="color: #000000; font-weight: bold;">type</span> <span style="color: #6434A3;">model</span> <span style="color: #a52a2a;">=</span>
+  <span style="color: #a52a2a;">{</span> moves <span style="color: #a52a2a;">:</span> move <span style="color: #6434A3;">Zipper.</span>tree_zipper
+  <span style="color: #a52a2a;">;</span> position <span style="color: #a52a2a;">:</span> <span style="color: #6434A3;">Chess.</span>position
+  <span style="color: #a52a2a;">;</span> ply <span style="color: #a52a2a;">:</span> int
+  <span style="color: #a52a2a;">}</span>
+
+<span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">init</span><span style="color: #BA36A5;"> </span><span style="color: #a52a2a;">()</span> <span style="color: #a52a2a;">=</span>
+  <span style="color: #a52a2a;">{</span> position <span style="color: #a52a2a;">=</span> <span style="color: #6434A3;">Ochess.</span>init_position
+  <span style="color: #a52a2a;">;</span> moves <span style="color: #a52a2a;">=</span> <span style="color: #6434A3;">Zipper.</span>tree_init <span style="color: #a52a2a;">()</span>
+  <span style="color: #a52a2a;">;</span> ply <span style="color: #a52a2a;">=</span> 0
+  <span style="color: #a52a2a;">}</span>
+
+<span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">update</span><span style="color: #BA36A5;"> model</span> <span style="color: #a52a2a;">=</span> <span style="color: #0000FF;">function</span>
+
+  <span style="color: #8D8D84;">(* </span><span style="color: #8D8D84; font-style: italic;">... </span><span style="color: #8D8D84;">*)</span>
+
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Make_move</span> move <span style="color: #a52a2a;">-&gt;</span>
+    <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">san</span> <span style="color: #a52a2a;">=</span> <span style="color: #6434A3;">Chess.</span>san_of_move model.position move <span style="color: #000000; font-weight: bold;">in</span>
+    <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">_</span><span style="color: #a52a2a;">,</span><span style="color: #BA36A5;"> moves</span> <span style="color: #a52a2a;">=</span> <span style="color: #6434A3;">Zipper.</span>tree_fwd' <span style="color: #a52a2a;">(</span>move<span style="color: #a52a2a;">,</span> san<span style="color: #a52a2a;">)</span> model.moves <span style="color: #000000; font-weight: bold;">in</span>
+    <span style="color: #a52a2a;">{</span> position <span style="color: #a52a2a;">=</span> <span style="color: #6434A3;">Chess.</span>make_move model.position move
+    <span style="color: #a52a2a;">;</span> moves
+    <span style="color: #a52a2a;">;</span> ply <span style="color: #a52a2a;">=</span> model.ply <span style="color: #a52a2a;">+</span> 1
+    <span style="color: #a52a2a;">},</span> <span style="color: #6434A3;">Cmd.</span>none
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Back_button</span> <span style="color: #a52a2a;">-&gt;</span>
+    <span style="color: #000000; font-weight: bold;">begin</span> <span style="color: #0000FF;">match</span> model.position.prev <span style="color: #0000FF;">with</span>
+      <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Some</span> position <span style="color: #a52a2a;">-&gt;</span>
+        <span style="color: #a52a2a;">{</span> moves <span style="color: #a52a2a;">=</span> <span style="color: #6434A3;">Zipper.</span>tree_back model.moves
+        <span style="color: #a52a2a;">;</span> position
+        <span style="color: #a52a2a;">;</span> ply <span style="color: #a52a2a;">=</span> model.ply <span style="color: #a52a2a;">-</span> 1<span style="color: #a52a2a;">}</span>
+      <span style="color: #a52a2a;">|</span> _ <span style="color: #a52a2a;">-&gt;</span> model
+    <span style="color: #000000; font-weight: bold;">end</span><span style="color: #a52a2a;">,</span> <span style="color: #6434A3;">Cmd.</span>none
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Fwd_button</span> <span style="color: #a52a2a;">-&gt;</span>
+    <span style="color: #000000; font-weight: bold;">begin</span> <span style="color: #0000FF;">try</span> <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #a52a2a;">(</span><span style="color: #BA36A5;">move</span><span style="color: #a52a2a;">,</span><span style="color: #BA36A5;"> _san</span><span style="color: #a52a2a;">),</span><span style="color: #BA36A5;"> moves</span> <span style="color: #a52a2a;">=</span> <span style="color: #6434A3;">Zipper.</span>tree_fwd model.moves <span style="color: #000000; font-weight: bold;">in</span>
+        <span style="color: #a52a2a;">{</span> position <span style="color: #a52a2a;">=</span> <span style="color: #6434A3;">Chess.</span>make_move model.position move
+        <span style="color: #a52a2a;">;</span> moves
+        <span style="color: #a52a2a;">;</span> ply <span style="color: #a52a2a;">=</span> model.ply <span style="color: #a52a2a;">+</span> 1
+        <span style="color: #a52a2a;">},</span> <span style="color: #6434A3;">Cmd.</span>none
+      <span style="color: #0000FF;">with</span> <span style="color: #6434A3;">Zipper.</span><span style="color: #000000; background-color: #FFFFFF;">End_of_list</span> <span style="color: #a52a2a;">-&gt;</span> model<span style="color: #a52a2a;">,</span> <span style="color: #6434A3;">Cmd.</span>none
+    <span style="color: #000000; font-weight: bold;">end</span>
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Jump</span> how_many <span style="color: #a52a2a;">-&gt;</span>
+    <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #000000; font-weight: bold;">rec</span> <span style="color: #006699;">jump_fwd</span><span style="color: #BA36A5;"> position zipper n</span> <span style="color: #a52a2a;">=</span>
+      <span style="color: #0000FF;">if</span> n <span style="color: #a52a2a;">&lt;=</span> 0 <span style="color: #0000FF;">then</span> position<span style="color: #a52a2a;">,</span> zipper
+      <span style="color: #0000FF;">else</span> <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #a52a2a;">(</span><span style="color: #BA36A5;">move</span><span style="color: #a52a2a;">,</span><span style="color: #BA36A5;"> _san</span><span style="color: #a52a2a;">),</span><span style="color: #BA36A5;"> zipper'</span> <span style="color: #a52a2a;">=</span> <span style="color: #6434A3;">Zipper.</span>tree_fwd zipper <span style="color: #000000; font-weight: bold;">in</span>
+        jump_fwd <span style="color: #a52a2a;">(</span><span style="color: #6434A3;">Chess.</span>make_move position move<span style="color: #a52a2a;">)</span> zipper' <span style="color: #a52a2a;">(</span>n <span style="color: #a52a2a;">-</span> 1<span style="color: #a52a2a;">)</span> <span style="color: #000000; font-weight: bold;">in</span>
+    <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #000000; font-weight: bold;">rec</span> <span style="color: #006699;">jump_back</span><span style="color: #BA36A5;"> </span><span style="color: #a52a2a;">(</span><span style="color: #BA36A5;">position</span><span style="color: #a52a2a;">:</span><span style="color: #6434A3;">Chess.</span><span style="color: #6434A3;">position</span><span style="color: #a52a2a;">)</span><span style="color: #BA36A5;"> zipper n</span> <span style="color: #a52a2a;">=</span>
+      <span style="color: #0000FF;">match</span> position.prev<span style="color: #a52a2a;">,</span> n <span style="color: #0000FF;">with</span>
+      <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Some</span> position'<span style="color: #a52a2a;">,</span> n <span style="color: #0000FF;">when</span> n <span style="color: #a52a2a;">&lt;</span> 0 <span style="color: #a52a2a;">-&gt;</span>
+        jump_back position' <span style="color: #a52a2a;">(</span><span style="color: #6434A3;">Zipper.</span>tree_back zipper<span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">(</span>n <span style="color: #a52a2a;">+</span> 1<span style="color: #a52a2a;">)</span>
+      <span style="color: #a52a2a;">|</span> _ <span style="color: #a52a2a;">-&gt;</span> position<span style="color: #a52a2a;">,</span> zipper <span style="color: #000000; font-weight: bold;">in</span>
+    <span style="color: #000000; font-weight: bold;">begin</span> <span style="color: #0000FF;">match</span> how_many <span style="color: #0000FF;">with</span>
+      <span style="color: #a52a2a;">|</span> 0 <span style="color: #a52a2a;">-&gt;</span> model<span style="color: #a52a2a;">,</span> <span style="color: #6434A3;">Cmd.</span>none
+      <span style="color: #a52a2a;">|</span> n <span style="color: #a52a2a;">-&gt;</span> <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">position</span><span style="color: #a52a2a;">,</span><span style="color: #BA36A5;"> moves</span> <span style="color: #a52a2a;">=</span>
+               <span style="color: #0000FF;">if</span> n <span style="color: #a52a2a;">&gt;</span> 0 <span style="color: #0000FF;">then</span> jump_fwd model.position model.moves n
+               <span style="color: #0000FF;">else</span> jump_back model.position model.moves n <span style="color: #000000; font-weight: bold;">in</span>
+        <span style="color: #a52a2a;">{</span>position<span style="color: #a52a2a;">;</span> moves<span style="color: #a52a2a;">;</span> ply <span style="color: #a52a2a;">=</span> model.ply <span style="color: #a52a2a;">+</span> n<span style="color: #a52a2a;">},</span> <span style="color: #6434A3;">Cmd.</span>none
+    <span style="color: #000000; font-weight: bold;">end</span>
+
+<span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">move_view</span><span style="color: #BA36A5;"> </span><span style="color: #a52a2a;">?(</span><span style="color: #BA36A5;">highlight</span><span style="color: #a52a2a;">=</span><span style="color: #D0372D;">false</span><span style="color: #a52a2a;">)</span><span style="color: #BA36A5;"> current_ply offset</span>
+<span style="color: #BA36A5;">    </span><span style="color: #a52a2a;">(</span><span style="color: #6434A3;">Zipper.</span><span style="color: #000000; background-color: #FFFFFF;">Node</span><span style="color: #BA36A5;"> </span><span style="color: #a52a2a;">((</span><span style="color: #BA36A5;">_move</span><span style="color: #a52a2a;">,</span><span style="color: #BA36A5;"> san</span><span style="color: #a52a2a;">),</span><span style="color: #BA36A5;"> _var</span><span style="color: #a52a2a;">))</span> <span style="color: #a52a2a;">=</span>
+  <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">ply</span> <span style="color: #a52a2a;">=</span> current_ply <span style="color: #a52a2a;">+</span> offset <span style="color: #a52a2a;">+</span> 1 <span style="color: #000000; font-weight: bold;">in</span>
+  <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">number</span> <span style="color: #a52a2a;">=</span> ply <span style="color: #a52a2a;">/</span> 2
+  <span style="color: #000000; font-weight: bold;">and</span> <span style="color: #BA36A5;">w_move</span> <span style="color: #a52a2a;">=</span> ply <span style="color: #a52a2a;">mod</span> 2 <span style="color: #a52a2a;">=</span> 0 <span style="color: #000000; font-weight: bold;">in</span>
+  li <span style="color: #a52a2a;">[</span> classList <span style="color: #a52a2a;">[</span> <span style="color: #008000;">"move"</span><span style="color: #a52a2a;">,</span> <span style="color: #D0372D;">true</span>
+                 <span style="color: #a52a2a;">;</span> <span style="color: #008000;">"numbered"</span><span style="color: #a52a2a;">,</span> w_move
+                 <span style="color: #a52a2a;">;</span> <span style="color: #008000;">"highlight"</span><span style="color: #a52a2a;">,</span> highlight
+                 <span style="color: #a52a2a;">]</span> <span style="color: #a52a2a;">]</span>
+    <span style="color: #a52a2a;">[</span> span <span style="color: #a52a2a;">[</span>class' <span style="color: #008000;">"number"</span><span style="color: #a52a2a;">]</span> <span style="color: #a52a2a;">[</span>string_of_int number <span style="color: #a52a2a;">|&gt;</span> text<span style="color: #a52a2a;">]</span>
+    <span style="color: #a52a2a;">;</span> span
+        <span style="color: #a52a2a;">[</span> class' <span style="color: #008000;">"move"</span>
+        <span style="color: #a52a2a;">;</span> <span style="color: #0000FF;">if</span> offset <span style="color: #a52a2a;">&lt;&gt;</span> 0 <span style="color: #0000FF;">then</span> onClick <span style="color: #a52a2a;">(</span><span style="color: #000000; background-color: #FFFFFF;">Jump</span> offset<span style="color: #a52a2a;">)</span> <span style="color: #0000FF;">else</span> noProp
+        <span style="color: #a52a2a;">]</span> <span style="color: #a52a2a;">[</span>text san<span style="color: #a52a2a;">]</span>
+    <span style="color: #a52a2a;">]</span>
+
+<span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">view</span><span style="color: #BA36A5;"> model</span> <span style="color: #a52a2a;">=</span>
+  <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #a52a2a;">(</span><span style="color: #BA36A5;">_context</span><span style="color: #a52a2a;">,</span><span style="color: #BA36A5;"> past</span><span style="color: #a52a2a;">),</span><span style="color: #BA36A5;"> future</span> <span style="color: #a52a2a;">=</span> model.moves <span style="color: #000000; font-weight: bold;">in</span>
+  move_list_view model.ply <span style="color: #a52a2a;">(</span>past<span style="color: #a52a2a;">,</span> future<span style="color: #a52a2a;">)</span>
+  <span style="color: #a52a2a;">|&gt;</span> ul <span style="color: #a52a2a;">[</span>class' <span style="color: #008000;">"moves"</span><span style="color: #a52a2a;">]</span>
+</pre>
+</div>
+
+<p>
+Also, one last change before your app is functional again, in
+<code>src/Pgn.ml</code>:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-ocaml"><span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">string_of_game</span><span style="color: #BA36A5;"> </span><span style="color: #a52a2a;">(</span><span style="color: #BA36A5;">game</span><span style="color: #a52a2a;">:</span><span style="color: #6434A3;">Game.</span><span style="color: #6434A3;">model</span><span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">=</span>
+  <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #a52a2a;">(</span><span style="color: #BA36A5;">_context</span><span style="color: #a52a2a;">,</span><span style="color: #BA36A5;"> past</span><span style="color: #a52a2a;">),</span><span style="color: #BA36A5;"> future</span> <span style="color: #a52a2a;">=</span> game.moves <span style="color: #000000; font-weight: bold;">in</span>
+  <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">moves</span> <span style="color: #a52a2a;">=</span> <span style="color: #6434A3;">List.</span>rev_append past future <span style="color: #000000; font-weight: bold;">in</span>
+  <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">sans</span> <span style="color: #a52a2a;">=</span> <span style="color: #6434A3;">List.</span>map <span style="color: #a52a2a;">(</span><span style="color: #0000FF;">fun</span> <span style="color: #a52a2a;">(</span><span style="color: #6434A3;">Zipper.</span><span style="color: #000000; background-color: #FFFFFF;">Node</span><span style="color: #BA36A5;"> </span><span style="color: #a52a2a;">((</span><span style="color: #BA36A5;">_</span><span style="color: #a52a2a;">,</span><span style="color: #BA36A5;"> san</span><span style="color: #a52a2a;">),</span><span style="color: #BA36A5;"> _</span><span style="color: #a52a2a;">))</span> <span style="color: #a52a2a;">-&gt;</span> san<span style="color: #a52a2a;">)</span> moves <span style="color: #000000; font-weight: bold;">in</span>
+  <span style="color: #6434A3;">String.</span>concat <span style="color: #008000;">" "</span> sans <span style="color: #a52a2a;">^</span> <span style="color: #008000;">" *"</span>
+</pre>
+</div>
+
+<p>
+That&rsquo;s it!  Tomorrow, we&rsquo;ll add support for branching the move list
+into a tree of moves, and reading PGN files that contain variations.
+</p>
+</div>
 </div>
 </div>
 </body>
