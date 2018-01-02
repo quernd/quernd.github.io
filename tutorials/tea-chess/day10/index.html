@@ -3,7 +3,7 @@
 "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
 <head>
-<!-- 2018-01-02 Tue 19:24 -->
+<!-- 2018-01-02 Tue 19:42 -->
 <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Twelve Days of Christmas #10</title>
@@ -385,6 +385,19 @@ and the type that it focuses on.
   <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Close_tab</span> <span style="color: #0000FF;">of</span> string
   <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Validate_pgn</span> <span style="color: #0000FF;">of</span> string
 <span style="color: #808080;">[@@bs.deriving {accessors}]</span>
+
+<span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">init_model</span> <span style="color: #a52a2a;">=</span>
+  <span style="color: #a52a2a;">{</span> scratch_game <span style="color: #a52a2a;">=</span> <span style="color: #6434A3;">Game.</span>init <span style="color: #a52a2a;">()</span>
+  <span style="color: #a52a2a;">;</span> game <span style="color: #a52a2a;">=</span> scratch_lens
+  <span style="color: #a52a2a;">;</span> board <span style="color: #a52a2a;">=</span> <span style="color: #6434A3;">Board.</span>init <span style="color: #a52a2a;">()</span>
+  <span style="color: #a52a2a;">;</span> tournament <span style="color: #a52a2a;">=</span> <span style="color: #000000; background-color: #FFFFFF;">Idle</span>
+  <span style="color: #a52a2a;">;</span> local_games <span style="color: #a52a2a;">=</span> <span style="color: #6434A3;">IntMap.</span>empty
+  <span style="color: #a52a2a;">;</span> lichess_games <span style="color: #a52a2a;">=</span> <span style="color: #6434A3;">StringMap.</span>empty
+  <span style="color: #a52a2a;">;</span> route <span style="color: #a52a2a;">=</span> <span style="color: #000000; background-color: #FFFFFF;">Scratch</span>
+  <span style="color: #a52a2a;">}</span>
+
+<span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">init</span><span style="color: #BA36A5;"> </span><span style="color: #a52a2a;">()</span><span style="color: #BA36A5;"> location</span> <span style="color: #a52a2a;">=</span>
+  route_of_location location <span style="color: #a52a2a;">|&gt;</span> update_route init_model
 </pre>
 </div>
 
@@ -713,6 +726,34 @@ We now only need the remaining views:
 </div>
 
 <p>
+Here&rsquo;s another goodie.  We&rsquo;re using <code>IntMap.fold</code> to build the list of
+tabs from the map of games.  However, <code>IntMap.fold</code> is a left fold,
+and we need the list in reverse order.  Instead of just reversing it,
+I implemented a right fold by using a continuation function.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-ocaml"><span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">game_nav_view</span><span style="color: #BA36A5;"> model</span> <span style="color: #a52a2a;">=</span>
+  <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">game_nav_item</span><span style="color: #BA36A5;"> current link label</span> <span style="color: #a52a2a;">=</span>
+    li <span style="color: #a52a2a;">[</span> <span style="color: #0000FF;">if</span> current <span style="color: #0000FF;">then</span> class' <span style="color: #008000;">"current"</span> <span style="color: #0000FF;">else</span> noProp <span style="color: #a52a2a;">]</span>
+      <span style="color: #a52a2a;">[</span> <span style="color: #0000FF;">if</span> current <span style="color: #0000FF;">then</span> text label <span style="color: #0000FF;">else</span> a <span style="color: #a52a2a;">[</span>href link<span style="color: #a52a2a;">]</span> <span style="color: #a52a2a;">[</span>text label<span style="color: #a52a2a;">]</span> <span style="color: #a52a2a;">]</span> <span style="color: #000000; font-weight: bold;">in</span>
+
+  <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">g</span><span style="color: #BA36A5;"> id _game k</span> <span style="color: #a52a2a;">=</span>
+    <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">item</span> <span style="color: #a52a2a;">=</span> game_nav_item 
+        <span style="color: #a52a2a;">(</span>model.route <span style="color: #a52a2a;">=</span> <span style="color: #000000; background-color: #FFFFFF;">Local</span> id<span style="color: #a52a2a;">)</span>
+        <span style="color: #a52a2a;">(</span><span style="color: #6434A3;">Printf.</span>sprintf <span style="color: #008000;">"#/local/%d"</span> id<span style="color: #a52a2a;">)</span>
+        <span style="color: #a52a2a;">(</span><span style="color: #6434A3;">Printf.</span>sprintf <span style="color: #008000;">"Game %d"</span> id<span style="color: #a52a2a;">)</span>
+    <span style="color: #000000; font-weight: bold;">in</span> <span style="color: #0000FF;">fun</span> <span style="color: #BA36A5;">tl</span> <span style="color: #a52a2a;">-&gt;</span> k <span style="color: #a52a2a;">(</span>item<span style="color: #a52a2a;">::</span>tl<span style="color: #a52a2a;">)</span> <span style="color: #000000; font-weight: bold;">in</span>
+
+  nav <span style="color: #a52a2a;">[</span>class' <span style="color: #008000;">"top tabbed"</span><span style="color: #a52a2a;">]</span>
+    <span style="color: #a52a2a;">[</span> ul <span style="color: #a52a2a;">[]</span>
+        <span style="color: #a52a2a;">(</span>game_nav_item <span style="color: #a52a2a;">(</span>model.route <span style="color: #a52a2a;">=</span> <span style="color: #000000; background-color: #FFFFFF;">Scratch</span><span style="color: #a52a2a;">)</span> <span style="color: #008000;">"#/"</span> <span style="color: #008000;">"*scratch*"</span>
+         <span style="color: #a52a2a;">::(</span><span style="color: #6434A3;">IntMap.</span>fold g model.local_games <span style="color: #a52a2a;">(</span><span style="color: #0000FF;">fun</span> <span style="color: #BA36A5;">x</span> <span style="color: #a52a2a;">-&gt;</span> x<span style="color: #a52a2a;">))</span> <span style="color: #a52a2a;">[])</span>
+    <span style="color: #a52a2a;">]</span>
+</pre>
+</div>
+
+<p>
 You should now be able to open new tabs, and to load Lichess games.
 </p>
 
@@ -727,7 +768,128 @@ You should now be able to open new tabs, and to load Lichess games.
 <div class="outline-text-2" id="text-org475aa58">
 <p>
 Let&rsquo;s make the games persistent between sessions by storing them in
-the browser&rsquo;s local storage. 
+the browser&rsquo;s local storage.  Here&rsquo;s a very simple serialization to a
+minimal type of PGN. Add it to <code>src/Pgn.ml</code>:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-ocaml"><span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">string_of_game</span><span style="color: #BA36A5;"> </span><span style="color: #a52a2a;">(</span><span style="color: #BA36A5;">game</span><span style="color: #a52a2a;">:</span><span style="color: #6434A3;">Game.</span><span style="color: #6434A3;">model</span><span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">=</span>
+  <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #a52a2a;">(</span><span style="color: #BA36A5;">_context</span><span style="color: #a52a2a;">,</span><span style="color: #BA36A5;"> past</span><span style="color: #a52a2a;">),</span><span style="color: #BA36A5;"> future</span> <span style="color: #a52a2a;">=</span> game.moves <span style="color: #000000; font-weight: bold;">in</span>
+  <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">moves</span> <span style="color: #a52a2a;">=</span> <span style="color: #6434A3;">List.</span>rev_append past future <span style="color: #000000; font-weight: bold;">in</span>
+  <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">sans</span> <span style="color: #a52a2a;">=</span> <span style="color: #6434A3;">List.</span>map <span style="color: #a52a2a;">(</span><span style="color: #0000FF;">fun</span> <span style="color: #a52a2a;">(</span><span style="color: #6434A3;">Zipper.</span><span style="color: #000000; background-color: #FFFFFF;">Node</span><span style="color: #BA36A5;"> </span><span style="color: #a52a2a;">((</span><span style="color: #BA36A5;">_</span><span style="color: #a52a2a;">,</span><span style="color: #BA36A5;"> san</span><span style="color: #a52a2a;">),</span><span style="color: #BA36A5;"> _</span><span style="color: #a52a2a;">))</span> <span style="color: #a52a2a;">-&gt;</span> san<span style="color: #a52a2a;">)</span> moves <span style="color: #000000; font-weight: bold;">in</span>
+  <span style="color: #6434A3;">String.</span>concat <span style="color: #008000;">" "</span> sans <span style="color: #a52a2a;">^</span> <span style="color: #008000;">" *"</span>
+</pre>
+</div>
+
+<p>
+Now we can serialize the games and put them into local storage one by
+creating a list of commands, plus a command for a &ldquo;table of contents&rdquo;.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-ocaml"><span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">update</span><span style="color: #BA36A5;"> model</span> <span style="color: #a52a2a;">=</span> <span style="color: #0000FF;">function</span>
+
+  <span style="color: #8D8D84;">(* </span><span style="color: #8D8D84; font-style: italic;">... </span><span style="color: #8D8D84;">*)</span>
+
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Save_games</span> <span style="color: #a52a2a;">-&gt;</span>
+    <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">keys</span><span style="color: #a52a2a;">,</span><span style="color: #BA36A5;"> cmds</span> <span style="color: #a52a2a;">=</span>
+      <span style="color: #6434A3;">IntMap.</span>fold
+        <span style="color: #a52a2a;">(</span><span style="color: #0000FF;">fun</span> <span style="color: #BA36A5;">key game </span><span style="color: #a52a2a;">(</span><span style="color: #BA36A5;">acc_keys</span><span style="color: #a52a2a;">,</span><span style="color: #BA36A5;"> acc_pgn</span><span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">-&gt;</span>
+           <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">key'</span> <span style="color: #a52a2a;">=</span> string_of_int key <span style="color: #000000; font-weight: bold;">in</span>
+           <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">pgn</span> <span style="color: #a52a2a;">=</span> <span style="color: #6434A3;">Pgn.</span>string_of_game game <span style="color: #000000; font-weight: bold;">in</span>
+           <span style="color: #a52a2a;">(</span>key'<span style="color: #a52a2a;">::</span>acc_keys<span style="color: #a52a2a;">),</span>
+           <span style="color: #a52a2a;">(</span><span style="color: #6434A3;">Ex.LocalStorage.</span>setItemCmd key' pgn<span style="color: #a52a2a;">::</span>acc_pgn<span style="color: #a52a2a;">))</span>
+        model.local_games
+        <span style="color: #a52a2a;">([],</span> <span style="color: #a52a2a;">[])</span> <span style="color: #000000; font-weight: bold;">in</span>
+    <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">games</span> <span style="color: #a52a2a;">=</span> <span style="color: #6434A3;">String.</span>concat <span style="color: #008000;">" "</span> keys <span style="color: #000000; font-weight: bold;">in</span>
+    <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">cmd</span> <span style="color: #a52a2a;">=</span> <span style="color: #6434A3;">Ex.LocalStorage.</span>setItemCmd <span style="color: #008000;">"games"</span> games <span style="color: #000000; font-weight: bold;">in</span>
+    model<span style="color: #a52a2a;">,</span> cmd<span style="color: #a52a2a;">::</span>cmds <span style="color: #a52a2a;">|&gt;</span> <span style="color: #6434A3;">Cmd.</span>batch
+</pre>
+</div>
+
+<p>
+Loading the games on startup is a little nasty.  There is probably a
+simpler way to do this, but I just read the entire locally stored data
+by first asking for the length (number of items) of the storage, then
+obtaining a list of the keys, and finally a list of keys and values.
+I used <code>Tea_task</code> to run these function asynchronously:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-ocaml"><span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">load_games</span> <span style="color: #a52a2a;">=</span>
+  <span style="color: #6434A3;">Ex.LocalStorage.</span>length
+  <span style="color: #a52a2a;">|&gt;</span> <span style="color: #6434A3;">Tea_task.</span>andThen <span style="color: #a52a2a;">(</span><span style="color: #0000FF;">fun</span> <span style="color: #BA36A5;">length</span> <span style="color: #a52a2a;">-&gt;</span>
+      <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #000000; font-weight: bold;">rec</span> <span style="color: #006699;">loop</span><span style="color: #BA36A5;"> i acc</span> <span style="color: #a52a2a;">=</span>
+        <span style="color: #0000FF;">if</span> i <span style="color: #a52a2a;">&gt;=</span> 0 <span style="color: #0000FF;">then</span>
+          loop <span style="color: #a52a2a;">(</span>i <span style="color: #a52a2a;">-</span> 1<span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">(</span><span style="color: #6434A3;">Ex.LocalStorage.</span>key i<span style="color: #a52a2a;">::</span>acc<span style="color: #a52a2a;">)</span>
+        <span style="color: #0000FF;">else</span> acc <span style="color: #000000; font-weight: bold;">in</span>
+      loop length <span style="color: #a52a2a;">[]</span> <span style="color: #a52a2a;">|&gt;</span> <span style="color: #6434A3;">Tea_task.</span>sequence
+    <span style="color: #a52a2a;">)</span>
+  <span style="color: #a52a2a;">|&gt;</span> <span style="color: #6434A3;">Tea_task.</span>andThen <span style="color: #a52a2a;">(</span><span style="color: #0000FF;">fun</span> <span style="color: #BA36A5;">keys</span> <span style="color: #a52a2a;">-&gt;</span>
+      <span style="color: #6434A3;">List.</span>map
+        <span style="color: #a52a2a;">(</span><span style="color: #0000FF;">fun</span> <span style="color: #BA36A5;">key</span> <span style="color: #a52a2a;">-&gt;</span>
+           <span style="color: #a52a2a;">(</span><span style="color: #6434A3;">Ex.LocalStorage.</span>getItem key
+            <span style="color: #a52a2a;">|&gt;</span> <span style="color: #6434A3;">Tea_task.</span>map <span style="color: #a52a2a;">(</span><span style="color: #0000FF;">fun</span> <span style="color: #BA36A5;">value</span> <span style="color: #a52a2a;">-&gt;</span> <span style="color: #a52a2a;">(</span>key<span style="color: #a52a2a;">,</span> value<span style="color: #a52a2a;">))</span>
+           <span style="color: #a52a2a;">)</span>
+        <span style="color: #a52a2a;">)</span> keys
+      <span style="color: #a52a2a;">|&gt;</span> <span style="color: #6434A3;">Tea_task.</span>sequence<span style="color: #a52a2a;">)</span>
+  <span style="color: #a52a2a;">|&gt;</span> <span style="color: #6434A3;">Tea_task.</span>attemptOpt <span style="color: #a52a2a;">(</span><span style="color: #0000FF;">function</span> <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Ok</span> games <span style="color: #a52a2a;">-&gt;</span> <span style="color: #000000; background-color: #FFFFFF;">Some</span> <span style="color: #a52a2a;">(</span><span style="color: #000000; background-color: #FFFFFF;">Games_loaded</span> games<span style="color: #a52a2a;">)</span>
+                                   <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Error</span> _ <span style="color: #a52a2a;">-&gt;</span> <span style="color: #000000; background-color: #FFFFFF;">None</span><span style="color: #a52a2a;">)</span>
+
+<span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">init</span><span style="color: #BA36A5;"> </span><span style="color: #a52a2a;">()</span><span style="color: #BA36A5;"> location</span> <span style="color: #a52a2a;">=</span>
+  <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">model</span><span style="color: #a52a2a;">,</span><span style="color: #BA36A5;"> cmd</span> <span style="color: #a52a2a;">=</span>
+    route_of_location location <span style="color: #a52a2a;">|&gt;</span> update_route init_model <span style="color: #000000; font-weight: bold;">in</span>
+  model<span style="color: #a52a2a;">,</span> <span style="color: #6434A3;">Cmd.</span>batch <span style="color: #a52a2a;">[</span>cmd<span style="color: #a52a2a;">;</span> load_games<span style="color: #a52a2a;">]</span>
+</pre>
+</div>
+
+<p>
+A <code>Tea_task.t</code> can be chained by using <code>.andThen</code>, but eventually it
+has to be run by using <code>.attemptOpt</code>.  Upon completion, it will return
+with a <code>Result.t</code>, which we turn into a message.  Here&rsquo;s how we read
+the items into our games map:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-ocaml"><span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">update</span><span style="color: #BA36A5;"> model</span> <span style="color: #a52a2a;">=</span> <span style="color: #0000FF;">function</span>
+
+  <span style="color: #8D8D84;">(* </span><span style="color: #8D8D84; font-style: italic;">... </span><span style="color: #8D8D84;">*)</span>
+
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Games_loaded</span> list <span style="color: #a52a2a;">-&gt;</span>
+    <span style="color: #000000; font-weight: bold;">begin</span> <span style="color: #0000FF;">try</span>
+        <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">games</span> <span style="color: #a52a2a;">=</span>
+          <span style="color: #6434A3;">List.</span>assoc <span style="color: #008000;">"games"</span> list
+          <span style="color: #a52a2a;">|&gt;</span> <span style="color: #6434A3;">Chess.</span>split_on_char <span style="color: #008000;">' '</span> <span style="color: #000000; font-weight: bold;">in</span>
+        <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">local_games</span> <span style="color: #a52a2a;">=</span>
+          <span style="color: #6434A3;">List.</span>fold_left
+            <span style="color: #a52a2a;">(</span><span style="color: #0000FF;">fun</span> <span style="color: #BA36A5;">acc v</span> <span style="color: #a52a2a;">-&gt;</span>
+               <span style="color: #6434A3;">IntMap.</span>add
+                 <span style="color: #a52a2a;">(</span>int_of_string v<span style="color: #a52a2a;">)</span>
+                 <span style="color: #a52a2a;">(</span><span style="color: #6434A3;">List.</span>assoc v list <span style="color: #a52a2a;">|&gt;</span> <span style="color: #6434A3;">Pgn.</span>game_of_string<span style="color: #a52a2a;">)</span>
+                 acc
+            <span style="color: #a52a2a;">)</span> <span style="color: #6434A3;">IntMap.</span>empty games <span style="color: #000000; font-weight: bold;">in</span>
+        <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">game</span> <span style="color: #a52a2a;">=</span>
+          <span style="color: #0000FF;">match</span> model.route <span style="color: #0000FF;">with</span>
+          <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Local</span> id <span style="color: #a52a2a;">-&gt;</span> local_lens <span style="color: #a52a2a;">|--</span> <span style="color: #6434A3;">IntMapLens.</span>for_key id
+          <span style="color: #a52a2a;">|</span> _ <span style="color: #a52a2a;">-&gt;</span> model.game <span style="color: #000000; font-weight: bold;">in</span>        
+        <span style="color: #a52a2a;">{</span>model <span style="color: #0000FF;">with</span> local_games<span style="color: #a52a2a;">;</span> game<span style="color: #a52a2a;">},</span> <span style="color: #6434A3;">Cmd.</span>none
+      <span style="color: #0000FF;">with</span> e <span style="color: #a52a2a;">-&gt;</span> <span style="color: #6434A3;">Js.</span>log e<span style="color: #a52a2a;">;</span> model<span style="color: #a52a2a;">,</span> <span style="color: #6434A3;">Cmd.</span>none
+    <span style="color: #000000; font-weight: bold;">end</span>
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Clear_games</span> <span style="color: #a52a2a;">-&gt;</span>
+    model<span style="color: #a52a2a;">,</span> <span style="color: #6434A3;">Ex.LocalStorage.</span>clearCmd <span style="color: #a52a2a;">()</span>
+</pre>
+</div>
+
+<p>
+Phew, that&rsquo;s it for today.  Try it out in your browser.  Load some games, save them by clicking
+the button, close the window and open it again.  You should see the
+tabs again, and be able to restore the games.
+</p>
+
+<p>
+<a href="../day9/index.html">Tomorrow, we will add the possibility to make alternative moves on the
+chessboard, implementing a variation tree in the move list.</a>  To this
+end, we will use tree zippers.
 </p>
 </div>
 </div>
