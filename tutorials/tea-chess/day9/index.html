@@ -3,7 +3,7 @@
 "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
 <head>
-<!-- 2018-01-01 Mon 23:42 -->
+<!-- 2018-01-02 Tue 15:51 -->
 <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Twelve Days of Christmas #9</title>
@@ -158,12 +158,30 @@ characters to match.
 <pre class="src src-ocaml">utop <span style="color: #a52a2a;">#</span> <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">pgn_castle</span> <span style="color: #a52a2a;">=</span> token <span style="color: #008000;">"O-O"</span> <span style="color: #a52a2a;">&lt;|&gt;</span> token <span style="color: #008000;">"O-O-O"</span><span style="color: #ff4500;">;;</span>
 utop <span style="color: #a52a2a;">#</span> <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">pgn_piece</span> <span style="color: #a52a2a;">=</span> one_of <span style="color: #a52a2a;">[</span><span style="color: #008000;">'K'</span><span style="color: #a52a2a;">;</span> <span style="color: #008000;">'Q'</span><span style="color: #a52a2a;">;</span> <span style="color: #008000;">'R'</span><span style="color: #a52a2a;">;</span> <span style="color: #008000;">'B'</span><span style="color: #a52a2a;">;</span> <span style="color: #008000;">'N'</span><span style="color: #a52a2a;">;</span> <span style="color: #008000;">'P'</span><span style="color: #a52a2a;">]</span><span style="color: #ff4500;">;;</span>
 utop <span style="color: #a52a2a;">#</span> <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">pgn_file</span> <span style="color: #a52a2a;">=</span> one_of <span style="color: #a52a2a;">[</span><span style="color: #008000;">'a'</span><span style="color: #a52a2a;">;</span> <span style="color: #008000;">'b'</span><span style="color: #a52a2a;">;</span> <span style="color: #008000;">'c'</span><span style="color: #a52a2a;">;</span> <span style="color: #008000;">'d'</span><span style="color: #a52a2a;">;</span> <span style="color: #008000;">'e'</span><span style="color: #a52a2a;">;</span> <span style="color: #008000;">'f'</span><span style="color: #a52a2a;">;</span> <span style="color: #008000;">'g'</span><span style="color: #a52a2a;">;</span> <span style="color: #008000;">'h'</span><span style="color: #a52a2a;">]</span><span style="color: #ff4500;">;;</span>
-utop <span style="color: #a52a2a;">#</span> <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">pgn_rank</span> <span style="color: #a52a2a;">=</span> one_of <span style="color: #a52a2a;">[</span><span style="color: #008000;">'1'</span><span style="color: #a52a2a;">;</span> <span style="color: #008000;">'2'</span><span style="color: #a52a2a;">;</span> <span style="color: #008000;">'3'</span><span style="color: #a52a2a;">;</span> <span style="color: #008000;">'4'</span><span style="color: #a52a2a;">;</span> <span style="color: #008000;">'5'</span><span style="color: #a52a2a;">;</span> <span style="color: #008000;">'6'</span><span style="color: #a52a2a;">;</span> <span style="color: #008000;">'7'</span><span style="color: #a52a2a;">;</span> <span style="color: #008000;">'8'</span><span style="color: #a52a2a;">]</span><span style="color: #ff4500;">;;</span>
+utop <span style="color: #a52a2a;">#</span> <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">pgn_rank</span> <span style="color: #a52a2a;">=</span> one_of <span style="color: #a52a2a;">[</span><span style="color: #008000;">'1'</span><span style="color: #a52a2a;">;</span> <span style="color: #008000;">'2'</span><span style="color: #a52a2a;">;</span> <span style="color: #008000;">'3'</span><span style="color: #a52a2a;">;</span> <span style="color: #008000;">'4'</span><span style="color: #a52a2a;">]</span> <span style="color: #a52a2a;">&lt;|&gt;</span> one_of <span style="color: #a52a2a;">[</span><span style="color: #008000;">'5'</span><span style="color: #a52a2a;">;</span> <span style="color: #008000;">'6'</span><span style="color: #a52a2a;">;</span> <span style="color: #008000;">'7'</span><span style="color: #a52a2a;">;</span> <span style="color: #008000;">'8'</span><span style="color: #a52a2a;">]</span><span style="color: #ff4500;">;;</span>
 </pre>
 </div>
 
 <p>
-Now let&rsquo;s see if we can combine some parsers to match a move.  Here&rsquo;s a bit of
+The last one is slightly redundant but very instructive: it uses the <code>&lt;|&gt;</code> combinator (&ldquo;or&rdquo;) to say that the parser
+matches either one of the alternatives.  Check the source code of Opal
+to see how it works:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-ocaml"><span style="color: #000000; font-weight: bold;">let</span> <span style="color: #a52a2a;">(&lt;|&gt;)</span> x y <span style="color: #a52a2a;">=</span>
+  <span style="color: #0000FF;">fun</span> <span style="color: #BA36A5;">input</span> <span style="color: #a52a2a;">-&gt;</span>
+    <span style="color: #0000FF;">match</span> x input <span style="color: #0000FF;">with</span>
+    <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Some</span> _ <span style="color: #0000FF;">as</span> ret <span style="color: #a52a2a;">-&gt;</span> ret
+    <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">None</span> <span style="color: #a52a2a;">-&gt;</span> y input
+</pre>
+</div>
+
+<p>
+Pretty straightforward, right? If the first parser matches, we return
+the result, if it doesn&rsquo;t, we hand off the input to the second parser.
+Now let&rsquo;s see if we can combine some parsers to match a move.
+How do we put one parser after the other?  Here&rsquo;s a bit of
 black magic:
 </p>
 
@@ -268,11 +286,11 @@ special meaning (for instance, if the game starts from a specified position).
 </div>
 </div>
 
-<div id="outline-container-orgae27bb8" class="outline-2">
-<h2 id="orgae27bb8">A parser for Simple PGN</h2>
-<div class="outline-text-2" id="text-orgae27bb8">
+<div id="outline-container-org9c141fa" class="outline-2">
+<h2 id="org9c141fa">Simple parsers</h2>
+<div class="outline-text-2" id="text-org9c141fa">
 <p>
-Let&rsquo;s address Simple PGN first.  Start a new file <code>src/Pgn.ml</code> with
+Start a new file <code>src/Pgn.ml</code> with
 the following:
 </p>
 
@@ -423,9 +441,9 @@ A comment is just anything between curly braces:
 </div>
 </div>
 
-<div id="outline-container-orgf5006b9" class="outline-2">
-<h2 id="orgf5006b9">A parser for PGN</h2>
-<div class="outline-text-2" id="text-orgf5006b9">
+<div id="outline-container-orga414c58" class="outline-2">
+<h2 id="orga414c58">Mutually recursive parsers</h2>
+<div class="outline-text-2" id="text-orga414c58">
 <p>
 The last few definitions are tricky because they are <i>mutually
 recursive</i>.  Since PGN allows recursive variations, a move can contain
@@ -491,7 +509,9 @@ Finally we need a function that turns the parsed PGN into a game
 zipper.  In order to compute a move from an SAN, we compute all the
 moves that the SAN is compatible with.  If that&rsquo;s more than one, we
 raise an exception because the move is ambiguous.  If it&rsquo;s zero, then
-the move is illegal.
+the move is illegal. In order to find the moves that a SAN is
+compatible with, we need to do some rather boring case analysis.  I&rsquo;ll
+spare you the details and just give you the entire function right away:
 </p>
 
 <div class="org-src-container">
@@ -532,8 +552,12 @@ the move is illegal.
 </div>
 
 <p>
-A game zipper is easily obtained by just following along the move
-list, carrying the position and the ply number in an accumulator:
+A game zipper is easily obtained by just following along the parsed
+list of SANs, carrying the position, ply number and move list in an accumulator.
+Remember that <code>List.fold_left</code> takes as its first argument a function
+that maps the current accumulator and a list item to the next
+accumulator (the function <code>advance</code>).  The initial accumulator is an
+empty game zipper.
 </p>
 
 <div class="org-src-container">
