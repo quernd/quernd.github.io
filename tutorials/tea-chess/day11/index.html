@@ -3,7 +3,7 @@
 "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
 <head>
-<!-- 2018-01-02 Tue 22:11 -->
+<!-- 2018-01-03 Wed 00:12 -->
 <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Twelve Days of Christmas #11</title>
@@ -254,9 +254,14 @@ In <code>src/Game.ml</code>, make the following changes:
   <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Back_button</span> <span style="color: #a52a2a;">-&gt;</span>
     <span style="color: #000000; font-weight: bold;">begin</span> <span style="color: #0000FF;">match</span> model.position.prev <span style="color: #0000FF;">with</span>
       <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Some</span> position <span style="color: #a52a2a;">-&gt;</span>
-        <span style="color: #a52a2a;">{</span> moves <span style="color: #a52a2a;">=</span> <span style="color: #6434A3;">Zipper.</span>tree_back model.moves
-        <span style="color: #a52a2a;">;</span> position
-        <span style="color: #a52a2a;">;</span> ply <span style="color: #a52a2a;">=</span> model.ply <span style="color: #a52a2a;">-</span> 1<span style="color: #a52a2a;">}</span>
+        <span style="color: #000000; font-weight: bold;">begin</span> <span style="color: #0000FF;">try</span> <span style="color: #a52a2a;">{</span> moves <span style="color: #a52a2a;">=</span> <span style="color: #6434A3;">Zipper.</span>tree_back model.moves
+                  <span style="color: #a52a2a;">;</span> position
+                  <span style="color: #a52a2a;">;</span> ply <span style="color: #a52a2a;">=</span> model.ply <span style="color: #a52a2a;">-</span> 1<span style="color: #a52a2a;">}</span>
+          <span style="color: #0000FF;">with</span> <span style="color: #6434A3;">Zipper.</span><span style="color: #000000; background-color: #FFFFFF;">Beginning_of_list</span> <span style="color: #a52a2a;">-&gt;</span>
+            <span style="color: #a52a2a;">{</span> moves <span style="color: #a52a2a;">=</span> <span style="color: #6434A3;">Zipper.</span>tree_up model.moves <span style="color: #a52a2a;">|&gt;</span> snd <span style="color: #a52a2a;">|&gt;</span> <span style="color: #6434A3;">Zipper.</span>tree_back
+            <span style="color: #a52a2a;">;</span> position
+            <span style="color: #a52a2a;">;</span> ply <span style="color: #a52a2a;">=</span> model.ply <span style="color: #a52a2a;">-</span> 1<span style="color: #a52a2a;">}</span>
+        <span style="color: #000000; font-weight: bold;">end</span>
       <span style="color: #a52a2a;">|</span> _ <span style="color: #a52a2a;">-&gt;</span> model
     <span style="color: #000000; font-weight: bold;">end</span><span style="color: #a52a2a;">,</span> <span style="color: #6434A3;">Cmd.</span>none
   <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Fwd_button</span> <span style="color: #a52a2a;">-&gt;</span>
@@ -323,8 +328,10 @@ Also, one last change before your app is functional again, in
 </div>
 
 <p>
-That&rsquo;s it!  Tomorrow, we&rsquo;ll add support for branching the move list
-into a tree of moves, and reading PGN files that contain variations.
+That&rsquo;s it!  When you make moves, everything looks like before, but
+when you take back moves and make different moves, you will only see
+the current variation from the point it diverged.  <a href="../day12/index.html">Tomorrow, we&rsquo;ll add support for displaying the move list
+as a tree of moves, and reading PGN files that contain variations.</a>
 </p>
 </div>
 </div>
