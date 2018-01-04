@@ -3,7 +3,7 @@
 "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
 <head>
-<!-- 2018-01-03 Wed 00:12 -->
+<!-- 2018-01-04 Thu 15:05 -->
 <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Twelve Days of Christmas #10</title>
@@ -294,7 +294,7 @@ in in your <code>src</code> directory.
 </p>
 
 <p>
-A lens is like a functional getter/setter.  Say we have list of games, and we are
+A lens is like <a href="http://lambdafoo.com/blog/2015/01/16/ocaml-lenses/">a functional getter/setter</a>.  Say we have list of games, and we are
 currently viewing and editing one of them.  A lens combines two functions:
 </p>
 
@@ -306,7 +306,8 @@ replaces a part of <code>a</code> by <code>b</code>. (Such that <code>set a b |&
 
 <p>
 There are more laws that need to be fulfilled. If you want to learn
-more about lenses, check out <a href="https://artyom.me/#lens-over-tea">Artyom&rsquo;s &ldquo;lens over tea&rdquo;</a>.  For instance, here&rsquo;s a simple lens:
+more about lenses, check out <a href="https://www.schoolofhaskell.com/school/to-infinity-and-beyond/pick-of-the-week/a-little-lens-starter-tutorial">Joseph Abrahamson&rsquo;s &ldquo;Little Lens Starter
+Tutorial&rdquo;</a> or the really technical <a href="https://artyom.me/#lens-over-tea">Artyom&rsquo;s &ldquo;lens over tea&rdquo;</a>.  For instance, here&rsquo;s a simple lens:
 </p>
 
 <div class="org-src-container">
@@ -527,7 +528,7 @@ lenses for <code>IntMap</code> and <code>StringMap</code>.  Let&rsquo;s roll our
 For any <code>Map.OrderedType</code> we can now derive a module <code>MapLens</code> with a
 function <code>for_key</code> that returns a lens.  This example might seem a
 little overengineered, but we will use it for great effect in today&rsquo;s
-code, and it shows the power of OCaml&rsquo;s module system.
+code, and it shows the power of <a href="http://lambdafoo.com/blog/2015/05/15/unreliable-guide-to-ocaml-modules/">OCaml&rsquo;s module system</a>.
 </p>
 </div>
 </div>

@@ -3,7 +3,7 @@
 "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
 <head>
-<!-- 2018-01-03 Wed 00:12 -->
+<!-- 2018-01-04 Thu 15:05 -->
 <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Twelve Days of Christmas #11</title>
@@ -36,7 +36,10 @@ zippers to make navigation easier, we will implement tree zippers now.
 Tree zippers are much like list zippers in that they are a pair of a
 context and an inner tree.  (Remember that list zippers were a pair of
 a context [&ldquo;past&rdquo;] and a list [&ldquo;future&rdquo;].)  For trees, the situation
-is a little trickier.
+is a little trickier.  We will first examine our data structure and
+then derive a custom zipper structure for it.  There is a general
+approach of viewing <a href="https://pavpanchekha.com/blog/zippers/derivative.html">zippers as derivatives</a>, a technique first
+described <a href="http://strictlypositive.org/diff.pdf">by Conor McBride</a>.
 </p>
 
 <p>
@@ -319,7 +322,23 @@ Also, one last change before your app is functional again, in
 </p>
 
 <div class="org-src-container">
-<pre class="src src-ocaml"><span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">string_of_game</span><span style="color: #BA36A5;"> </span><span style="color: #a52a2a;">(</span><span style="color: #BA36A5;">game</span><span style="color: #a52a2a;">:</span><span style="color: #6434A3;">Game.</span><span style="color: #6434A3;">model</span><span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">=</span>
+<pre class="src src-ocaml"><span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">game_of_string</span><span style="color: #BA36A5;"> string</span> <span style="color: #a52a2a;">=</span>
+
+  <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">advance</span><span style="color: #BA36A5;"> </span><span style="color: #a52a2a;">(</span><span style="color: #BA36A5;">game</span><span style="color: #a52a2a;">:</span><span style="color: #6434A3;">Game.</span><span style="color: #6434A3;">model</span><span style="color: #a52a2a;">)</span><span style="color: #BA36A5;"> </span><span style="color: #a52a2a;">(</span><span style="color: #BA36A5;">move</span><span style="color: #a52a2a;">:</span><span style="color: #6434A3;">pgn_move</span><span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">:</span> <span style="color: #6434A3;">Game.</span><span style="color: #6434A3;">model</span> <span style="color: #a52a2a;">=</span>
+    <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">move'</span> <span style="color: #a52a2a;">=</span> move_of_pgn_move game.position move.move <span style="color: #000000; font-weight: bold;">in</span>
+    <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">position</span> <span style="color: #a52a2a;">=</span> <span style="color: #6434A3;">Chess.</span>make_move game.position move' <span style="color: #000000; font-weight: bold;">in</span>
+    <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">san</span> <span style="color: #a52a2a;">=</span> <span style="color: #6434A3;">Chess.</span>san_of_move game.position move' <span style="color: #000000; font-weight: bold;">in</span>
+    <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">_</span><span style="color: #a52a2a;">,</span><span style="color: #BA36A5;"> moves</span> <span style="color: #a52a2a;">=</span> <span style="color: #6434A3;">Zipper.</span>tree_fwd' <span style="color: #a52a2a;">(</span>move'<span style="color: #a52a2a;">,</span> san<span style="color: #a52a2a;">)</span> game.moves <span style="color: #000000; font-weight: bold;">in</span>
+    <span style="color: #a52a2a;">{</span>position<span style="color: #a52a2a;">;</span> ply <span style="color: #a52a2a;">=</span> game.ply <span style="color: #a52a2a;">+</span> 1<span style="color: #a52a2a;">;</span> moves<span style="color: #a52a2a;">}</span>
+  <span style="color: #000000; font-weight: bold;">in</span>
+
+  <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">pgn</span> <span style="color: #a52a2a;">=</span> <span style="color: #6434A3;">LazyStream.</span>of_string string <span style="color: #a52a2a;">|&gt;</span> parse pgn_game <span style="color: #000000; font-weight: bold;">in</span>
+  <span style="color: #0000FF;">match</span> pgn <span style="color: #0000FF;">with</span>
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Some</span> <span style="color: #a52a2a;">(</span>_<span style="color: #a52a2a;">,</span> pgn'<span style="color: #a52a2a;">,</span> _<span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">-&gt;</span>
+    <span style="color: #6434A3;">List.</span>fold_left advance <span style="color: #a52a2a;">(</span><span style="color: #6434A3;">Game.</span>init <span style="color: #a52a2a;">())</span> pgn'
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">None</span> <span style="color: #a52a2a;">-&gt;</span> <span style="color: #006FE0;">raise</span> <span style="color: #000000; background-color: #FFFFFF;">Parse_error</span>
+
+<span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">string_of_game</span><span style="color: #BA36A5;"> </span><span style="color: #a52a2a;">(</span><span style="color: #BA36A5;">game</span><span style="color: #a52a2a;">:</span><span style="color: #6434A3;">Game.</span><span style="color: #6434A3;">model</span><span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">=</span>
   <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #a52a2a;">(</span><span style="color: #BA36A5;">_context</span><span style="color: #a52a2a;">,</span><span style="color: #BA36A5;"> past</span><span style="color: #a52a2a;">),</span><span style="color: #BA36A5;"> future</span> <span style="color: #a52a2a;">=</span> game.moves <span style="color: #000000; font-weight: bold;">in</span>
   <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">moves</span> <span style="color: #a52a2a;">=</span> <span style="color: #6434A3;">List.</span>rev_append past future <span style="color: #000000; font-weight: bold;">in</span>
   <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">sans</span> <span style="color: #a52a2a;">=</span> <span style="color: #6434A3;">List.</span>map <span style="color: #a52a2a;">(</span><span style="color: #0000FF;">fun</span> <span style="color: #a52a2a;">(</span><span style="color: #6434A3;">Zipper.</span><span style="color: #000000; background-color: #FFFFFF;">Node</span><span style="color: #BA36A5;"> </span><span style="color: #a52a2a;">((</span><span style="color: #BA36A5;">_</span><span style="color: #a52a2a;">,</span><span style="color: #BA36A5;"> san</span><span style="color: #a52a2a;">),</span><span style="color: #BA36A5;"> _</span><span style="color: #a52a2a;">))</span> <span style="color: #a52a2a;">-&gt;</span> san<span style="color: #a52a2a;">)</span> moves <span style="color: #000000; font-weight: bold;">in</span>
