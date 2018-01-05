@@ -3,7 +3,7 @@
 "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
 <head>
-<!-- 2018-01-04 Thu 22:47 -->
+<!-- 2018-01-05 Fri 23:46 -->
 <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Twelve Days of Christmas</title>
@@ -21,6 +21,354 @@
 </div>
 <div id="content">
 <h1 class="title">Twelve Days of Christmas</h1>
+<p>
+This is the last part of <a href="../index.html">a chess-themed tutorial</a> on writing an SPA in
+<a href="https://github.com/OvermindDL1/bucklescript-tea">Bucklescript-TEA</a>.  After this part, your app will look similar to <a href="demo.html">this demo</a>.
+</p>
+
+<div id="outline-container-org44760b2" class="outline-2">
+<h2 id="org44760b2">Javascript/Bucklescript interop</h2>
+<div class="outline-text-2" id="text-org44760b2">
+<p>
+Let&rsquo;s embed the world class chess engine <a href="http://www.stockfishchess.com/">Stockfish</a> into our app.  Download the Javascript port of Stockfish from <a href="https://github.com/nmrugg/stockfish.js/tree/master/src">nmrugg&rsquo;s repository</a> and drop the file <code>stockfish.js</code> into the directory <code>release/js</code>.  Edit your <code>release/index.html</code> to contain the following Javascript:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-js">stockfish_loader = <span style="color: #0000FF;">function</span> (<span style="color: #BA36A5;">handler</span>) {
+  stockfish = <span style="color: #0000FF;">new</span> <span style="color: #6434A3;">Worker</span>(<span style="color: #008000;">'js/stockfish.js'</span>);
+  stockfish.onmessage = <span style="color: #0000FF;">function</span>(<span style="color: #BA36A5;">msg</span>) {
+    app.pushMsg(handler(msg.data));
+  };
+  <span style="color: #0000FF;">return</span> stockfish;
+};
+setTimeout(<span style="color: #0000FF;">function</span>() {
+  app = starter.main(document.body);
+}, 1)
+</pre>
+</div>
+
+<p>
+The key differences are that <code>app</code> is now a global variable, and <code>stockfish_loader</code> is also a global function that we can call from within Bucklescript.  When <code>stockfish_loader</code> is called with a <code>handler</code> function, it initializes a <i>Web worker</i> in the background that will pass messages into our message loop by using <code>app.pushMsg</code>.  All we have to do is to set up a function in Bucklescript that generates appropriate messages.
+</p>
+
+<p>
+Change the model in <code>src/Main.ml</code>. We also add a declaration of the external function from the Javascript side.  Bucklescript will ensure that it can only be called with an argument that is a function from <code>string</code> to <code>msg</code> and assume it will get a <code>Stockfish.stockfish</code> back.  Just to be safe, because Javascript can throw <code>null</code> at us anytime, we wrap it into a special Bucklescript type <code>Js.nullable</code> that is similar to an <code>option</code>. 
+</p>
+
+<div class="org-src-container">
+<pre class="src src-ocaml"><span style="color: #000000; font-weight: bold;">type</span> <span style="color: #6434A3;">model</span> <span style="color: #a52a2a;">=</span>
+  <span style="color: #a52a2a;">{</span> game <span style="color: #a52a2a;">:</span> game_lens
+  <span style="color: #a52a2a;">;</span> board <span style="color: #a52a2a;">:</span> <span style="color: #6434A3;">Board.</span>model
+  <span style="color: #a52a2a;">;</span> scratch_game <span style="color: #a52a2a;">:</span> <span style="color: #6434A3;">Game.</span>model
+  <span style="color: #a52a2a;">;</span> local_games <span style="color: #a52a2a;">:</span> <span style="color: #6434A3;">Game.</span>model <span style="color: #6434A3;">IntMap.</span>t
+  <span style="color: #a52a2a;">;</span> tournament <span style="color: #a52a2a;">:</span> <span style="color: #a52a2a;">(</span>string <span style="color: #a52a2a;">*</span> string list<span style="color: #a52a2a;">)</span> list transfer
+  <span style="color: #a52a2a;">;</span> lichess_games <span style="color: #a52a2a;">:</span> int <span style="color: #6434A3;">StringMap.</span>t
+  <span style="color: #a52a2a;">;</span> route <span style="color: #a52a2a;">:</span> route
+  <span style="color: #a52a2a;">;</span> stockfish <span style="color: #a52a2a;">:</span> <span style="color: #6434A3;">Stockfish.</span>model option
+  <span style="color: #a52a2a;">}</span>
+
+<span style="color: #000000; font-weight: bold;">external</span> <span style="color: #006699;">stockfish_loader</span> <span style="color: #a52a2a;">:</span> <span style="color: #a52a2a;">(</span>string <span style="color: #a52a2a;">-&gt;</span> msg<span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">-&gt;</span> <span style="color: #6434A3;">Stockfish.</span>stockfish <span style="color: #6434A3;">Js.</span>nullable <span style="color: #a52a2a;">=</span> <span style="color: #008000;">"stockfish_loader"</span> <span style="color: #808080;">[@@bs.val]</span>
+
+<span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">stockfish_move</span><span style="color: #BA36A5;"> position</span> <span style="color: #a52a2a;">=</span>
+  position
+  <span style="color: #a52a2a;">|&gt;</span> <span style="color: #6434A3;">Stockfish.</span>make_move
+  <span style="color: #a52a2a;">|&gt;</span> stockfish_msg
+</pre>
+</div>
+
+<p>
+Now let&rsquo;s tackle the mysterious <code>Stockfish.stockfish</code>.  Start a file <code>src/Stockfish.ml</code> with the following content:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-ocaml"><span style="color: #000000; font-weight: bold;">open </span><span style="color: #6434A3;">Tea</span>
+
+<span style="color: #000000; font-weight: bold;">type</span> <span style="color: #6434A3;">stockfish</span> <span style="color: #a52a2a;">=</span> <span style="color: #a52a2a;">&lt;</span>
+  postMessage <span style="color: #a52a2a;">:</span> string <span style="color: #a52a2a;">-&gt;</span> unit <span style="color: #808080;">[@bs.meth]</span><span style="color: #a52a2a;">;</span>
+<span style="color: #a52a2a;">&gt;</span> <span style="color: #6434A3;">Js.</span>t
+
+<span style="color: #000000; font-weight: bold;">type</span> <span style="color: #6434A3;">status</span> <span style="color: #a52a2a;">=</span>
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Idle</span>
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Thinking</span>
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Loading</span>
+
+<span style="color: #000000; font-weight: bold;">type</span> <span style="color: #6434A3;">model</span> <span style="color: #a52a2a;">=</span>
+  <span style="color: #a52a2a;">{</span> status <span style="color: #a52a2a;">:</span> status
+  <span style="color: #a52a2a;">;</span> stockfish <span style="color: #a52a2a;">:</span> stockfish
+  <span style="color: #a52a2a;">;</span> depth <span style="color: #a52a2a;">:</span> int
+  <span style="color: #a52a2a;">;</span> autoplay <span style="color: #a52a2a;">:</span> bool
+  <span style="color: #a52a2a;">}</span>
+
+<span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">init</span><span style="color: #BA36A5;"> stockfish</span> <span style="color: #a52a2a;">=</span>
+  <span style="color: #a52a2a;">{</span> status <span style="color: #a52a2a;">=</span> <span style="color: #000000; background-color: #FFFFFF;">Loading</span>
+  <span style="color: #a52a2a;">;</span> stockfish <span style="color: #a52a2a;">=</span> stockfish
+  <span style="color: #a52a2a;">;</span> depth <span style="color: #a52a2a;">=</span> 12
+  <span style="color: #a52a2a;">;</span> autoplay <span style="color: #a52a2a;">=</span> <span style="color: #D0372D;">true</span>
+  <span style="color: #a52a2a;">}</span>
+</pre>
+</div>
+
+<p>
+What this means is that the only thing we require from our Javascript-compatible <code>stockfish</code> type is that it exposes a method <code>postMessage</code> that takes a string and returns nothing (the <code>unit</code> type).
+</p>
+
+<p>
+When the user clicks a button to fire up Stockfish, a <code>Load_stockfish</code> message is triggered; notice how we turn our &ldquo;nullable&rdquo; into an option to cover the fact that Stockfish might have failed to load.  We hand over a function that, when a <code>string</code> comes in, will generate a <code>Stockfish_msg (Data string)</code> to feed into our event loop.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-ocaml"><span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">update</span><span style="color: #BA36A5;"> model</span> <span style="color: #a52a2a;">=</span> <span style="color: #0000FF;">function</span>
+
+  <span style="color: #8D8D84;">(* </span><span style="color: #8D8D84; font-style: italic;">... </span><span style="color: #8D8D84;">*)</span>
+
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Load_stockfish</span> <span style="color: #a52a2a;">-&gt;</span>
+    <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">f</span> <span style="color: #a52a2a;">=</span> <span style="color: #a52a2a;">(</span><span style="color: #0000FF;">fun</span> <span style="color: #BA36A5;">string</span> <span style="color: #a52a2a;">-&gt;</span> <span style="color: #6434A3;">Stockfish.</span>data string <span style="color: #a52a2a;">|&gt;</span> stockfish_msg<span style="color: #a52a2a;">)</span> <span style="color: #000000; font-weight: bold;">in</span>
+    <span style="color: #000000; font-weight: bold;">begin</span> <span style="color: #0000FF;">match</span> stockfish_loader f <span style="color: #a52a2a;">|&gt;</span> <span style="color: #6434A3;">Js.Nullable.</span>to_opt
+      <span style="color: #0000FF;">with</span>
+      <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">None</span> <span style="color: #a52a2a;">-&gt;</span> <span style="color: #6434A3;">Js.</span>log <span style="color: #008000;">"Stockfish failed to load"</span><span style="color: #a52a2a;">;</span> model<span style="color: #a52a2a;">,</span> <span style="color: #6434A3;">Cmd.</span>none
+      <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Some</span> stockfish <span style="color: #a52a2a;">-&gt;</span>
+        <span style="color: #a52a2a;">{</span>model <span style="color: #0000FF;">with</span> stockfish <span style="color: #a52a2a;">=</span> <span style="color: #000000; background-color: #FFFFFF;">Some</span> <span style="color: #a52a2a;">(</span><span style="color: #6434A3;">Stockfish.</span>init stockfish<span style="color: #a52a2a;">)},</span> <span style="color: #6434A3;">Cmd.</span>none
+    <span style="color: #000000; font-weight: bold;">end</span>
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Stockfish_msg</span> <span style="color: #a52a2a;">(</span><span style="color: #000000; background-color: #FFFFFF;">Move</span> move<span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">-&gt;</span>
+    <span style="color: #000000; font-weight: bold;">begin</span> <span style="color: #0000FF;">try</span>
+        <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">move'</span> <span style="color: #a52a2a;">=</span> <span style="color: #6434A3;">Pgn.</span>move_of_pgn_move
+            <span style="color: #a52a2a;">((</span>model <span style="color: #a52a2a;">|</span>. model.game<span style="color: #a52a2a;">)</span>.position<span style="color: #a52a2a;">)</span> move.move <span style="color: #000000; font-weight: bold;">in</span>
+        <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">game</span><span style="color: #a52a2a;">,</span><span style="color: #BA36A5;"> cmd</span> <span style="color: #a52a2a;">=</span>
+          <span style="color: #6434A3;">Game.</span>update <span style="color: #a52a2a;">(</span>model <span style="color: #a52a2a;">|</span>. model.game<span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">(</span><span style="color: #6434A3;">Game.</span><span style="color: #000000; background-color: #FFFFFF;">Make_move</span> move'<span style="color: #a52a2a;">)</span> <span style="color: #000000; font-weight: bold;">in</span>
+        model <span style="color: #a52a2a;">|&gt;</span> model.game <span style="color: #a52a2a;">^=</span> game<span style="color: #a52a2a;">,</span> <span style="color: #6434A3;">Cmd.</span>map game_msg cmd
+      <span style="color: #0000FF;">with</span> <span style="color: #6434A3;">Chess.</span><span style="color: #000000; background-color: #FFFFFF;">Illegal_move</span> <span style="color: #a52a2a;">-&gt;</span> model<span style="color: #a52a2a;">,</span> <span style="color: #6434A3;">Cmd.</span>none
+      <span style="color: #8D8D84;">(* </span><span style="color: #8D8D84; font-style: italic;">Stockfish rarely makes illegal moves, but just in case ;-) </span><span style="color: #8D8D84;">*)</span>
+    <span style="color: #000000; font-weight: bold;">end</span>
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Stockfish_msg</span> msg <span style="color: #a52a2a;">-&gt;</span>
+    <span style="color: #000000; font-weight: bold;">begin</span> <span style="color: #0000FF;">match</span> model.stockfish <span style="color: #0000FF;">with</span>
+      <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">None</span> <span style="color: #a52a2a;">-&gt;</span> model<span style="color: #a52a2a;">,</span> <span style="color: #6434A3;">Cmd.</span>none
+      <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Some</span> stockfish' <span style="color: #a52a2a;">-&gt;</span>
+        <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">stockfish</span><span style="color: #a52a2a;">,</span><span style="color: #BA36A5;"> cmd</span> <span style="color: #a52a2a;">=</span> <span style="color: #6434A3;">Stockfish.</span>update stockfish' msg <span style="color: #000000; font-weight: bold;">in</span>
+        <span style="color: #a52a2a;">{</span>model <span style="color: #0000FF;">with</span> stockfish <span style="color: #a52a2a;">=</span> <span style="color: #000000; background-color: #FFFFFF;">Some</span> stockfish<span style="color: #a52a2a;">},</span> <span style="color: #6434A3;">Cmd.</span>map stockfish_msg cmd
+    <span style="color: #000000; font-weight: bold;">end</span>
+  <span style="color: #a52a2a;">|</span> _ <span style="color: #a52a2a;">-&gt;</span> model<span style="color: #a52a2a;">,</span> <span style="color: #6434A3;">Cmd.</span>none
+</pre>
+</div>
+</div>
+</div>
+
+<div id="outline-container-orgd3f1318" class="outline-2">
+<h2 id="orgd3f1318">Data in, data out</h2>
+<div class="outline-text-2" id="text-orgd3f1318">
+<p>
+When data comes in, we hand it over to Stockfish; when Stockfish generates a move, we update the game model.  Here&rsquo;s how Stockfish parses the messages (Hint: Use <code>Js.log</code> to check out what Stockfish&rsquo;s messages look like!):
+</p>
+
+<div class="org-src-container">
+<pre class="src src-ocaml"><span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">update</span><span style="color: #BA36A5;"> model</span> <span style="color: #a52a2a;">=</span> <span style="color: #0000FF;">function</span>
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Autoplay</span> autoplay <span style="color: #a52a2a;">-&gt;</span> <span style="color: #a52a2a;">{</span>model <span style="color: #0000FF;">with</span> autoplay<span style="color: #a52a2a;">},</span> <span style="color: #6434A3;">Cmd.</span>none
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Set_depth</span> depth <span style="color: #a52a2a;">-&gt;</span>
+    <span style="color: #000000; font-weight: bold;">begin</span> <span style="color: #0000FF;">try</span> <span style="color: #a52a2a;">{</span>model <span style="color: #0000FF;">with</span> depth <span style="color: #a52a2a;">=</span> int_of_string depth<span style="color: #a52a2a;">},</span> <span style="color: #6434A3;">Cmd.</span>none
+      <span style="color: #0000FF;">with</span> _ <span style="color: #a52a2a;">-&gt;</span> model<span style="color: #a52a2a;">,</span> <span style="color: #6434A3;">Cmd.</span>none <span style="color: #000000; font-weight: bold;">end</span>
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Data</span> data <span style="color: #a52a2a;">-&gt;</span>
+    <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #000000; font-weight: bold;">open </span><span style="color: #6434A3;">Opal</span> <span style="color: #000000; font-weight: bold;">in</span>
+    <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006FE0;">parser</span> <span style="color: #a52a2a;">=</span>
+      <span style="color: #a52a2a;">(</span>token <span style="color: #008000;">"Stockfish"</span> <span style="color: #a52a2a;">&gt;&gt;</span> return <span style="color: #000000; background-color: #FFFFFF;">Parsed_ready</span><span style="color: #a52a2a;">)</span>
+      <span style="color: #a52a2a;">&lt;|&gt;</span>
+      <span style="color: #a52a2a;">(</span>token <span style="color: #008000;">"bestmove"</span> <span style="color: #a52a2a;">&gt;&gt;</span>
+       lexeme <span style="color: #a52a2a;">(</span>many1 alpha_num<span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">&gt;&gt;</span> 
+       token <span style="color: #008000;">"bestmoveSan"</span> <span style="color: #a52a2a;">&gt;&gt;</span>
+       <span style="color: #6434A3;">Pgn.</span>pgn_move <span style="color: #a52a2a;">()</span> <span style="color: #a52a2a;">&gt;&gt;=</span> <span style="color: #0000FF;">fun</span> <span style="color: #BA36A5;">move</span> <span style="color: #a52a2a;">-&gt;</span>
+       exactly <span style="color: #008000;">' '</span> <span style="color: #a52a2a;">&gt;&gt;</span>
+       return <span style="color: #a52a2a;">(</span><span style="color: #000000; background-color: #FFFFFF;">Parsed_move</span> move<span style="color: #a52a2a;">))</span> <span style="color: #000000; font-weight: bold;">in</span>
+    <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">move</span> <span style="color: #a52a2a;">=</span> <span style="color: #6434A3;">LazyStream.</span>of_string data <span style="color: #a52a2a;">|&gt;</span> parse <span style="color: #006FE0;">parser</span> <span style="color: #000000; font-weight: bold;">in</span>
+    <span style="color: #000000; font-weight: bold;">begin</span> <span style="color: #0000FF;">match</span> move <span style="color: #0000FF;">with</span>
+      <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Some</span> <span style="color: #000000; background-color: #FFFFFF;">Parsed_ready</span> <span style="color: #a52a2a;">-&gt;</span> <span style="color: #a52a2a;">{</span>model <span style="color: #0000FF;">with</span> status <span style="color: #a52a2a;">=</span> <span style="color: #000000; background-color: #FFFFFF;">Idle</span><span style="color: #a52a2a;">},</span> <span style="color: #6434A3;">Cmd.</span>msg <span style="color: #000000; background-color: #FFFFFF;">Ready</span>
+      <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Some</span> <span style="color: #a52a2a;">(</span><span style="color: #000000; background-color: #FFFFFF;">Parsed_move</span> move<span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">-&gt;</span> <span style="color: #a52a2a;">{</span>model <span style="color: #0000FF;">with</span> status <span style="color: #a52a2a;">=</span> <span style="color: #000000; background-color: #FFFFFF;">Idle</span><span style="color: #a52a2a;">},</span> <span style="color: #6434A3;">Cmd.</span>msg <span style="color: #a52a2a;">(</span><span style="color: #000000; background-color: #FFFFFF;">Move</span> move<span style="color: #a52a2a;">)</span>
+      <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">None</span> <span style="color: #a52a2a;">-&gt;</span> model<span style="color: #a52a2a;">,</span> <span style="color: #6434A3;">Cmd.</span>none
+    <span style="color: #000000; font-weight: bold;">end</span>
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Make_move</span> position <span style="color: #a52a2a;">-&gt;</span>
+    model.stockfish<span style="color: #a52a2a;">##</span>postMessage <span style="color: #a52a2a;">(</span><span style="color: #008000;">"position fen "</span> <span style="color: #a52a2a;">^</span> position<span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">;</span>
+    model.stockfish<span style="color: #a52a2a;">##</span>postMessage <span style="color: #a52a2a;">(</span><span style="color: #6434A3;">Printf.</span>sprintf <span style="color: #008000;">"go depth %d"</span> model.depth<span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">;</span>
+    <span style="color: #a52a2a;">{</span>model <span style="color: #0000FF;">with</span> status <span style="color: #a52a2a;">=</span> <span style="color: #000000; background-color: #FFFFFF;">Thinking</span><span style="color: #a52a2a;">},</span> <span style="color: #6434A3;">Cmd.</span>none
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Move</span> _ <span style="color: #a52a2a;">-&gt;</span> model<span style="color: #a52a2a;">,</span> <span style="color: #6434A3;">Cmd.</span>none
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Ready</span> <span style="color: #a52a2a;">-&gt;</span> model<span style="color: #a52a2a;">,</span> <span style="color: #6434A3;">Cmd.</span>none
+</pre>
+</div>
+
+<p>
+In this code snippet, you can also see how we can send data out of Bucklescript: since <code>model.stockfish</code> is bound to an external JS object, using its <code>##postMessage</code> method will leave the realm of Bucklescript.  Since we defined it as returning unit, we don&rsquo;t expect anything as the return value.
+</p>
+
+<p>
+Here&rsquo;s a <code>view</code> function for Stockfish to set its strength and autoplay properties:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-ocaml"><span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">view</span><span style="color: #BA36A5;"> model</span> <span style="color: #a52a2a;">=</span>
+  <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #000000; font-weight: bold;">open </span><span style="color: #6434A3;">Html</span> <span style="color: #000000; font-weight: bold;">in</span>
+  form <span style="color: #a52a2a;">[]</span>
+    <span style="color: #a52a2a;">[</span> node <span style="color: #008000;">"fieldset"</span> <span style="color: #a52a2a;">[]</span>
+        <span style="color: #a52a2a;">[</span> node <span style="color: #008000;">"legend"</span> <span style="color: #a52a2a;">[]</span> <span style="color: #a52a2a;">[</span>text <span style="color: #008000;">"Stockfish"</span><span style="color: #a52a2a;">]</span>
+        <span style="color: #a52a2a;">;</span> p <span style="color: #a52a2a;">[]</span>
+            <span style="color: #a52a2a;">[</span> label <span style="color: #a52a2a;">[</span>for' <span style="color: #008000;">"strength"</span><span style="color: #a52a2a;">]</span>
+                <span style="color: #a52a2a;">[</span>text <span style="color: #008000;">"strength"</span>
+                <span style="color: #a52a2a;">;</span> input'
+                    <span style="color: #a52a2a;">[</span> type' <span style="color: #008000;">"range"</span>
+                    <span style="color: #a52a2a;">;</span> string_of_int model.depth <span style="color: #a52a2a;">|&gt;</span> value
+                    <span style="color: #a52a2a;">;</span> <span style="color: #6434A3;">Attributes.</span>min <span style="color: #008000;">"1"</span>
+                    <span style="color: #a52a2a;">;</span> <span style="color: #6434A3;">Attributes.</span>max <span style="color: #008000;">"24"</span>
+                    <span style="color: #a52a2a;">;</span> <span style="color: #6434A3;">Attributes.</span>step <span style="color: #008000;">"1"</span>
+                    <span style="color: #a52a2a;">;</span> onInput set_depth
+                    <span style="color: #a52a2a;">;</span> id <span style="color: #008000;">"strength"</span>
+                    <span style="color: #a52a2a;">]</span>
+                    <span style="color: #a52a2a;">[]</span> <span style="color: #a52a2a;">]</span> <span style="color: #a52a2a;">]</span>
+        <span style="color: #a52a2a;">;</span> p <span style="color: #a52a2a;">[]</span>
+            <span style="color: #a52a2a;">[</span> label <span style="color: #a52a2a;">[</span>for' <span style="color: #008000;">"autoplay"</span><span style="color: #a52a2a;">]</span>
+                <span style="color: #a52a2a;">[</span>text <span style="color: #008000;">"autoplay"</span>
+                <span style="color: #a52a2a;">;</span> input'
+                    <span style="color: #a52a2a;">[</span> type' <span style="color: #008000;">"checkbox"</span>
+                    <span style="color: #a52a2a;">;</span> onCheck autoplay
+                    <span style="color: #a52a2a;">;</span> id <span style="color: #008000;">"autoplay"</span>
+                    <span style="color: #a52a2a;">;</span> checked model.autoplay
+                    <span style="color: #a52a2a;">]</span>
+                    <span style="color: #a52a2a;">[]</span> <span style="color: #a52a2a;">]</span> <span style="color: #a52a2a;">]</span> <span style="color: #a52a2a;">]</span> <span style="color: #a52a2a;">]</span>
+</pre>
+</div>
+
+<p>
+Let&rsquo;s add a button to fire up Stockfish in the main model:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-ocaml"><span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">view</span><span style="color: #BA36A5;"> model</span> <span style="color: #a52a2a;">=</span>
+  <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">game</span> <span style="color: #a52a2a;">=</span> model <span style="color: #a52a2a;">|</span>. model.game <span style="color: #000000; font-weight: bold;">in</span>
+  <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">game_view</span> <span style="color: #a52a2a;">=</span> <span style="color: #6434A3;">Game.</span>view game <span style="color: #a52a2a;">|&gt;</span> map game_msg <span style="color: #000000; font-weight: bold;">in</span>
+  <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">game_status</span> <span style="color: #a52a2a;">=</span> <span style="color: #6434A3;">Chess.</span>game_status game.position <span style="color: #000000; font-weight: bold;">in</span>
+  <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">interactable</span> <span style="color: #a52a2a;">=</span>
+    <span style="color: #0000FF;">match</span> game_status <span style="color: #0000FF;">with</span>
+    <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Play</span> move_list <span style="color: #a52a2a;">-&gt;</span>
+      <span style="color: #6434A3;">Board.</span><span style="color: #000000; background-color: #FFFFFF;">Interactable</span> <span style="color: #a52a2a;">(</span>game.position.turn<span style="color: #a52a2a;">,</span> move_list<span style="color: #a52a2a;">)</span>
+    <span style="color: #a52a2a;">|</span> _ <span style="color: #a52a2a;">-&gt;</span> <span style="color: #6434A3;">Board.</span><span style="color: #000000; background-color: #FFFFFF;">Not_interactable</span> <span style="color: #000000; font-weight: bold;">in</span>
+  main <span style="color: #a52a2a;">[]</span>
+    <span style="color: #a52a2a;">[</span> section <span style="color: #a52a2a;">[</span>id <span style="color: #008000;">"board"</span><span style="color: #a52a2a;">]</span>
+        <span style="color: #a52a2a;">[</span> header_nav_view
+        <span style="color: #a52a2a;">;</span> <span style="color: #6434A3;">Board.</span>view interactable game.position.ar model.board
+          <span style="color: #a52a2a;">|&gt;</span> map board_msg
+        <span style="color: #a52a2a;">;</span> whose_move_view <span style="color: #a52a2a;">(</span>model.board.orientation<span style="color: #a52a2a;">,</span> game.position.turn<span style="color: #a52a2a;">)::</span>
+          <span style="color: #6434A3;">List.</span>map <span style="color: #a52a2a;">(</span>map board_msg<span style="color: #a52a2a;">)</span> <span style="color: #6434A3;">Board.</span>buttons_view <span style="color: #a52a2a;">@</span>
+          <span style="color: #6434A3;">List.</span>map <span style="color: #a52a2a;">(</span>map game_msg<span style="color: #a52a2a;">)</span> <span style="color: #6434A3;">Game.</span>buttons_view
+          <span style="color: #a52a2a;">|&gt;</span> nav <span style="color: #a52a2a;">[</span>id <span style="color: #008000;">"buttons"</span><span style="color: #a52a2a;">]</span>
+
+        <span style="color: #a52a2a;">;</span> p <span style="color: #a52a2a;">[]</span>
+            <span style="color: #000000; font-weight: bold;">begin</span> <span style="color: #0000FF;">match</span> model.stockfish <span style="color: #0000FF;">with</span>
+              <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">None</span> <span style="color: #a52a2a;">-&gt;</span> <span style="color: #a52a2a;">[</span> button <span style="color: #a52a2a;">[</span>onClick <span style="color: #000000; background-color: #FFFFFF;">Load_stockfish</span><span style="color: #a52a2a;">]</span>
+                            <span style="color: #a52a2a;">[</span><span style="color: #008000;">"load Stockfish"</span> <span style="color: #a52a2a;">|&gt;</span> text<span style="color: #a52a2a;">]</span> <span style="color: #a52a2a;">]</span>
+              <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Some</span> stockfish <span style="color: #a52a2a;">-&gt;</span>
+                <span style="color: #a52a2a;">[</span> <span style="color: #6434A3;">Stockfish.</span>view stockfish
+                  <span style="color: #a52a2a;">|&gt;</span> map stockfish_msg
+                <span style="color: #a52a2a;">;</span> <span style="color: #000000; font-weight: bold;">begin</span> <span style="color: #0000FF;">match</span> stockfish.status <span style="color: #0000FF;">with</span>
+                  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Idle</span> <span style="color: #a52a2a;">-&gt;</span>
+                    <span style="color: #000000; font-weight: bold;">begin</span> <span style="color: #0000FF;">match</span> interactable <span style="color: #0000FF;">with</span>
+                      <span style="color: #a52a2a;">|</span> <span style="color: #6434A3;">Board.</span><span style="color: #000000; background-color: #FFFFFF;">Not_interactable</span> <span style="color: #a52a2a;">-&gt;</span> <span style="color: #6434A3;">Board.</span>result_view game_status
+                      <span style="color: #a52a2a;">|</span> _ <span style="color: #a52a2a;">-&gt;</span> button
+                               <span style="color: #a52a2a;">[</span>game.position <span style="color: #a52a2a;">|&gt;</span> <span style="color: #6434A3;">Chess.</span>fen_of_position
+                                <span style="color: #a52a2a;">|&gt;</span> stockfish_move <span style="color: #a52a2a;">|&gt;</span> onClick<span style="color: #a52a2a;">]</span>
+                               <span style="color: #a52a2a;">[</span>text <span style="color: #008000;">"move, computer!"</span><span style="color: #a52a2a;">]</span>
+                    <span style="color: #000000; font-weight: bold;">end</span>
+                  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Loading</span> <span style="color: #a52a2a;">-&gt;</span> text <span style="color: #008000;">"loading Stockfish"</span>
+                  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Thinking</span> <span style="color: #a52a2a;">-&gt;</span> text <span style="color: #008000;">"Stockfish is thinking"</span>
+                <span style="color: #000000; font-weight: bold;">end</span>
+                <span style="color: #a52a2a;">]</span>
+            <span style="color: #000000; font-weight: bold;">end</span>
+        <span style="color: #a52a2a;">]</span>
+</pre>
+</div>
+
+<p>
+At this point, we only need to take care of a small detail:  Stockfish expects the current position in <a href="http://www.mychess.de/ChessNotation.htm">FEN notation</a>.  Here&rsquo;s the conversion function, put it in <code>src/Chess.ml</code>:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-ocaml"><span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">fen_of_position</span><span style="color: #BA36A5;"> position</span> <span style="color: #a52a2a;">=</span>
+  <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">coordinates</span> <span style="color: #a52a2a;">=</span> <span style="color: #a52a2a;">[</span>7<span style="color: #a52a2a;">;</span> 6<span style="color: #a52a2a;">;</span> 5<span style="color: #a52a2a;">;</span> 4<span style="color: #a52a2a;">;</span> 3<span style="color: #a52a2a;">;</span> 2<span style="color: #a52a2a;">;</span> 1<span style="color: #a52a2a;">;</span> 0<span style="color: #a52a2a;">]</span> <span style="color: #000000; font-weight: bold;">in</span>
+  <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">char_of_empty</span><span style="color: #BA36A5;"> i</span> <span style="color: #a52a2a;">=</span> <span style="color: #008000;">"0123456789"</span>.<span style="color: #a52a2a;">[</span>i<span style="color: #a52a2a;">]</span> <span style="color: #000000; font-weight: bold;">in</span>
+
+  <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">rank</span><span style="color: #BA36A5;"> n</span> <span style="color: #a52a2a;">=</span>
+    <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #000000; font-weight: bold;">rec</span> <span style="color: #006699;">loop</span><span style="color: #BA36A5;"> </span><span style="color: #a52a2a;">(</span><span style="color: #BA36A5;">acc</span><span style="color: #a52a2a;">,</span><span style="color: #BA36A5;"> empty</span><span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">=</span> <span style="color: #0000FF;">function</span>
+      <span style="color: #a52a2a;">|</span> <span style="color: #a52a2a;">[]</span> <span style="color: #a52a2a;">-&gt;</span> acc<span style="color: #a52a2a;">,</span> empty
+      <span style="color: #a52a2a;">|</span> hd<span style="color: #a52a2a;">::</span>tl <span style="color: #a52a2a;">-&gt;</span> 
+        <span style="color: #000000; font-weight: bold;">begin</span> <span style="color: #0000FF;">match</span> position.ar.<span style="color: #a52a2a;">(</span>hd<span style="color: #a52a2a;">)</span>.<span style="color: #a52a2a;">(</span>n<span style="color: #a52a2a;">)</span> <span style="color: #0000FF;">with</span>
+          <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Empty</span> <span style="color: #a52a2a;">-&gt;</span> loop <span style="color: #a52a2a;">(</span>acc<span style="color: #a52a2a;">,</span> empty <span style="color: #a52a2a;">+</span> 1<span style="color: #a52a2a;">)</span> tl
+          <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Piece</span> piece <span style="color: #a52a2a;">-&gt;</span> 
+            <span style="color: #0000FF;">if</span> empty <span style="color: #a52a2a;">&gt;</span> 0
+            <span style="color: #0000FF;">then</span> loop <span style="color: #a52a2a;">(</span>char_of_piece piece<span style="color: #a52a2a;">::</span>char_of_empty empty<span style="color: #a52a2a;">::</span>acc<span style="color: #a52a2a;">,</span> 0<span style="color: #a52a2a;">)</span> tl
+            <span style="color: #0000FF;">else</span> loop <span style="color: #a52a2a;">(</span>char_of_piece piece<span style="color: #a52a2a;">::</span>acc<span style="color: #a52a2a;">,</span> 0<span style="color: #a52a2a;">)</span> tl
+        <span style="color: #000000; font-weight: bold;">end</span> <span style="color: #000000; font-weight: bold;">in</span>
+    <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">acc</span><span style="color: #a52a2a;">,</span><span style="color: #BA36A5;"> empty</span> <span style="color: #a52a2a;">=</span> loop <span style="color: #a52a2a;">([],</span> 0<span style="color: #a52a2a;">)</span> coordinates <span style="color: #000000; font-weight: bold;">in</span>
+    <span style="color: #6434A3;">Opal.</span>implode <span style="color: #a52a2a;">(</span><span style="color: #0000FF;">if</span> empty <span style="color: #a52a2a;">&gt;</span> 0 <span style="color: #0000FF;">then</span> char_of_empty empty<span style="color: #a52a2a;">::</span>acc <span style="color: #0000FF;">else</span> acc<span style="color: #a52a2a;">)</span> <span style="color: #000000; font-weight: bold;">in</span>
+
+  <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">board</span> <span style="color: #a52a2a;">=</span>
+    <span style="color: #6434A3;">List.</span>map rank coordinates
+    <span style="color: #a52a2a;">|&gt;</span> <span style="color: #6434A3;">String.</span>concat <span style="color: #008000;">"/"</span>
+  <span style="color: #000000; font-weight: bold;">in</span>
+  <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">full_move</span> <span style="color: #a52a2a;">=</span> position.number <span style="color: #a52a2a;">/</span> 2 <span style="color: #a52a2a;">+</span> 1 <span style="color: #000000; font-weight: bold;">in</span>
+  <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">en_passant</span> <span style="color: #a52a2a;">=</span>
+    <span style="color: #0000FF;">match</span> position.en_passant <span style="color: #0000FF;">with</span>
+    <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">None</span> <span style="color: #a52a2a;">-&gt;</span> <span style="color: #008000;">"-"</span>
+    <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Some</span> file <span style="color: #a52a2a;">-&gt;</span> <span style="color: #6434A3;">Printf.</span>sprintf <span style="color: #008000;">"%c%c"</span> <span style="color: #a52a2a;">(</span>char_of_file file<span style="color: #a52a2a;">)</span>
+                     <span style="color: #a52a2a;">(</span><span style="color: #0000FF;">if</span> position.turn <span style="color: #a52a2a;">=</span> <span style="color: #000000; background-color: #FFFFFF;">White</span> <span style="color: #0000FF;">then</span> <span style="color: #008000;">'6'</span> <span style="color: #0000FF;">else</span> <span style="color: #008000;">'3'</span><span style="color: #a52a2a;">)</span> <span style="color: #000000; font-weight: bold;">in</span>
+
+  <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">castling_white</span> <span style="color: #a52a2a;">=</span>
+    <span style="color: #0000FF;">match</span> position.cas_w <span style="color: #0000FF;">with</span>
+    <span style="color: #a52a2a;">|</span> <span style="color: #D0372D;">true</span><span style="color: #a52a2a;">,</span> <span style="color: #D0372D;">true</span> <span style="color: #a52a2a;">-&gt;</span> <span style="color: #008000;">"KQ"</span>
+    <span style="color: #a52a2a;">|</span> <span style="color: #D0372D;">true</span><span style="color: #a52a2a;">,</span> <span style="color: #D0372D;">false</span> <span style="color: #a52a2a;">-&gt;</span> <span style="color: #008000;">"Q"</span>
+    <span style="color: #a52a2a;">|</span> <span style="color: #D0372D;">false</span><span style="color: #a52a2a;">,</span> <span style="color: #D0372D;">true</span> <span style="color: #a52a2a;">-&gt;</span> <span style="color: #008000;">"K"</span>
+    <span style="color: #a52a2a;">|</span> <span style="color: #D0372D;">false</span><span style="color: #a52a2a;">,</span> <span style="color: #D0372D;">false</span> <span style="color: #a52a2a;">-&gt;</span> <span style="color: #008000;">""</span> <span style="color: #000000; font-weight: bold;">in</span>
+  <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">castling_black</span> <span style="color: #a52a2a;">=</span>
+    <span style="color: #0000FF;">match</span> position.cas_b <span style="color: #0000FF;">with</span>
+    <span style="color: #a52a2a;">|</span> <span style="color: #D0372D;">true</span><span style="color: #a52a2a;">,</span> <span style="color: #D0372D;">true</span> <span style="color: #a52a2a;">-&gt;</span> <span style="color: #008000;">"kq"</span>
+    <span style="color: #a52a2a;">|</span> <span style="color: #D0372D;">true</span><span style="color: #a52a2a;">,</span> <span style="color: #D0372D;">false</span> <span style="color: #a52a2a;">-&gt;</span> <span style="color: #008000;">"q"</span>
+    <span style="color: #a52a2a;">|</span> <span style="color: #D0372D;">false</span><span style="color: #a52a2a;">,</span> <span style="color: #D0372D;">true</span> <span style="color: #a52a2a;">-&gt;</span> <span style="color: #008000;">"k"</span>
+    <span style="color: #a52a2a;">|</span> <span style="color: #D0372D;">false</span><span style="color: #a52a2a;">,</span> <span style="color: #D0372D;">false</span> <span style="color: #a52a2a;">-&gt;</span> <span style="color: #008000;">""</span> <span style="color: #000000; font-weight: bold;">in</span>
+  <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">castling</span> <span style="color: #a52a2a;">=</span>
+    <span style="color: #0000FF;">if</span> castling_white <span style="color: #a52a2a;">=</span> <span style="color: #008000;">""</span> <span style="color: #a52a2a;">&amp;&amp;</span> castling_black <span style="color: #a52a2a;">=</span> <span style="color: #008000;">""</span>
+    <span style="color: #0000FF;">then</span> <span style="color: #008000;">""</span> <span style="color: #0000FF;">else</span> castling_white <span style="color: #a52a2a;">^</span> castling_black <span style="color: #000000; font-weight: bold;">in</span>
+
+  <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">turn</span> <span style="color: #a52a2a;">=</span> <span style="color: #0000FF;">match</span> position.turn <span style="color: #0000FF;">with</span> <span style="color: #000000; background-color: #FFFFFF;">White</span> <span style="color: #a52a2a;">-&gt;</span> <span style="color: #008000;">'w'</span> <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Black</span> <span style="color: #a52a2a;">-&gt;</span> <span style="color: #008000;">'b'</span> <span style="color: #000000; font-weight: bold;">in</span>
+
+  <span style="color: #6434A3;">Printf.</span>sprintf <span style="color: #008000;">"%s %c %s %s %d %d"</span> board turn castling en_passant position.irr_change full_move
+</pre>
+</div>
+
+<p>
+Good!  You should now be able to make Stockfish play moves.  Play with the strength slider, but be aware that Stockfish will need a couple of minutes to make a (Grandmaster-strength) move on the higher levels.
+</p>
+
+<p>
+Here&rsquo;s the cherry on the top:  When you check the &ldquo;autoplay&rdquo; checkbox, Stockfish will play a move automatically when you make one:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-ocaml"><span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">update</span><span style="color: #BA36A5;"> model</span> <span style="color: #a52a2a;">=</span> <span style="color: #0000FF;">function</span>
+  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Board_msg</span> <span style="color: #a52a2a;">(</span><span style="color: #000000; background-color: #FFFFFF;">Move</span> move<span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">-&gt;</span>
+    <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">game</span><span style="color: #a52a2a;">,</span><span style="color: #BA36A5;"> cmd</span> <span style="color: #a52a2a;">=</span> <span style="color: #6434A3;">Game.</span>update <span style="color: #a52a2a;">(</span>model <span style="color: #a52a2a;">|</span>. model.game<span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">(</span><span style="color: #6434A3;">Game.</span><span style="color: #000000; background-color: #FFFFFF;">Make_move</span> move<span style="color: #a52a2a;">)</span> <span style="color: #000000; font-weight: bold;">in</span>
+    <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">autoplay_cmd</span> <span style="color: #a52a2a;">=</span> <span style="color: #0000FF;">match</span> model.stockfish <span style="color: #0000FF;">with</span>
+      <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">None</span> <span style="color: #a52a2a;">-&gt;</span> <span style="color: #6434A3;">Cmd.</span>none
+      <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Some</span> stockfish <span style="color: #a52a2a;">-&gt;</span>
+        <span style="color: #0000FF;">if</span> stockfish.autoplay <span style="color: #0000FF;">then</span>
+          game.position
+          <span style="color: #a52a2a;">|&gt;</span> <span style="color: #6434A3;">Chess.</span>fen_of_position
+          <span style="color: #a52a2a;">|&gt;</span> stockfish_move <span style="color: #a52a2a;">|&gt;</span> <span style="color: #6434A3;">Cmd.</span>msg
+        <span style="color: #0000FF;">else</span> <span style="color: #6434A3;">Cmd.</span>none <span style="color: #000000; font-weight: bold;">in</span>
+    model <span style="color: #a52a2a;">|&gt;</span> model.game <span style="color: #a52a2a;">^=</span> game<span style="color: #a52a2a;">,</span> <span style="color: #6434A3;">Cmd.</span>batch <span style="color: #a52a2a;">[</span><span style="color: #6434A3;">Cmd.</span>map game_msg cmd<span style="color: #a52a2a;">;</span> autoplay_cmd<span style="color: #a52a2a;">]</span>
+</pre>
+</div>
+
+<p>
+That&rsquo;s it for this time! You&rsquo;ve reached the end of this tutorial.  I hope you enjoyed your journey into functional front-end programming! <a href="./demo.html">Your app should now look like this demo.</a>
+</p>
+
+<p>
+If you have any comments, questions or suggestions, let me know!  You can reach me on Github or by e-mail (check the <a href="file:///">home page</a> for details).
+</p>
+</div>
+</div>
 </div>
 </body>
 </html>
