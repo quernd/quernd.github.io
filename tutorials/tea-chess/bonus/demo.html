@@ -22,16 +22,17 @@ Make moves, take them back and make alternative moves.  Moves will be
     strongest chess programs, <a
     href="https://stockfishchess.org/">Stockfish</a>, right in your browser. </p></div>
     <div id="tea"></div>
-    <script>
-      stockfish = new Worker('js/stockfish.js');
-      stockfish.onmessage = function(s) {
-        document.dispatchEvent(new CustomEvent("stockfish", {detail: s}));
-      }
-    </script>
     <script src="main.js"></script>
     <script>
-      setTimeout(function() {
-        var app = starter.main(document.getElementById("tea"));
+stockfish_loader = function (handler) {
+        stockfish = new Worker('js/stockfish.js');
+        stockfish.onmessage = function(msg) {
+app.pushMsg(handler(msg.data));
+};
+return stockfish;
+};
+setTimeout(function() {
+        app = starter.main(document.getElementById("tea"));
       }, 1)
     </script>
   </body>
