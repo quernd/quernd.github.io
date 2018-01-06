@@ -3,7 +3,7 @@
 "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
 <head>
-<!-- 2018-01-05 Fri 22:58 -->
+<!-- 2018-01-06 Sat 00:16 -->
 <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Twelve Days of Christmas #12</title>
@@ -404,6 +404,102 @@ Now we&rsquo;re ready to define the <code>view</code> function:
                 <span style="color: #a52a2a;">|&gt;</span> past_view c past <span style="color: #000000; font-weight: bold;">in</span>
   line_context_view c' context acc
   <span style="color: #a52a2a;">|&gt;</span> make_line
+</pre>
+</div>
+
+<p>
+This is the corresponding CSS:
+</p>
+<div class="org-src-container">
+<pre class="src src-css"><span style="color: #0000ff; font-weight: bold;">li.move </span>{
+  <span style="color: #00AA00;">display</span>: inline;
+}
+<span style="color: #0000ff; font-weight: bold;">li.move:after </span>{
+  <span style="color: #00AA00;">content</span>: <span style="color: #008000;">" "</span>;
+}
+<span style="color: #0000ff; font-weight: bold;">li.move.highlight &gt; span.move </span>{
+  <span style="color: #00AA00;">background</span>: #ff0;
+}
+<span style="color: #0000ff; font-weight: bold;">span.move </span>{
+  <span style="color: #00AA00;">cursor</span>: pointer;
+}
+<span style="color: #0000ff; font-weight: bold;">span.number </span>{
+    <span style="color: #00AA00;">color</span>: #808080;
+    <span style="color: #00AA00;">display</span>: none;
+}
+<span style="color: #0000ff; font-weight: bold;">li.move.white &gt; span.number:after </span>{
+  <span style="color: #00AA00;">content</span>: <span style="color: #008000;">".\00a0"</span>;
+}
+<span style="color: #0000ff; font-weight: bold;">li.move.black &gt; span.number:after </span>{
+    <span style="color: #00AA00;">content</span>: <span style="color: #008000;">"...\00a0"</span>;
+}
+li.move.white &gt; span.number,
+ul.moves &gt; li:first-child &gt; span.number,
+<span style="color: #0000ff; font-weight: bold;">li.move.variations + li.move &gt; span.number </span>{
+    <span style="color: #00AA00;">display</span>: inline;
+}
+
+<span style="color: #0000ff; font-weight: bold;">span.comment </span>{
+  <span style="color: #00AA00;">color</span>: #008000;
+}
+
+<span style="color: #0000ff; font-weight: bold;">ul.moves </span>{
+    <span style="color: #00AA00;">background</span>: #fff;
+}
+
+<span style="color: #0000ff; font-weight: bold;">ul.moves </span>{
+    <span style="color: #00AA00;">margin</span>: .25em;
+    <span style="color: #00AA00;">padding</span>: .25em;
+    <span style="color: #00AA00;">list-style-type</span>: none;
+}
+</pre>
+</div>
+
+<p>
+Let&rsquo;s also style the nested variations before they get out of hand:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-css"><span style="color: #0000ff; font-weight: bold;">ol.variations </span>{
+    <span style="color: #00AA00;">list-style-type</span>: upper-latin;
+    <span style="color: #00AA00;">padding-left</span>: 20px;
+}
+<span style="color: #0000ff; font-weight: bold;">ol.variations ul.moves </span>{
+    <span style="color: #00AA00;">background</span>: #d3d3d3;
+}
+<span style="color: #0000ff; font-weight: bold;">ol.variations ol.variations </span>{
+    <span style="color: #00AA00;">list-style-type</span>: upper-roman;
+    <span style="color: #00AA00;">font-size</span>: small;
+}
+<span style="color: #0000ff; font-weight: bold;">ol.variations ol.variations ul.moves </span>{
+    <span style="color: #00AA00;">background</span>: #fff;
+}
+<span style="color: #0000ff; font-weight: bold;">ol.variations ol.variations ol.variations </span>{
+    <span style="color: #00AA00;">list-style-type</span>: lower-latin;
+}
+<span style="color: #0000ff; font-weight: bold;">ol.variations ol.variations ol.variations ul.moves </span>{
+    <span style="color: #00AA00;">background</span>: #d3d3d3;
+}
+<span style="color: #0000ff; font-weight: bold;">ol.variations ol.variations ol.variations ol.variations </span>{
+    <span style="color: #00AA00;">list-style-type</span>: lower-roman;
+    <span style="color: #00AA00;">font-size</span>: x-small;
+}
+<span style="color: #0000ff; font-weight: bold;">ol.variations ol.variations ol.variations ol.variations ul.moves </span>{
+    <span style="color: #00AA00;">background</span>: #fff;
+}
+<span style="color: #0000ff; font-weight: bold;">ol.variations ol.variations ol.variations ol.variations ol.variations </span>{
+    <span style="color: #00AA00;">list-style-type</span>: lower-greek;
+}
+<span style="color: #0000ff; font-weight: bold;">ol.variations ol.variations ol.variations ol.variations ol.variations ul.moves </span>{
+    <span style="color: #00AA00;">background</span>: #d3d3d3;
+}
+<span style="color: #0000ff; font-weight: bold;">ol.variations ol.variations ol.variations ol.variations ol.variations ol.variations </span>{
+    <span style="color: #00AA00;">list-style-type</span>: circle;
+    <span style="color: #00AA00;">font-size</span>: xx-small;
+}
+<span style="color: #0000ff; font-weight: bold;">ol.variations ol.variations ol.variations ol.variations ol.variations ol.variations ul.moves </span>{
+    <span style="color: #00AA00;">background</span>: #fff;
+}
 </pre>
 </div>
 
