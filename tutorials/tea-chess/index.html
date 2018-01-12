@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<!-- 2018-01-12 Fri 22:22 -->
+<!-- 2018-01-12 Fri 23:40 -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Chess in Bucklescript-TEA</title>
@@ -1898,8 +1898,7 @@ such as <code>map2</code>.  Here are the decoders we will need for the
 <div class="org-src-container">
 <pre class="src src-ocaml"><span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">cartesian_decoder</span><span style="color: #BA36A5;"> field_x field_y</span> <span style="color: #a52a2a;">=</span>
   <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #000000; font-weight: bold;">open </span><span style="color: #6434A3;">Json.Decoder</span> <span style="color: #000000; font-weight: bold;">in</span>
-  <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #000000; font-weight: bold;">open </span><span style="color: #6434A3;">Mouse</span> <span style="color: #000000; font-weight: bold;">in</span>
-  map2 <span style="color: #a52a2a;">(</span><span style="color: #0000FF;">fun</span> <span style="color: #BA36A5;">x y</span> <span style="color: #a52a2a;">-&gt;</span> <span style="color: #a52a2a;">{</span>x<span style="color: #a52a2a;">;</span> y<span style="color: #a52a2a;">})</span>
+  map2 <span style="color: #a52a2a;">(</span><span style="color: #0000FF;">fun</span> <span style="color: #BA36A5;">x y</span> <span style="color: #a52a2a;">-&gt;</span> <span style="color: #6434A3;">Mouse.</span><span style="color: #a52a2a;">{</span>x<span style="color: #a52a2a;">;</span> y<span style="color: #a52a2a;">})</span>
     <span style="color: #a52a2a;">(</span>field field_x int<span style="color: #a52a2a;">)</span>
     <span style="color: #a52a2a;">(</span>field field_y int<span style="color: #a52a2a;">)</span>
 
@@ -1923,7 +1922,8 @@ such as <code>map2</code>.  Here are the decoders we will need for the
 The first, <code>cartesian_decoder</code> is a template for arbitrary decoders
 with two fields.  It uses two <code>field</code> decoders for the given fields
 and returns a record <code>{x; y}</code> (of type <code>Mouse.position</code>, that&rsquo;s why we
-have to open <code>Mouse</code> &#x2013; alternatively, we could annotate the type).
+have to prefix it with <code>Mouse</code> &#x2013; alternatively, we could open <code>Mouse</code>
+or annotate the type explicitly).
 Notice how <code>map2</code> takes a function that combines the output of the two
 decoders it takes as its other arguments.
 </p>
@@ -1956,11 +1956,9 @@ function we needed!
 
 <div class="org-src-container">
 <pre class="src src-ocaml"><span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">handler</span><span style="color: #BA36A5;"> decoder msg event</span> <span style="color: #a52a2a;">=</span>
-  <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #000000; font-weight: bold;">open </span><span style="color: #6434A3;">Result</span> <span style="color: #000000; font-weight: bold;">in</span>
-  <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">result</span> <span style="color: #a52a2a;">=</span> decoder event <span style="color: #000000; font-weight: bold;">in</span>
-  <span style="color: #0000FF;">match</span> result <span style="color: #0000FF;">with</span>
-  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Ok</span> result <span style="color: #a52a2a;">-&gt;</span> <span style="color: #000000; background-color: #FFFFFF;">Some</span> <span style="color: #a52a2a;">(</span>msg result<span style="color: #a52a2a;">)</span>
-  <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Error</span> _ <span style="color: #a52a2a;">-&gt;</span> None
+  <span style="color: #0000FF;">match</span> decoder event <span style="color: #0000FF;">with</span>
+  <span style="color: #a52a2a;">|</span> <span style="color: #6434A3;">Result.</span><span style="color: #000000; background-color: #FFFFFF;">Ok</span> result <span style="color: #a52a2a;">-&gt;</span> <span style="color: #000000; background-color: #FFFFFF;">Some</span> <span style="color: #a52a2a;">(</span>msg result<span style="color: #a52a2a;">)</span>
+  <span style="color: #a52a2a;">|</span> <span style="color: #6434A3;">Result.</span><span style="color: #000000; background-color: #FFFFFF;">Error</span> _ <span style="color: #a52a2a;">-&gt;</span> None
 </pre>
 </div>
 </div>
@@ -4391,8 +4389,7 @@ everything up nicely:
 <div class="org-src-container">
 <pre class="src src-ocaml"><span style="color: #8D8D84;">(* </span><span style="color: #8D8D84; font-style: italic;">nonstandard 1/2 </span><span style="color: #8D8D84;">*)</span>
 <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">result</span> <span style="color: #a52a2a;">=</span>
-  <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #000000; font-weight: bold;">open </span><span style="color: #6434A3;">Chess</span> <span style="color: #000000; font-weight: bold;">in</span>
-  <span style="color: #a52a2a;">(</span>token <span style="color: #008000;">"1-0"</span> <span style="color: #a52a2a;">&gt;&gt;</span> return <span style="color: #a52a2a;">(</span><span style="color: #000000; background-color: #FFFFFF;">Some</span> <span style="color: #a52a2a;">(</span><span style="color: #000000; background-color: #FFFFFF;">Win</span> <span style="color: #000000; background-color: #FFFFFF;">White</span><span style="color: #a52a2a;">)))</span> <span style="color: #a52a2a;">&lt;|&gt;</span>
+  <span style="color: #a52a2a;">(</span>token <span style="color: #008000;">"1-0"</span> <span style="color: #a52a2a;">&gt;&gt;</span> return <span style="color: #a52a2a;">(</span><span style="color: #000000; background-color: #FFFFFF;">Some</span> <span style="color: #a52a2a;">(</span><span style="color: #6434A3;">Chess.</span><span style="color: #000000; background-color: #FFFFFF;">Win</span> <span style="color: #000000; background-color: #FFFFFF;">White</span><span style="color: #a52a2a;">)))</span> <span style="color: #a52a2a;">&lt;|&gt;</span>
   <span style="color: #a52a2a;">(</span>token <span style="color: #008000;">"1/2-1/2"</span> <span style="color: #a52a2a;">&gt;&gt;</span> return <span style="color: #a52a2a;">(</span><span style="color: #000000; background-color: #FFFFFF;">Some</span> <span style="color: #000000; background-color: #FFFFFF;">Draw</span><span style="color: #a52a2a;">))</span> <span style="color: #a52a2a;">&lt;|&gt;</span>
   <span style="color: #a52a2a;">(</span>token <span style="color: #008000;">"1/2"</span> <span style="color: #a52a2a;">&gt;&gt;</span> return <span style="color: #a52a2a;">(</span><span style="color: #000000; background-color: #FFFFFF;">Some</span> <span style="color: #000000; background-color: #FFFFFF;">Draw</span><span style="color: #a52a2a;">))</span> <span style="color: #a52a2a;">&lt;|&gt;</span>
   <span style="color: #a52a2a;">(</span>token <span style="color: #008000;">"0-1"</span> <span style="color: #a52a2a;">&gt;&gt;</span> return <span style="color: #a52a2a;">(</span><span style="color: #000000; background-color: #FFFFFF;">Some</span> <span style="color: #a52a2a;">(</span><span style="color: #000000; background-color: #FFFFFF;">Win</span> <span style="color: #000000; background-color: #FFFFFF;">Black</span><span style="color: #a52a2a;">)))</span> <span style="color: #a52a2a;">&lt;|&gt;</span>
@@ -4404,6 +4401,17 @@ everything up nicely:
   line <span style="color: #a52a2a;">()</span> <span style="color: #a52a2a;">&lt;&lt;</span> spaces <span style="color: #a52a2a;">&gt;&gt;=</span> <span style="color: #0000FF;">fun</span> <span style="color: #BA36A5;">moves</span> <span style="color: #a52a2a;">-&gt;</span>
   result <span style="color: #a52a2a;">&gt;&gt;=</span> <span style="color: #0000FF;">fun</span> <span style="color: #BA36A5;">result</span> <span style="color: #a52a2a;">-&gt;</span> return <span style="color: #a52a2a;">{</span> header<span style="color: #a52a2a;">;</span> moves<span style="color: #a52a2a;">;</span> result <span style="color: #a52a2a;">}</span>
 </pre>
+</div>
+
+<div class="hint">
+<p>
+When we need to qualify a variant constructor by adding the module
+name (like <code>Chess.Win</code>), the compiler may be able to infer other
+types without annotation, simply because they have to match.  By
+qualifying <code>Win</code>, you
+don&rsquo;t have to qualify either <code>White</code>, <code>Draw</code> nor <code>Black</code>.
+</p>
+
 </div>
 </div>
 </div>
@@ -5619,8 +5627,8 @@ and the variant type, because we need to be able to listen on both
 </p>
 
 <div class="org-src-container">
-<pre class="src src-ocaml"><span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">route_of_location</span><span style="color: #BA36A5;"> </span><span style="color: #a52a2a;">(</span><span style="color: #BA36A5;">location</span><span style="color: #a52a2a;">:</span><span style="color: #6434A3;">Web.Location.</span><span style="color: #6434A3;">location</span><span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">=</span>
-  <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">route</span> <span style="color: #a52a2a;">=</span> <span style="color: #6434A3;">Js.String.</span>split <span style="color: #008000;">"/"</span> location.hash <span style="color: #000000; font-weight: bold;">in</span>
+<pre class="src src-ocaml"><span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">route_of_location</span><span style="color: #BA36A5;"> location</span> <span style="color: #a52a2a;">=</span>
+  <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">route</span> <span style="color: #a52a2a;">=</span> <span style="color: #6434A3;">Js.String.</span>split <span style="color: #008000;">"/"</span> location.<span style="color: #6434A3;">Web.Location.</span>hash <span style="color: #000000; font-weight: bold;">in</span>
   <span style="color: #0000FF;">match</span> route <span style="color: #0000FF;">with</span>
   <span style="color: #a52a2a;">|</span> <span style="color: #a52a2a;">[|</span><span style="color: #008000;">"#"</span><span style="color: #a52a2a;">;</span> <span style="color: #008000;">""</span><span style="color: #a52a2a;">|]</span> <span style="color: #a52a2a;">-&gt;</span> <span style="color: #000000; background-color: #FFFFFF;">Game</span> 1
   <span style="color: #a52a2a;">|</span> <span style="color: #a52a2a;">[|</span><span style="color: #008000;">"#"</span><span style="color: #a52a2a;">;</span> <span style="color: #008000;">"tournament"</span><span style="color: #a52a2a;">|]</span> <span style="color: #a52a2a;">-&gt;</span> <span style="color: #000000; background-color: #FFFFFF;">Tournament</span>
@@ -5633,6 +5641,16 @@ and the variant type, because we need to be able to listen on both
   <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Lichess</span> id <span style="color: #a52a2a;">-&gt;</span> <span style="color: #6434A3;">Printf.</span>sprintf <span style="color: #008000;">"#/lichess/%s"</span> id
   <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Tournament</span> <span style="color: #a52a2a;">-&gt;</span> <span style="color: #008000;">"#/tournament"</span>
 </pre>
+</div>
+
+<div class="hint">
+<p>
+When we need to access a record field from a record that was defined
+in another module, we use the funny-looking syntax above:
+<code>location.Web.Location.hash</code>, where the module name is &ldquo;infixed&rdquo; into
+the record and the field name.
+</p>
+
 </div>
 
 <p>
@@ -6721,16 +6739,16 @@ UNDER CONSTRUCTION
       <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">move</span><span style="color: #a52a2a;">,</span><span style="color: #BA36A5;"> position'</span> <span style="color: #a52a2a;">=</span> move_of_pgn position hd <span style="color: #000000; font-weight: bold;">in</span>
       <span style="color: #6434A3;">Zipper.</span><span style="color: #000000; background-color: #FFFFFF;">Var</span> <span style="color: #a52a2a;">(</span>move<span style="color: #a52a2a;">,</span> line_of_pgn position' tl<span style="color: #a52a2a;">)</span>
     <span style="color: #a52a2a;">|</span> _ <span style="color: #a52a2a;">-&gt;</span> <span style="color: #006FE0;">raise</span> <span style="color: #6434A3;">Pgn.</span><span style="color: #000000; background-color: #FFFFFF;">Parse_error</span>
-  <span style="color: #000000; font-weight: bold;">and</span> <span style="color: #006699;">move_of_pgn</span><span style="color: #BA36A5;"> position </span><span style="color: #a52a2a;">(</span><span style="color: #BA36A5;">pgn_move</span><span style="color: #a52a2a;">:</span><span style="color: #6434A3;">Pgn.</span><span style="color: #6434A3;">move</span><span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">=</span>
-    <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">move</span> <span style="color: #a52a2a;">=</span> <span style="color: #6434A3;">Pgn.</span>move_of_pgn_move position pgn_move.move <span style="color: #000000; font-weight: bold;">in</span>
+  <span style="color: #000000; font-weight: bold;">and</span> <span style="color: #006699;">move_of_pgn</span><span style="color: #BA36A5;"> position pgn_move</span> <span style="color: #a52a2a;">=</span>
+    <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">move</span> <span style="color: #a52a2a;">=</span> <span style="color: #6434A3;">Pgn.</span>move_of_pgn_move position pgn_move.<span style="color: #6434A3;">Pgn.</span>move <span style="color: #000000; font-weight: bold;">in</span>
     <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">san</span> <span style="color: #a52a2a;">=</span> <span style="color: #6434A3;">Chess.</span>san_of_move position move <span style="color: #000000; font-weight: bold;">in</span>
     <span style="color: #a52a2a;">{</span> move
     <span style="color: #a52a2a;">;</span> san
     <span style="color: #a52a2a;">;</span> pre_comments <span style="color: #a52a2a;">=</span> pgn_move.pre_comments
     <span style="color: #a52a2a;">;</span> post_comments <span style="color: #a52a2a;">=</span> pgn_move.post_comments
     <span style="color: #a52a2a;">},</span> <span style="color: #6434A3;">Chess.</span>make_move' position move
-  <span style="color: #000000; font-weight: bold;">and</span> <span style="color: #006699;">node_of_pgn</span><span style="color: #BA36A5;"> position </span><span style="color: #a52a2a;">(</span><span style="color: #BA36A5;">pgn_move</span><span style="color: #a52a2a;">:</span><span style="color: #6434A3;">Pgn.</span><span style="color: #6434A3;">move</span><span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">=</span>
-    <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">rav</span> <span style="color: #a52a2a;">=</span> <span style="color: #6434A3;">List.</span>map <span style="color: #a52a2a;">(</span>variation_of_pgn position<span style="color: #a52a2a;">)</span> pgn_move.rav <span style="color: #000000; font-weight: bold;">in</span>
+  <span style="color: #000000; font-weight: bold;">and</span> <span style="color: #006699;">node_of_pgn</span><span style="color: #BA36A5;"> position pgn_move</span> <span style="color: #a52a2a;">=</span>
+    <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">rav</span> <span style="color: #a52a2a;">=</span> <span style="color: #6434A3;">List.</span>map <span style="color: #a52a2a;">(</span>variation_of_pgn position<span style="color: #a52a2a;">)</span> pgn_move.<span style="color: #6434A3;">Pgn.</span>rav <span style="color: #000000; font-weight: bold;">in</span>
     <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">move</span><span style="color: #a52a2a;">,</span><span style="color: #BA36A5;"> position'</span> <span style="color: #a52a2a;">=</span> move_of_pgn position pgn_move <span style="color: #000000; font-weight: bold;">in</span>
     <span style="color: #6434A3;">Zipper.</span><span style="color: #000000; background-color: #FFFFFF;">Node</span> <span style="color: #a52a2a;">(</span>move<span style="color: #a52a2a;">,</span> rav<span style="color: #a52a2a;">),</span> position'
 
