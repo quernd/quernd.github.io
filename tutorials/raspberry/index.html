@@ -1,14 +1,12 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
-"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+<!DOCTYPE html>
+<html lang="en">
 <head>
-<!-- 2017-12-31 Sun 00:13 -->
-<meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
+<!-- 2018-01-12 Fri 21:08 -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Raspberry Pi Mobile Internet Router</title>
-<meta name="generator" content="Org mode" />
-<meta name="author" content="Daniel Quernheim" />
+<meta name="generator" content="Org mode">
+<meta name="author" content="Daniel Quernheim">
 <link rel='stylesheet' href='/style.css' type='text/css'/>
 </head>
 <body>
@@ -34,7 +32,7 @@ I mainly followed the Instructable tutorials by <a href="http://www.instructable
 </p>
 
 <p>
-I purchased a USB Wifi dongle (as the Raspberry Pi 2 Model B, unlike the Pi 3, doesn't have built-in Wifi) as well as a 3G GSM USB modem to hold a SIM card.  I made sure to buy device that were recommended as Raspbian-compatible.  The Wifi dongle is an <a href="http://www.edimax.com/edimax/merchandise/merchandise_detail/data/edimax/global/wireless_adapters_n150/ew-7811un/">Edimax EW-7811UN</a> ("ideal for Raspberry Pi"), and the 3G modem is a <a href="https://www.cnet.com/products/huawei-e173-wireless-cellular-modem/specs/">Huawei E173</a>.  
+I purchased a USB Wifi dongle (as the Raspberry Pi 2 Model B, unlike the Pi 3, doesn&rsquo;t have built-in Wifi) as well as a 3G GSM USB modem to hold a SIM card.  I made sure to buy device that were recommended as Raspbian-compatible.  The Wifi dongle is an <a href="http://www.edimax.com/edimax/merchandise/merchandise_detail/data/edimax/global/wireless_adapters_n150/ew-7811un/">Edimax EW-7811UN</a> (&ldquo;ideal for Raspberry Pi&rdquo;), and the 3G modem is a <a href="https://www.cnet.com/products/huawei-e173-wireless-cellular-modem/specs/">Huawei E173</a>.  
 </p>
 </div>
 </div>
@@ -43,15 +41,15 @@ I purchased a USB Wifi dongle (as the Raspberry Pi 2 Model B, unlike the Pi 3, d
 <h2 id="orgb31be4b">SSH like MacGyver</h2>
 <div class="outline-text-2" id="text-orgb31be4b">
 <p>
-You will probably be able to skip this step unless you're utterly unprepared as I was.  If you have either an ethernet cable (and your Pi has a working installation of <a href="https://www.raspbian.org/FrontPage">Raspbian</a> with SSH enabled) or a screen and a keyboard, you can go directly to the next section.
+You will probably be able to skip this step unless you&rsquo;re utterly unprepared as I was.  If you have either an ethernet cable (and your Pi has a working installation of <a href="https://www.raspbian.org/FrontPage">Raspbian</a> with SSH enabled) or a screen and a keyboard, you can go directly to the next section.
 </p>
 
 <p>
-The first problem I ran into was that while I had previously installed the Raspbian distribution on the Raspberry Pi, I was unable to log into the device.  I had a keyboard and an HDMI cable, but no screen.  Neither did I have an ethernet cable or even the adapter needed for my MacBook Air.  When trying to find out how to use a laptop as an external screen (impossible, apparently), I learned that fortunately, one can log into the Raspberry Pi via SSH over a USB connection from an Android phone with a terminal emulator by <a href="https://www.raspberrypi.org/forums/viewtopic.php?t=18916&amp;p=331361">turning one of the Pi's USB ports into an ethernet port and assigning a static IP to it</a>.  At least in theory &#x2013; in practice, this requires editing the file <code>/etc/network/interfaces</code>, which in turn requires access to the Raspberry Pi, right?  So it seems I was stuck.
+The first problem I ran into was that while I had previously installed the Raspbian distribution on the Raspberry Pi, I was unable to log into the device.  I had a keyboard and an HDMI cable, but no screen.  Neither did I have an ethernet cable or even the adapter needed for my MacBook Air.  When trying to find out how to use a laptop as an external screen (impossible, apparently), I learned that fortunately, one can log into the Raspberry Pi via SSH over a USB connection from an Android phone with a terminal emulator by <a href="https://www.raspberrypi.org/forums/viewtopic.php?t=18916&amp;p=331361">turning one of the Pi&rsquo;s USB ports into an ethernet port and assigning a static IP to it</a>.  At least in theory &#x2013; in practice, this requires editing the file <code>/etc/network/interfaces</code>, which in turn requires access to the Raspberry Pi, right?  So it seems I was stuck.
 </p>
 
 <p>
-Then it hit me that I might be able to edit the filesystem on the Raspberry Pi directly on the laptop.  Not out of the box of course, since Apple doesn't provide drivers to access Linux filesystems, but with OSXFuse maybe?  There is a <a href="https://github.com/gpz500/fuse-ext2/releases">fork of the Fuse-ext2 project</a> that worked for me so I could edit <code>/etc/network/interfaces</code> as follows:
+Then it hit me that I might be able to edit the filesystem on the Raspberry Pi directly on the laptop.  Not out of the box of course, since Apple doesn&rsquo;t provide drivers to access Linux filesystems, but with OSXFuse maybe?  There is a <a href="https://github.com/gpz500/fuse-ext2/releases">fork of the Fuse-ext2 project</a> that worked for me so I could edit <code>/etc/network/interfaces</code> as follows:
 </p>
 
 <pre class="example">
@@ -73,7 +71,7 @@ $ ssh pi@192.168.42.42
 </pre>
 
 <p>
-Now I was able to use my phone's Internet connection by adding a route as explained in the above link:
+Now I was able to use my phone&rsquo;s Internet connection by adding a route as explained in the above link:
 </p>
 
 <pre class="example">
@@ -81,7 +79,7 @@ $ sudo route add default gw 192.168.42.129 usb0
 </pre>
 
 <p>
-(If needed, find the phone's IP address using <code>arp -a</code>.)  From this point on, the Pi was connected to the Internet through the phone.  But we wanted to have it the other way around, so keep reading.
+(If needed, find the phone&rsquo;s IP address using <code>arp -a</code>.)  From this point on, the Pi was connected to the Internet through the phone.  But we wanted to have it the other way around, so keep reading.
 </p>
 </div>
 </div>
@@ -90,7 +88,7 @@ $ sudo route add default gw 192.168.42.129 usb0
 <h2 id="org4a67a46">Setting up Wifi</h2>
 <div class="outline-text-2" id="text-org4a67a46">
 <p>
-The next challenge was to setup the Wifi.  I chose to get this running first in order to be able to log into the Pi from my laptop.  The idea is to use a USB Wifi dongle in Access Point mode.  It turned out that the Wifi dongle I picked worked out of the box &#x2013; when used "normally".  But to get Access Point mode to work, there was a little intricacy:  I had to compile patched drivers.
+The next challenge was to setup the Wifi.  I chose to get this running first in order to be able to log into the Pi from my laptop.  The idea is to use a USB Wifi dongle in Access Point mode.  It turned out that the Wifi dongle I picked worked out of the box &#x2013; when used &ldquo;normally&rdquo;.  But to get Access Point mode to work, there was a little intricacy:  I had to compile patched drivers.
 </p>
 
 <p>
@@ -195,7 +193,7 @@ $ sudo apt-get install iptables dnsmasq ppp wvdial usb-modeswitch iw
 </pre>
 
 <p>
-I did, as expected run into problems with the modem's data partition which would prevent the modem from being recognized.  Different devices require different values in <code>/etc/usb_modeswitch.conf</code>; what worked for me was:
+I did, as expected run into problems with the modem&rsquo;s data partition which would prevent the modem from being recognized.  Different devices require different values in <code>/etc/usb_modeswitch.conf</code>; what worked for me was:
 </p>
 
 <div class="org-src-container">
@@ -209,7 +207,7 @@ I did, as expected run into problems with the modem's data partition which would
 </div>
 
 <p>
-For the actual 3G connection, there are various options involving scripts to be found, but I chose a simple way using <code>wvdial</code>.  I edited <code>/etc/wvdial.conf</code> to match my carrier's requirements:
+For the actual 3G connection, there are various options involving scripts to be found, but I chose a simple way using <code>wvdial</code>.  I edited <code>/etc/wvdial.conf</code> to match my carrier&rsquo;s requirements:
 </p>
 
 <div class="org-src-container">
@@ -237,7 +235,7 @@ and added the following to <code>/etc/network/interfaces</code>:
 </div>
 
 <p>
-(Unfortunately, <code>auto ppp0</code> didn't work here because it would cause <code>wvdial</code> to run on boot before the modem hardware was ready.  My workaround is explained below.)
+(Unfortunately, <code>auto ppp0</code> didn&rsquo;t work here because it would cause <code>wvdial</code> to run on boot before the modem hardware was ready.  My workaround is explained below.)
 </p>
 
 <p>
@@ -272,7 +270,7 @@ pre-up iptables-restore &lt; /etc/iptables.ipv4.nat
 <h2 id="org05544b3">Getting it ready on boot</h2>
 <div class="outline-text-2" id="text-org05544b3">
 <p>
-Unfortunately, I needed to manually have the Pi establish the 3G connection, having to wait for the modem to be ready after boot.  (The network devices seem to be brought up before the USB hardware is ready.)  I experimented with <code>udev</code> to listen for the device to show up but ultimately didn't succeed.  Instead, I wrote a simple shell script <code>/usr/local/bin/ppp0up.sh</code> that just sleeps 20 seconds before bringing the device up:
+Unfortunately, I needed to manually have the Pi establish the 3G connection, having to wait for the modem to be ready after boot.  (The network devices seem to be brought up before the USB hardware is ready.)  I experimented with <code>udev</code> to listen for the device to show up but ultimately didn&rsquo;t succeed.  Instead, I wrote a simple shell script <code>/usr/local/bin/ppp0up.sh</code> that just sleeps 20 seconds before bringing the device up:
 </p>
 
 <div class="org-src-container">
@@ -291,7 +289,7 @@ and added a line to <code>/etc/rc.local</code> (run on boot):
 </div>
 
 <p>
-This runs my above-mentioned script in the background, so it doesn't block the boot process.  When the internet comes up, the 3G modem will signal it by lighting up its LED in green (EDGE) or bright blue (3G).
+This runs my above-mentioned script in the background, so it doesn&rsquo;t block the boot process.  When the internet comes up, the 3G modem will signal it by lighting up its LED in green (EDGE) or bright blue (3G).
 </p>
 </div>
 </div>
@@ -300,7 +298,7 @@ This runs my above-mentioned script in the background, so it doesn't block the b
 <h2 id="org2debf6c">The magical memory stick</h2>
 <div class="outline-text-2" id="text-org2debf6c">
 <p>
-Now that the system automatically goes online on boot, there is only one problem: How can I shut the Pi down, given there is no button?  I don't want to always open an SSH connection, and I can't afford to keep the Pi running 24/7 (even though its power consumption is little, it does strain the batteries).  People have added shutdown buttons to their Pi computers via the GPIO pins, but that was a little too much for me.  Instead, I repurposed an old memory stick by adding a <code>udev</code> rule that would cause the Pi to shut down as soon as the stick is plugged in!
+Now that the system automatically goes online on boot, there is only one problem: How can I shut the Pi down, given there is no button?  I don&rsquo;t want to always open an SSH connection, and I can&rsquo;t afford to keep the Pi running 24/7 (even though its power consumption is little, it does strain the batteries).  People have added shutdown buttons to their Pi computers via the GPIO pins, but that was a little too much for me.  Instead, I repurposed an old memory stick by adding a <code>udev</code> rule that would cause the Pi to shut down as soon as the stick is plugged in!
 </p>
 
 <p>

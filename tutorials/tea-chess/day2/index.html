@@ -1,14 +1,12 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
-"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+<!DOCTYPE html>
+<html lang="en">
 <head>
-<!-- 2017-12-31 Sun 00:13 -->
-<meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
+<!-- 2018-01-12 Fri 21:08 -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Twelve Days of Christmas #2</title>
-<meta name="generator" content="Org mode" />
-<meta name="author" content="Daniel Quernheim" />
+<meta name="generator" content="Org mode">
+<meta name="author" content="Daniel Quernheim">
 <link rel='stylesheet' href='/style.css' type='text/css'/>
 </head>
 <body>
@@ -21,40 +19,49 @@
 </div>
 <div id="content">
 <h1 class="title">Twelve Days of Christmas #2</h1>
+<div class="warning">
 <p>
-This is the second part of <a href="../index.html">a chess-themed tutorial</a> on writing an SPA in
+This was the first version of this tutorial.  Please visit the <a href="../index.html">new
+version</a> instead.
+</p>
+
+</div>
+
+<p>
+This is the second part of <a href="../index-old.html">a chess-themed tutorial</a> on writing an SPA in
 <a href="https://github.com/OvermindDL1/bucklescript-tea">Bucklescript-TEA</a>.  After this part, your app will look similar to <a href="demo.html">this demo</a>.
 </p>
+
 
 <p>
 Yesterday, we implemented a chessboard without pieces.  Today, we will
 add pieces and use a random number generator to play random moves.  We
 use an existing OCaml chess library to do the heavy lifting.  If you
-want to use my repository as a starting point, we're currently at tag <code>day1</code>.
+want to use my repository as a starting point, we&rsquo;re currently at tag <code>day1</code>.
 </p>
 
 <div id="outline-container-org9225916" class="outline-2">
 <h2 id="org9225916">Integrating existing OCaml code</h2>
 <div class="outline-text-2" id="text-org9225916">
 <p>
-Just like <a href="https://chess24.com/en/read/news/deepmind-s-alphazero-crushes-chess">Google's recent success with AlphaZero</a>, we will only need to
+Just like <a href="https://chess24.com/en/read/news/deepmind-s-alphazero-crushes-chess">Google&rsquo;s recent success with AlphaZero</a>, we will only need to
 spell out the rules of chess, and our program will learn how to
-display the chessboard and play against itself. That's it, folks! See
+display the chessboard and play against itself. That&rsquo;s it, folks! See
 you next time! Well&#x2026; that would be nice, but last time I checked, no
 neural network was able to write frontend code. That might change, but
 for now we still have to invest some human labour. At least we can
 save a few hours of work by pulling in a decent chess library.
-Bucklescript integrates with NPM as well as OPAM, but I didn't find
+Bucklescript integrates with NPM as well as OPAM, but I didn&rsquo;t find
 any open-source implementation of chess that I liked on either, not
 even on Github for that matter, so I decided to use good old
-MIT-licensed <a href="http://www.olegtrott.com/chess/">O'Chess by Oleg Trott</a>. Just download the file
+MIT-licensed <a href="http://www.olegtrott.com/chess/">O&rsquo;Chess by Oleg Trott</a>. Just download the file
 <code>ochess.ml</code>, drop it into your <code>src</code> directory and add it to version
-control.  O'Chess is
+control.  O&rsquo;Chess is
 actually a full-fledged chess engine, but we are only interested in the rule logic.
 </p>
 
 <p>
-Let's make use of the fact that O'Chess defines a <code>color</code> type just like we did and replace our type definition by:
+Let&rsquo;s make use of the fact that O&rsquo;Chess defines a <code>color</code> type just like we did and replace our type definition by:
 </p>
 
 <div class="org-src-container">
@@ -81,12 +88,12 @@ The module or file Str can't be found.
 
 <p>
 This is because Bucklescript differs from the standard OCaml
-distribution in a few ways; it doesn't contain the <code>Str</code> module.
-Fortunately, this only affects a small portion of the code, and is easily remedied by providing our own function to split a string.  While I was at it, I got rid of all the warnings by prefixing all unused variables with <code>_</code> and by replacing <code>or</code>  with <code>||</code>.  I also disabled the <code>main</code> function of O'Chess to prevent it from being evaluated automatically.  You can get my updated <code>ochess.ml</code> from my repository.
+distribution in a few ways; it doesn&rsquo;t contain the <code>Str</code> module.
+Fortunately, this only affects a small portion of the code, and is easily remedied by providing our own function to split a string.  While I was at it, I got rid of all the warnings by prefixing all unused variables with <code>_</code> and by replacing <code>or</code>  with <code>||</code>.  I also disabled the <code>main</code> function of O&rsquo;Chess to prevent it from being evaluated automatically.  You can get my updated <code>ochess.ml</code> from my repository.
 </p>
 
 <p>
-Let's add a file <code>src/Chess.ml</code> that wraps O'Chess and adds all chess-related helper functions that we may come up with:
+Let&rsquo;s add a file <code>src/Chess.ml</code> that wraps O&rsquo;Chess and adds all chess-related helper functions that we may come up with:
 </p>
 
 <div class="org-src-container">
@@ -110,7 +117,7 @@ Let's add a file <code>src/Chess.ml</code> that wraps O'Chess and adds all chess
 </div>
 
 <p>
-I moved <code>char_of_file</code> and <code>char_of_rank</code> and added two more functions that will be useful later on.  Now we can access all these and all functionality of O'Chess through the <code>Chess</code> module.  Our model will now include a chess position, initially obtained from O'Chess:
+I moved <code>char_of_file</code> and <code>char_of_rank</code> and added two more functions that will be useful later on.  Now we can access all these and all functionality of O&rsquo;Chess through the <code>Chess</code> module.  Our model will now include a chess position, initially obtained from O&rsquo;Chess:
 </p>
 
 <div class="org-src-container">
@@ -190,7 +197,7 @@ under GFDL, BSD and GPL.  We will use some nifty CSS to display them on the boar
 </div>
 
 <p>
-Notice how the type and color of a piece are encoded in the classes.  Here's what the view function in <code>Main.ml</code> looks like now:
+Notice how the type and color of a piece are encoded in the classes.  Here&rsquo;s what the view function in <code>Main.ml</code> looks like now:
 </p>
 
 <div class="org-src-container">
@@ -225,7 +232,7 @@ Notice how the type and color of a piece are encoded in the classes.  Here's wha
 </div>
 
 <p>
-O'Chess represents the position as a record where the actual location of the pieces is stored in a 2-dimensional 8*8 array <code>ar</code>.  A square is either empty, or contains a piece of a certain type and color.  We use our helper functions to convert them into class names.  You should now see a nice chessboard with the pieces in their initial position!
+O&rsquo;Chess represents the position as a record where the actual location of the pieces is stored in a 2-dimensional 8*8 array <code>ar</code>.  A square is either empty, or contains a piece of a certain type and color.  We use our helper functions to convert them into class names.  You should now see a nice chessboard with the pieces in their initial position!
 </p>
 </div>
 </div>
@@ -234,7 +241,7 @@ O'Chess represents the position as a record where the actual location of the pie
 <h2 id="orgff4feb4">Your first commands</h2>
 <div class="outline-text-2" id="text-orgff4feb4">
 <p>
-Let's now use a random generator to make random moves.  O'Chess will tell us what moves are legal moves according to the rules of chess in a given position.  Let's add a button to trigger a random move, and let's add a little informative line that tells us how many moves we can choose from in the current position:
+Let&rsquo;s now use a random generator to make random moves.  O&rsquo;Chess will tell us what moves are legal moves according to the rules of chess in a given position.  Let&rsquo;s add a button to trigger a random move, and let&rsquo;s add a little informative line that tells us how many moves we can choose from in the current position:
 </p>
 
 <div class="org-src-container">
@@ -290,7 +297,7 @@ Let's now use a random generator to make random moves.  O'Chess will tell us wha
 </div>
 
 <p>
-(Exercise: Include information about whose player's turn it is in the
+(Exercise: Include information about whose player&rsquo;s turn it is in the
 result view.)
 </p>
 
@@ -305,9 +312,9 @@ Of course, the message <code>Random_button</code> also needs to be defined in ou
 <p>
 When <code>Random_button</code> is received, we want to issue a command that asks
 for a random number and performs a side effect.  Eventually, the
-result will come in, wrapped in a message.  Let's define another
+result will come in, wrapped in a message.  Let&rsquo;s define another
 message <code>Random_move of Chess.move</code> that has a chess move as its
-"payload".  On receiving a <code>Random_move</code> message, the move that it contains will be played on the board.  Here are the relevant parts of <code>Main.ml</code>:
+&ldquo;payload&rdquo;.  On receiving a <code>Random_move</code> message, the move that it contains will be played on the board.  Here are the relevant parts of <code>Main.ml</code>:
 </p>
 
 <div class="org-src-container">
@@ -341,32 +348,14 @@ message <code>Random_move of Chess.move</code> that has a chess move as its
 </div>
 
 <p>
-To handle the <code>Random_button</code> message, we check whether there are legal moves in the current position by inquiring the game status from O'Chess.  If there aren't, no command is issued.  If there are legal moves, we initialize a random integer generator with the length of the list of legal moves and send a command that takes a function that is evaluated when the random number is computed.  In this case, the random number is used to choose a move from the list of legal moves and to wrap it in a <code>Random_move</code> message.  Have you already wondered about the strange line <code>[@@bs.deriving {accessors}]</code>?  It's there so you can write <code>random_move</code> instead of <code>(fun x -&gt; Random_move x)</code> by adding a function for every type constructor.
+To handle the <code>Random_button</code> message, we check whether there are legal moves in the current position by inquiring the game status from O&rsquo;Chess.  If there aren&rsquo;t, no command is issued.  If there are legal moves, we initialize a random integer generator with the length of the list of legal moves and send a command that takes a function that is evaluated when the random number is computed.  In this case, the random number is used to choose a move from the list of legal moves and to wrap it in a <code>Random_move</code> message.  Have you already wondered about the strange line <code>[@@bs.deriving {accessors}]</code>?  It&rsquo;s there so you can write <code>random_move</code> instead of <code>(fun x -&gt; Random_move x)</code> by adding a function for every type constructor.
 </p>
 
 <p>
 Finally, when the <code>Random_move</code> message comes in, we update the
-position by using O'Chess to make the move (you can disregard the
-final <code>0</code> argument as it is only important when O'Chess is used as a
+position by using O&rsquo;Chess to make the move (you can disregard the
+final <code>0</code> argument as it is only important when O&rsquo;Chess is used as a
 chess engine).  Your app should now look like this:
-</p>
-
-<p>
-<img class="full" src="random.gif" />
-</p>
-
-<p>
-Try it out and see if you can play a full game before you get bored.  Most of the games will eventually end in a draw due to a rule that declares a draw after 50 moves of not making progress (no pawn move and no capture), but occasionally you will witness a checkmate.
-</p>
-
-<p>
-(Exercise: Include a "reset" button that allows the user to start over
-from the initial position.)
-</p>
-
-<p>
-This concludes day 2 of the Twelve Days of Christmas tutorial.  If you
-want to synchronize with my repository, check out tag <code>day2</code>.  <a href="../day3/index.html">Tomorrow, we will refactor our code and learn how to compose views that manage their own submodels.</a>
 </p>
 </div>
 </div>

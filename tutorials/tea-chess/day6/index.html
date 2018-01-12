@@ -1,14 +1,12 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
-"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+<!DOCTYPE html>
+<html lang="en">
 <head>
-<!-- 2017-12-31 Sun 00:13 -->
-<meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
+<!-- 2018-01-12 Fri 21:08 -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Twelve Days of Christmas #6</title>
-<meta name="generator" content="Org mode" />
-<meta name="author" content="Daniel Quernheim" />
+<meta name="generator" content="Org mode">
+<meta name="author" content="Daniel Quernheim">
 <link rel='stylesheet' href='/style.css' type='text/css'/>
 </head>
 <body>
@@ -21,10 +19,19 @@
 </div>
 <div id="content">
 <h1 class="title">Twelve Days of Christmas #6</h1>
+<div class="warning">
 <p>
-This is the sixth part of <a href="../index.html">a chess-themed tutorial</a> on writing an SPA in
+This was the first version of this tutorial.  Please visit the <a href="../index.html">new
+version</a> instead.
+</p>
+
+</div>
+
+<p>
+This is the sixth part of <a href="../index-old.html">a chess-themed tutorial</a> on writing an SPA in
 <a href="https://github.com/OvermindDL1/bucklescript-tea">Bucklescript-TEA</a>.  After this part, your app will look similar to <a href="demo.html">this demo</a>.
 </p>
+
 
 <p>
 Yesterday, we finished implementing drag and drop to make moves on the
@@ -38,11 +45,11 @@ repository.
 <h2 id="org32e75fa">Keeping a scoresheet like chess players do</h2>
 <div class="outline-text-2" id="text-org32e75fa">
 <p>
-Chess players have a shorthand way of keeping a scoresheet &#x2013; it's
+Chess players have a shorthand way of keeping a scoresheet &#x2013; it&rsquo;s
 called <a href="https://en.wikipedia.org/wiki/Algebraic_notation_(chess)">Standard Algebraic Notation</a> (SAN).  Instead of writing down the
 coordinates of the source square and the target square, they just
 write down the type of piece that moved and its destination square,
-for instance <code>Qg7</code> for a queen's move to the <code>g7</code> square.  The standard
+for instance <code>Qg7</code> for a queen&rsquo;s move to the <code>g7</code> square.  The standard
 abbreviations are <code>K, Q, R, B</code> and <code>N</code> (because <code>K</code> is already taken)
 for King, Queen, Rook, Bishop and Knight.  Pawn moves are indicated
 only by target square, and in the event of a capture, also by the
@@ -68,7 +75,7 @@ promoted two pawns to queens. (Can you prove that statement?)
 
 <p>
 Finally, if a move is a capture, an <code>x</code> is inserted after the piece
-type, if a move puts the opponent's king into check, <code>+</code> is added
+type, if a move puts the opponent&rsquo;s king into check, <code>+</code> is added
 to the move, and if a move checkmates the opponent, <code>#</code> is added.  For
 pawn moves, <code>x</code> is inserted between original and destination file,
 and for pawn promotions, <code>=Q</code> (or type of other piece if not a queen)
@@ -79,14 +86,14 @@ promoting to a rook and delivering checkmate, is written <code>exf8=R#</code>.
 <p>
 There are two special moves, kingside and queenside castle (involving
 the king and a rook), written <code>O-O</code> and <code>O-O-O</code> respectively.  Phew, I
-think I covered all the little corner cases now, let's see if we can
+think I covered all the little corner cases now, let&rsquo;s see if we can
 implement that.  (I actually described SAN as used by the <a href="https://www.chessclub.com/user/help/PGN-spec">PGN format</a>,
 which is slightly different from the official SAN as prescribed by the
 world chess organization FIDE.)
 </p>
 
 <p>
-We'll be adding all our code to <code>src/Chess.ml</code>.  Let's start by
+We&rsquo;ll be adding all our code to <code>src/Chess.ml</code>.  Let&rsquo;s start by
 defining a few useful types:
 </p>
 
@@ -109,7 +116,7 @@ defining a few useful types:
 </div>
 
 <p>
-We will use O'Chess to compute a list of <code>long_move</code> for a given
+We will use O&rsquo;Chess to compute a list of <code>long_move</code> for a given
 position, and then use the disambiguation strategies listed above to
 compute a corresponding list of <code>short_move</code>.  File and rank
 disambiguation is represented by <code>option</code> types.  Pawn moves always
@@ -156,19 +163,19 @@ it for a capturing move, and optionally a promotion piece.
 </div>
 
 <p>
-The <code>long_move</code> function converts the O'Chess move representation into the
+The <code>long_move</code> function converts the O&rsquo;Chess move representation into the
 <code>long_move</code> type by adding the <code>capture</code> flag and straightening out a
 few kinks.  In particular, it separates <code>Move</code> into <code>Pawn_move</code> and
 <code>Piece_move</code>, and groups the latter together with <code>Promotion</code>. There is a case that should
 never happen (moving a piece from an empty square), so we raise an
-exception (from O'Chess) in that case.
+exception (from O&rsquo;Chess) in that case.
 </p>
 
 <p>
 The <code>annotate_move</code> returns check/checkmate info for a given move by
 trying it in the given position and determining whether after the
-move, the other player's king will be in check.  If it is, and there
-are no legal moves, it's checkmate!
+move, the other player&rsquo;s king will be in check.  If it is, and there
+are no legal moves, it&rsquo;s checkmate!
 </p>
 
 <p>
@@ -236,13 +243,13 @@ square matches and if the optional disambiguation hints can be unified
 
 <p>
 Next, we define two ways of getting SAN strings.  The
-<code>legal_moves_with_san</code> function uses O'Chess to enumerate the legal moves and generate an
-<i>association list</i> of SAN and O'Chess moves.  An association list is a
+<code>legal_moves_with_san</code> function uses O&rsquo;Chess to enumerate the legal moves and generate an
+<i>association list</i> of SAN and O&rsquo;Chess moves.  An association list is a
 list of (key, value) pairs, and the <code>List</code> module provides some useful
 functions for searching the list for a given key and the like.  If
 your association lists start getting big, you may want to use a
 hashmap or other container that has faster access than O(n), but lists
-of legal moves are typically not longer than 30, so it shouldn't be a
+of legal moves are typically not longer than 30, so it shouldn&rsquo;t be a
 problem. 
 </p>
 
@@ -267,7 +274,7 @@ move in a given position.
 </div>
 
 <p>
-Finally, we're ready to calculate the SAN string for a given move:
+Finally, we&rsquo;re ready to calculate the SAN string for a given move:
 </p>
 
 <div class="org-src-container">
@@ -312,7 +319,7 @@ Finally, we're ready to calculate the SAN string for a given move:
 </div>
 
 <p>
-There's a lot of pattern matching going on here, but if you look
+There&rsquo;s a lot of pattern matching going on here, but if you look
 closely, you will find that it is a very straightforward formulation
 of the SAN definition.  There is a case that should never happen
 because when <code>long_move</code> is a <code>Piece_move</code>, the <code>short_move_option</code>
@@ -326,7 +333,7 @@ out.
 <h2 id="orgfd5f1ba">Logging and takeback</h2>
 <div class="outline-text-2" id="text-orgfd5f1ba">
 <p>
-Let's add a log of moves to the main view, as well as a "take back"
+Let&rsquo;s add a log of moves to the main view, as well as a &ldquo;take back&rdquo;
 button.  First we define approprate types and messages:
 </p>
 
@@ -354,7 +361,7 @@ button.  First we define approprate types and messages:
 </div>
 
 <p>
-Then we define how to render HTML for the moves.  Let's already assign
+Then we define how to render HTML for the moves.  Let&rsquo;s already assign
 classes to
 the <code>&lt;ul&gt;</code> and <code>&lt;li&gt;</code> tags so we can style them later.
 </p>
@@ -387,7 +394,7 @@ the <code>&lt;ul&gt;</code> and <code>&lt;li&gt;</code> tags so we can style the
 <p>
 The reason we use <code>List.rev_map</code> to display the moves is that we store
 them in reverse order to allow for more efficient adding of new moves
-when they come in.  Here's the relevant part of the <code>update</code> function:
+when they come in.  Here&rsquo;s the relevant part of the <code>update</code> function:
 </p>
 
 <div class="org-src-container">
@@ -421,12 +428,12 @@ that the user can click a move and it will be played on the board.)
 <h2 id="org2597d82">Capturing keyboard events</h2>
 <div class="outline-text-2" id="text-org2597d82">
 <p>
-As a cherry on the top, let's assign keyboard shortcuts to the "random
-move" and "take back" events.  Bucklescript-TEA doesn't yet come
-with a <code>Keyboard</code> module built-in, so why don't we just create our
-own?  Take a look at the <code>Tea.Mouse</code> module to see how it's done.
-We'll adapt the function <code>registerGlobal</code> in order to listen to the
-<code>keydown</code> event.  Unfortunately, the decoder is hardcoded, so we'll
+As a cherry on the top, let&rsquo;s assign keyboard shortcuts to the &ldquo;random
+move&rdquo; and &ldquo;take back&rdquo; events.  Bucklescript-TEA doesn&rsquo;t yet come
+with a <code>Keyboard</code> module built-in, so why don&rsquo;t we just create our
+own?  Take a look at the <code>Tea.Mouse</code> module to see how it&rsquo;s done.
+We&rsquo;ll adapt the function <code>registerGlobal</code> in order to listen to the
+<code>keydown</code> event.  Unfortunately, the decoder is hardcoded, so we&rsquo;ll
 just copy the function and change it.  Put the following code in
 <code>src/Keyboard.ml</code>:
 </p>
@@ -476,7 +483,7 @@ just copy the function and change it.  Put the following code in
 <p>
 Whenever a key is pressed, the key code and flags for all the modifier
 keys are extracted from the key event and put into a record of type
-<code>key_event</code>.  Let's add a subscription to our app and handle some key
+<code>key_event</code>.  Let&rsquo;s add a subscription to our app and handle some key
 presses.  First, the message:
 </p>
 
@@ -505,8 +512,8 @@ for two different subscriptions at the same time:
 </div>
 
 <p>
-Now we need to handle the interesting keyboard events in the <code>update</code> function. I use a Mac, so I use <kbd>Ctrl-r</kbd> for "random
-move" and <kbd>Ctrl-t</kbd> for "take back".  If you need the
+Now we need to handle the interesting keyboard events in the <code>update</code> function. I use a Mac, so I use <kbd>Ctrl-r</kbd> for &ldquo;random
+move&rdquo; and <kbd>Ctrl-t</kbd> for &ldquo;take back&rdquo;.  If you need the
 <kbd>Ctrl</kbd> key, just adapt the code.
 </p>
 
@@ -526,7 +533,7 @@ move" and <kbd>Ctrl-t</kbd> for "take back".  If you need the
 </p>
 
 <p>
-This concludes Day 6 of this tutorial.  We're now at tag <code>day6</code> in my
+This concludes Day 6 of this tutorial.  We&rsquo;re now at tag <code>day6</code> in my
 repository.  <a href="../day7/index.html">Tomorrow, we will improve the looks of the move list, and
 allow non-destructive stepping back and forward in the list.</a>
 </p>

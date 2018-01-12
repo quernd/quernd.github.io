@@ -1,14 +1,12 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
-"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+<!DOCTYPE html>
+<html lang="en">
 <head>
-<!-- 2017-12-31 Sun 15:21 -->
-<meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
+<!-- 2018-01-12 Fri 21:11 -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Twelve Days of Christmas #1</title>
-<meta name="generator" content="Org mode" />
-<meta name="author" content="Daniel Quernheim" />
+<meta name="generator" content="Org mode">
+<meta name="author" content="Daniel Quernheim">
 <link rel='stylesheet' href='/style.css' type='text/css'/>
 </head>
 <body>
@@ -21,10 +19,19 @@
 </div>
 <div id="content">
 <h1 class="title">Twelve Days of Christmas #1</h1>
+<div class="warning">
 <p>
-This is the first part of <a href="../index.html">a chess-themed tutorial</a> on writing an SPA in
+This was the first version of this tutorial.  Please visit the <a href="../index.html">new
+version</a> instead.
+</p>
+
+</div>
+
+<p>
+This is the first part of <a href="../index-old.html">a chess-themed tutorial</a> on writing an SPA in
 <a href="https://github.com/OvermindDL1/bucklescript-tea">Bucklescript-TEA</a>.  After this part, your app will look similar to <a href="demo.html">this demo</a>.
 </p>
+
 
 <div id="outline-container-org3d9b73d" class="outline-2">
 <h2 id="org3d9b73d">First things first</h2>
@@ -35,7 +42,7 @@ Before you can start, make sure you have the following installed:
 
 <ul class="org-ul">
 <li><a href="https://nodejs.org/">Node.js</a> and optionally <a href="https://yarnpkg.com/">Yarn</a>. Bucklescript piggybacks on the <a href="https://www.npmjs.com/">NPM
-package database</a>, and I'm afraid I don't know how to do Bucklescript
+package database</a>, and I&rsquo;m afraid I don&rsquo;t know how to do Bucklescript
 development without it. I prefer Yarn as an interface to NPM and use
 Yarn commands throughout this tutorial, but if you are already using
 NPM, it will work just as fine.</li>
@@ -49,7 +56,7 @@ development seamlessly.</li>
 </ul>
 
 <p>
-Let's setup a project directory structure. Arguably the easiest way is
+Let&rsquo;s setup a project directory structure. Arguably the easiest way is
 to just clone the <a href="https://github.com/tcoopman/bucklescript-tea-starter-kit">Bucklescript-TEA starter kit</a>, copy the relevant
 files into a fresh repository, or just follow along with <a href="https://www.github.com/quernd/tea-chess">my
 repository</a>. (I actually used <a href="http://www.fossil-scm.org/">Fossil</a> for local version control, and I
@@ -64,7 +71,7 @@ Take a look at the files in the starter kit. You will notice that
 defines build and watch scripts. Furthermore, <code>bsconfig.json</code> contains
 instructions for the Bucklescript compiler. Your OCaml source code
 will go in the <code>src</code> directory, and the compiled Javascript will be
-put into <code>release</code> by the build script. Why don't you edit
+put into <code>release</code> by the build script. Why don&rsquo;t you edit
 <code>package.json</code> and <code>bsconfig.json</code> for a better package name (e.g.
 <code>tea-chess</code>)?
 </p>
@@ -110,7 +117,7 @@ created release/main.js in 1.3s
 Congratulations! Visit the page in your web browser and play with the
 counters example a little. Whenever you make changes to your code, as
 soon as you save the file, the build script will notice and recompile
-your code, and the new javascript code will even be "hot-reloaded" in
+your code, and the new javascript code will even be &ldquo;hot-reloaded&rdquo; in
 your browser! Whenever something goes wrong, you will find a helpful
 error message displayed.
 </p>
@@ -134,11 +141,11 @@ Bucklescript version.
 <div class="outline-text-2" id="text-orgdcb8924">
 <p>
 Open <code>src/Main.ml</code> and take a look at the code. Now, if you are
-familiar with the "Elm architecture", made popular by the Elm language
+familiar with the &ldquo;Elm architecture&rdquo;, made popular by the Elm language
 of Evan Czaplicki, you will recognize the typical <i>msg</i>, <i>model</i>,
 <i>update</i>, and <i>view</i> definitions. Essentially, Bucklescript-TEA
-provides an API similar, if not almost compatible, to that of Elm's. I'm not going to provide a thorough
-discussion in case you haven't worked with the Elm architecture before.  There are lots of resources online that do a better job I
+provides an API similar, if not almost compatible, to that of Elm&rsquo;s. I&rsquo;m not going to provide a thorough
+discussion in case you haven&rsquo;t worked with the Elm architecture before.  There are lots of resources online that do a better job I
 ever could do.  For instance, check out the <a href="https://guide.elm-lang.org/architecture/">official tutorial</a>. However, the Elm architecture is pretty simple to
 grasp if all you remember is this:
 </p>
@@ -154,8 +161,8 @@ screen).</li>
 </ol>
 
 <p>
-Here's an adorable illustration by <a href="https://twitter.com/01k">Kolja Wilcke</a> from his and <a href="https://twitter.com/unsoundscapes">Andrey
-Kuzmin</a>'s <a href="https://www.youtube.com/watch?v=En2BKs8unnQ">talk</a> on <a href="https://github.com/w0rm/creating-a-fun-game-with-elm">Creating a Fun Game With Elm</a>:
+Here&rsquo;s an adorable illustration by <a href="https://twitter.com/01k">Kolja Wilcke</a> from his and <a href="https://twitter.com/unsoundscapes">Andrey
+Kuzmin</a>&rsquo;s <a href="https://www.youtube.com/watch?v=En2BKs8unnQ">talk</a> on <a href="https://github.com/w0rm/creating-a-fun-game-with-elm">Creating a Fun Game With Elm</a>:
 </p>
 
 <p>
@@ -168,7 +175,7 @@ charset="utf-8"></script>
 Side effects are managed behind the scenes to ensure that your
 functions stay pure. (A function is <a href="https://en.wikipedia.org/wiki/Pure_function">pure</a> when it will always return
 the same output value when called with the same input arguments, and
-doesn't cause any side effect.)  Therefore, in the Elm architecture,
+doesn&rsquo;t cause any side effect.)  Therefore, in the Elm architecture,
 you only deal with <i>recipes</i> for side effects, called <i>commands</i>.
 When you need to ask for a side effect to be
 performed, you can issue a command together with the new model in
@@ -176,12 +183,12 @@ the <i>update</i> function. Your program can also listen to <i>subscriptions</i>
 to receive messages on events such as mouse and keyboard events,
 websockets, and time. Both commands and subscriptions will feed
 messages into your update function.  In order to use commands and
-subscriptions, you need to "upgrade" from <code>beginnerProgram</code> to <code>standardProgram</code>.
+subscriptions, you need to &ldquo;upgrade&rdquo; from <code>beginnerProgram</code> to <code>standardProgram</code>.
 </p>
 
 <p>
 If you installed Merlin, you can use it to examine the types of the
-functions involved in the Elm Architecture. (For instance, if you're
+functions involved in the Elm Architecture. (For instance, if you&rsquo;re
 using Emacs, press <kbd>C-c C-t</kbd>, and Merlin will tell
 you the type of the function name at the point (cursor).  Press
 <kbd>C-c C-l</kbd>, and it will take you to the definition
@@ -235,7 +242,7 @@ want to learn about the basics of the Elm architecture and Bucklescript-TEA.
 </p>
 
 <p>
-Now, let's get rid of the counter example because that doesn't have
+Now, let&rsquo;s get rid of the counter example because that doesn&rsquo;t have
 anything to do with chess, and start adding our own
 code.  I stripped down the <i>model-update-view</i> loop in <code>src/Main.ml</code>
 and added the basics of a chess-related model:
@@ -294,12 +301,12 @@ orientation of the chessboard around.
 </p>
 
 <p>
-Notice how we're now using <code>standardProgram</code> instead of beginner
-program.  Hooray, you're not a beginner anymore!  This means we will
+Notice how we&rsquo;re now using <code>standardProgram</code> instead of beginner
+program.  Hooray, you&rsquo;re not a beginner anymore!  This means we will
 be able to listen for subscriptions such as mouse and keyboard events.  You will learn about them
 when we implement drag and drop to make moves on the chessboard.
 Right now, we choose <code>Sub.none</code> to express that we are not interested
-in any subscriptions yet, regardless of the model. Similarly, we don't
+in any subscriptions yet, regardless of the model. Similarly, we don&rsquo;t
 want to issue any commands, so we return <code>Cmd.none</code> along with the
 model everytime.
 </p>
@@ -333,7 +340,7 @@ because <code>function</code> has built-in pattern-matching.
 <p>
 We still need to write a meaningful <code>view</code> function, of course.  Right
 now it only returns <code>noNode</code>, which is a placeholder for when you
-don't want to display anything in the DOM.  Without further ado, here
+don&rsquo;t want to display anything in the DOM.  Without further ado, here
 we go:
 </p>
 
@@ -364,16 +371,16 @@ we go:
 </div>
 
 <p>
-This might be a little hard to digest, so here's what happens:
+This might be a little hard to digest, so here&rsquo;s what happens:
 </p>
 
 <p>
-A chessboard has 8 rows called "ranks", and 8 columns called "files".
+A chessboard has 8 rows called &ldquo;ranks&rdquo;, and 8 columns called &ldquo;files&rdquo;.
 Ranks are numbered, while files are referred to by a letter, so we
-define helper functions <code>char_of_file</code> and <code>char_of_rank</code>.  White's
-pieces start the game on ranks 1 and 2, while Black's pieces start on
-ranks 7 and 8.  Customarily, a chessboard from White's perspective
-will have ranks 1 and 2 at the bottom.  That's why we have to iterate
+define helper functions <code>char_of_file</code> and <code>char_of_rank</code>.  White&rsquo;s
+pieces start the game on ranks 1 and 2, while Black&rsquo;s pieces start on
+ranks 7 and 8.  Customarily, a chessboard from White&rsquo;s perspective
+will have ranks 1 and 2 at the bottom.  That&rsquo;s why we have to iterate
 through files and ranks a little differently according to the board
 orientation.
 </p>
@@ -392,12 +399,12 @@ a lot, it makes sense to put <code>open Tea.Html</code> into our code.
 
 <p>
 Click the button and see if the <code>Flip</code> message was wired correctly.
-You should see the coordinates changing according to the board's orientation.
+You should see the coordinates changing according to the board&rsquo;s orientation.
 </p>
 
 <p>
-Now let's make this board look a little more like an actual chessboard
-by adding a checkerboard pattern.  We'll assign some CSS style to the
+Now let&rsquo;s make this board look a little more like an actual chessboard
+by adding a checkerboard pattern.  We&rsquo;ll assign some CSS style to the
 individual squares.  Change the first argument to <code>td</code> as follows, and
 you should see black and white squares.  
 </p>

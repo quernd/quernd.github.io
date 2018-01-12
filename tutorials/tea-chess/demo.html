@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="">
+    <meta name="author" content="">
+    <link rel="stylesheet" type="text/css" href="css/board.css">
+    <link rel="stylesheet" type="text/css" href="css/game.css">
+    <link rel="stylesheet" type="text/css" href="css/main.css">
+    <title>TEA-Chess</title>
+  </head>
+
+  <body>
+    <script src="main.js"></script>
+      <script>
+        stockfish_loader = function (handler) {
+          stockfish = new Worker('js/stockfish.js');
+          stockfish.onmessage = function(msg) {
+            app.pushMsg(handler(msg.data));
+          };
+          return stockfish;
+        };
+        setTimeout(function() {
+          app = starter.main(document.body);
+        }, 1)
+    </script>
+  </body>
+</html>

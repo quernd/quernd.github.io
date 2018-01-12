@@ -1,14 +1,12 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
-"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+<!DOCTYPE html>
+<html lang="en">
 <head>
-<!-- 2017-12-31 Sun 15:21 -->
-<meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
+<!-- 2018-01-12 Fri 21:08 -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Twelve Days of Christmas #7</title>
-<meta name="generator" content="Org mode" />
-<meta name="author" content="Daniel Quernheim" />
+<meta name="generator" content="Org mode">
+<meta name="author" content="Daniel Quernheim">
 <link rel='stylesheet' href='/style.css' type='text/css'/>
 </head>
 <body>
@@ -21,16 +19,25 @@
 </div>
 <div id="content">
 <h1 class="title">Twelve Days of Christmas #7</h1>
+<div class="warning">
 <p>
-This is the seventh part of <a href="../index.html">a chess-themed tutorial</a> on writing an SPA in
+This was the first version of this tutorial.  Please visit the <a href="../index.html">new
+version</a> instead.
+</p>
+
+</div>
+
+<p>
+This is the seventh part of <a href="../index-old.html">a chess-themed tutorial</a> on writing an SPA in
 <a href="https://github.com/OvermindDL1/bucklescript-tea">Bucklescript-TEA</a>.  After this part, your app will look similar to <a href="demo.html">this demo</a>.
 </p>
+
 
 <p>
 Yesterday, we started logging moves, implementing
 take-back functionality and handled keyboard events. Today we improve
 the move list by making it look better, and by keeping moves after takeback until a different move
-is made. We learn about a functional programming technique called the "zipper".  Start from tag <code>day6</code> if you are following along with my
+is made. We learn about a functional programming technique called the &ldquo;zipper&rdquo;.  Start from tag <code>day6</code> if you are following along with my
 repository.
 </p>
 
@@ -38,21 +45,21 @@ repository.
 <h2 id="org830c7f9">Making the move list look better</h2>
 <div class="outline-text-2" id="text-org830c7f9">
 <p>
-So far, we're listing all moves in an unordered list.  That's not how
+So far, we&rsquo;re listing all moves in an unordered list.  That&rsquo;s not how
 you find chess game records printed in magazines.  The most common
 formats are: grouped by pairs of white/black move, or an inline list.
 In any case, moves are numbered in pairs, with the first white move
-labeled <code>1.</code>, the second white move <code>2.</code> etc. Black's moves are
+labeled <code>1.</code>, the second white move <code>2.</code> etc. Black&rsquo;s moves are
 usually not numbered unless they are the first move in a variation or
 after the move list was interrupted by a comment.  In that case, they
 are labeled with the move number followed by <code>...</code>, e.g. <code>3...</code>.
 Chess players typically make the distinction of <i>number of plies</i> (a
-ply is either one of White's and Black's moves) and <i>number of moves</i>
+ply is either one of White&rsquo;s and Black&rsquo;s moves) and <i>number of moves</i>
 (pairs of plies).
 </p>
 
 <p>
-Let's add some CSS to tweak our list so it looks better, and allows
+Let&rsquo;s add some CSS to tweak our list so it looks better, and allows
 for move numbers:
 </p>
 
@@ -89,13 +96,13 @@ for move numbers:
 We define the move list to have no bullet points (<code>list-style-type:
 none;</code>), and list items to be displayed inline.  To separate them, we
 use the CSS pseudo selector <code>:after</code> to insert a space.  Move numbers
-will be grey, and by default not shown unless we "switch them on" by
+will be grey, and by default not shown unless we &ldquo;switch them on&rdquo; by
 assigning the <code>numbered</code> class to the move.  We use the <code>:after</code>
 pseudo selector to insert a full stop and a non-breaking space.
 </p>
 
 <p>
-Now let's refactor <code>src/Main.ml</code> so that the move list view gets its
+Now let&rsquo;s refactor <code>src/Main.ml</code> so that the move list view gets its
 own function:
 </p>
 
@@ -117,10 +124,10 @@ own function:
 
 <p>
 We call <code>move_list_view model.moves</code> from the main <code>view</code> function.
-Notice how we check whether it's White's or Black's move by using the
+Notice how we check whether it&rsquo;s White&rsquo;s or Black&rsquo;s move by using the
 modulus operation.  It seems there should be an operation to return
 <code>ply / 2</code> (the integer part of the division) and <code>ply mod 2</code> (the
-remainder of the division) in one go, but I couldn't find one.  Not
+remainder of the division) in one go, but I couldn&rsquo;t find one.  Not
 performance-critical though :-)
 </p>
 
@@ -143,27 +150,27 @@ loop function and an accumulator.)
 <h2 id="org30f8632">List zippers</h2>
 <div class="outline-text-2" id="text-org30f8632">
 <p>
-Let's add a "move back" and "move forward" functionality to the move
-list view.  "Move back" is like "take back", but without changing the
-contents of the list, and "move forward" is like making the next move
+Let&rsquo;s add a &ldquo;move back&rdquo; and &ldquo;move forward&rdquo; functionality to the move
+list view.  &ldquo;Move back&rdquo; is like &ldquo;take back&rdquo;, but without changing the
+contents of the list, and &ldquo;move forward&rdquo; is like making the next move
 that was already in the list again, also not changing the contents of
 the list.  If we had an array that supports fast random access, we
 would probably just store the index of the current move, but
 </p>
 
 <ul class="org-ul">
-<li>that's really boring</li>
-<li>linked lists don't offer fast random access, and we need to quickly
-access the next move when the "move forward" button is clicked</li>
+<li>that&rsquo;s really boring</li>
+<li>linked lists don&rsquo;t offer fast random access, and we need to quickly
+access the next move when the &ldquo;move forward&rdquo; button is clicked</li>
 <li>we can learn about a cool purely functional data structure called <a href="https://pavpanchekha.com/blog/zippers/huet.html">the
 zipper</a>!</li>
 </ul>
 
 <p>
 Purely functional data structures are immutable, so they fit in nicely
-in our immutable world where we don't modify the model in-place but return a
-modified version of the model.  If you're interested in other purely
-functional data structures, I strongly recommend reading <a href="https://www.cs.cmu.edu/~rwh/theses/okasaki.pdf">Chris Okasaki's thesis</a>.
+in our immutable world where we don&rsquo;t modify the model in-place but return a
+modified version of the model.  If you&rsquo;re interested in other purely
+functional data structures, I strongly recommend reading <a href="https://www.cs.cmu.edu/~rwh/theses/okasaki.pdf">Chris Okasaki&rsquo;s thesis</a>.
 </p>
 
 <p>
@@ -174,8 +181,8 @@ between these two as a <i>cursor</i>, and moving the cursor around can be
 achieved by making cheap local modifications.  Zippers can be defined
 for all algebraic data structures.  In this tutorial, we will first
 use list zippers, and in a later part even tree zippers.  You can
-learn more about zippers in the excellent <a href="http://learnyouahaskell.com/zippers">"Learn You a Haskell for
-Great Good"</a> book, or in its <a href="https://learnyouanelm.github.io/pages/14-zippers.html">Elm adaptation</a>.
+learn more about zippers in the excellent <a href="http://learnyouahaskell.com/zippers">&ldquo;Learn You a Haskell for
+Great Good&rdquo;</a> book, or in its <a href="https://learnyouanelm.github.io/pages/14-zippers.html">Elm adaptation</a>.
 </p>
 
 <p>
@@ -183,24 +190,24 @@ We know that a list is either the empty list <code>[]</code> or a list made up o
 head and tail: <code>hd::tl</code>.  For instance, the list <code>[1; 2; 3; 4]</code> is
 actually represented as <code>1::[2::[3::[4::[]]]]</code>.  Navigating in this
 list actually means moving into and out of the square brackets!  A
-list zipper separates what we've already seen and what we're about to
+list zipper separates what we&rsquo;ve already seen and what we&rsquo;re about to
 see. For instance, a zipper at the position after <code>2</code> would be the
-pair of <code>past = 1::[2:: ◊ ]</code> (a list with a "hole") and a list to fill
+pair of <code>past = 1::[2:: ◊ ]</code> (a list with a &ldquo;hole&rdquo;) and a list to fill
 that hole: <code>future = [3; 4]</code>. 
 </p>
 
 <p>
 But how can we represent a list with a
-hole?  The crucial idea here is the "reversal of arrows".  Check out
+hole?  The crucial idea here is the &ldquo;reversal of arrows&rdquo;.  Check out
 these nice visual explanations for <a href="https://pavpanchekha.com/blog/zippers/huet.html">lists</a> and <a href="http://blog.ezyang.com/2010/04/you-could-have-invented-zippers/">trees</a>.  We turn the
-"past" list around: <code>past = [2; 1]</code>.  Then navigation becomes easy.
+&ldquo;past&rdquo; list around: <code>past = [2; 1]</code>.  Then navigation becomes easy.
 Moving back just takes the first element of <code>past</code> and appends it to the <code>future</code>
 list.  Moving forward just takes the first element of the <code>future</code>
 list and appends it to the <code>past</code> list.
 </p>
 
 <p>
-Start a new file <code>src/Zipper.ml</code>.  Here's the code for a simple list
+Start a new file <code>src/Zipper.ml</code>.  Here&rsquo;s the code for a simple list
 zipper:
 </p>
 
@@ -242,7 +249,7 @@ the future and starts over.
 </p>
 
 <p>
-Let's use a list zipper instead of a list to represent the moves now.
+Let&rsquo;s use a list zipper instead of a list to represent the moves now.
 Additionally, we now need to keep track of the current ply.
 </p>
 
@@ -294,7 +301,7 @@ future needs to be counting upwards while the past needs to be
 counting down.  I chose to implement tail-recursive functions that
 make everything explicit.   If you are new to functional programming,
 these might look a little scary.  I recommend the excellent <a href="https://fsharpforfunandprofit.com/posts/recursive-types-and-folds/">series on
-"folds" by Scott Wlaschin</a> if you want to understand what is going on here.
+&ldquo;folds&rdquo; by Scott Wlaschin</a> if you want to understand what is going on here.
 </p>
 
 <div class="org-src-container">
@@ -350,7 +357,7 @@ change the move list.
 </p>
 
 <p>
-Let's add two buttons and highlight the last move so we know where we
+Let&rsquo;s add two buttons and highlight the last move so we know where we
 are in the move list.  For the highlight, we pass an optional labeled
 argument to the <code>move_view</code> function, only for the first item of the
 past list:
@@ -379,9 +386,9 @@ past list:
 </div>
 
 <p>
-Let's also add a placeholder at the beginning of the move list that is
+Let&rsquo;s also add a placeholder at the beginning of the move list that is
 highlighted when the initial position is on the board.  I picked a
-Unicode symbol for "house".  Bucklescript adds nice Unicode support to
+Unicode symbol for &ldquo;house&rdquo;.  Bucklescript adds nice Unicode support to
 OCaml with <code>{js| |js}</code> strings:
 </p>
 
@@ -405,8 +412,8 @@ OCaml with <code>{js| |js}</code> strings:
 </div>
 
 <p>
-I renamed the "take back" button to "back" because that fits more with what it
-does now.  For the "forward" button, we repeat the same old pattern.
+I renamed the &ldquo;take back&rdquo; button to &ldquo;back&rdquo; because that fits more with what it
+does now.  For the &ldquo;forward&rdquo; button, we repeat the same old pattern.
 Beware of exceptions!  I also added keyboard shortcuts because I like
 the keyboard :-)
 </p>
@@ -440,9 +447,9 @@ the keyboard :-)
 <h2 id="orga0e634b">Simulating random access</h2>
 <div class="outline-text-2" id="text-orga0e634b">
 <p>
-Now let's implement a "random access" functionality: whenever the user
+Now let&rsquo;s implement a &ldquo;random access&rdquo; functionality: whenever the user
 clicks on a move, the game will jump to the position after this move.
-Let's define a message <code>Jump</code> with an
+Let&rsquo;s define a message <code>Jump</code> with an
 integer argument:
 </p>
 
@@ -461,7 +468,7 @@ integer argument:
 
 <p>
 We will use <code>Jump</code> with a negative number to jump back, and with a
-positive number to jump forward in the move list. First, let's make
+positive number to jump forward in the move list. First, let&rsquo;s make
 the moves clickable.  We refactor <code>move_view</code> so that instead of the
 sum of ply and offset it takes both arguments. A click on a move will trigger a <code>Jump</code> message
 with the appropriate offset:
@@ -534,7 +541,7 @@ triggers no jump. Finally, we react to the <code>Jump</code> message:
 <p>
 You should now be able to go back and forward using the buttons,
 keyboard shortcuts, and by just clicking on moves.  <a href="../day8/index.html">Tomorrow, we will
-turn our program into a "single-page application" (SPA)</a> by adding
+turn our program into a &ldquo;single-page application&rdquo; (SPA)</a> by adding
 client-side routing and some AJAX functionality to load games from the
 popular <a href="https://lichess.org/">Lichess online chess server</a>.
 </p>
