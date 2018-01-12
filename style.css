@@ -1,7 +1,11 @@
-nav, #nav {
+nav, #nav, p.up {
     float: right;
     text-transform: uppercase;
     padding-right: 1em;
+}
+
+p.up {
+    padding: 1em 1em 1em 2em;
 }
 
 div#org-div-home-and-up {
