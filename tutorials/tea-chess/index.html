@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<!-- 2018-01-21 Sun 20:40 -->
+<!-- 2018-01-21 Sun 21:07 -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Chess in Bucklescript-TEA</title>
@@ -168,11 +168,11 @@ comments <a href="mailto:daniel-2018@eu.avior.uberspace.de">by e-mail</a>.
 <li><a href="#part-viii">Part VIII: A move tree view</a>
 <ul>
 <li><a href="#orgb2b7cbd">Fully functional: Tree zippers!</a></li>
-<li><a href="#org0ce1bb6"><span class="todo TODO">TODO</span> Inside-out folds</a></li>
-<li><a href="#org59c1833"><span class="todo TODO">TODO</span> Building a zipper recursively</a></li>
+<li><a href="#org59c1833">Building a zipper recursively</a></li>
+<li><a href="#org0ce1bb6">Inside-out folds</a></li>
 <li><a href="#org32fd650"><span class="todo TODO">TODO</span> Move tree view and proper PGN serialization</a></li>
 <li><a href="#orgc2e6ab3"><span class="todo TODO">TODO</span> Navigating in a zipper</a></li>
-<li><a href="#orgb101770">The final touches (CSS)</a></li>
+<li><a href="#orgb101770"><span class="todo TODO">TODO</span> The final touches (CSS)</a></li>
 </ul>
 </li>
 </ul>
@@ -6708,88 +6708,13 @@ Our tree zipper is ready to be used :-)
 </div>
 </div>
 
-<div id="outline-container-org0ce1bb6" class="outline-3">
-<h3 id="org0ce1bb6"><span class="todo TODO">TODO</span> Inside-out folds</h3>
-<div class="outline-text-3" id="text-org0ce1bb6">
-<p>
-UNDER CONSTRUCTION
-</p>
-
-<div class="org-src-container">
-<pre class="src src-ocaml"><span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">id</span><span style="color: #BA36A5;"> x</span> <span style="color: #a52a2a;">=</span> x
-
-<span style="color: #8D8D84;">(* </span><span style="color: #8D8D84; font-style: italic;">fold_right' is like right fold, but carrying an additional </span>
-<span style="color: #8D8D84; font-style: italic;">   accumulator c that is updated by g and applied together with f </span><span style="color: #8D8D84;">*)</span>
-<span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">fold_right'</span><span style="color: #BA36A5;"> f g</span> <span style="color: #a52a2a;">=</span>  <span style="color: #8D8D84;">(* </span><span style="color: #8D8D84; font-style: italic;">c l </span><span style="color: #8D8D84;">*)</span>
-  <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #000000; font-weight: bold;">rec</span> <span style="color: #006699;">loop</span><span style="color: #BA36A5;"> cont c</span> <span style="color: #a52a2a;">=</span> <span style="color: #0000FF;">function</span>
-    <span style="color: #a52a2a;">|</span> hd<span style="color: #a52a2a;">::</span>tl <span style="color: #a52a2a;">-&gt;</span>
-      <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">c'</span> <span style="color: #a52a2a;">=</span> g c <span style="color: #000000; font-weight: bold;">in</span>
-      loop <span style="color: #a52a2a;">(</span><span style="color: #0000FF;">fun</span> <span style="color: #BA36A5;">acc'</span> <span style="color: #a52a2a;">-&gt;</span> cont <span style="color: #a52a2a;">(</span>f c hd<span style="color: #a52a2a;">::</span>acc'<span style="color: #a52a2a;">))</span> c' tl
-    <span style="color: #a52a2a;">|</span> <span style="color: #a52a2a;">[]</span> <span style="color: #a52a2a;">-&gt;</span> cont <span style="color: #a52a2a;">[]</span>
-  <span style="color: #000000; font-weight: bold;">in</span> loop id
-
-<span style="color: #8D8D84;">(* </span><span style="color: #8D8D84; font-style: italic;">fold_left' is like left fold, but carrying an additional </span>
-<span style="color: #8D8D84; font-style: italic;">   accumulator c that is updated by g and applied together with f </span><span style="color: #8D8D84;">*)</span>
-<span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">fold_left'</span><span style="color: #BA36A5;"> f g c l acc</span> <span style="color: #a52a2a;">=</span>  
-  <span style="color: #6434A3;">List.</span>fold_left
-    <span style="color: #a52a2a;">(</span><span style="color: #0000FF;">fun</span> <span style="color: #a52a2a;">(</span><span style="color: #BA36A5;">acc</span><span style="color: #a52a2a;">,</span><span style="color: #BA36A5;"> c</span><span style="color: #a52a2a;">)</span><span style="color: #BA36A5;"> item</span> <span style="color: #a52a2a;">-&gt;</span> f c item<span style="color: #a52a2a;">::</span>acc<span style="color: #a52a2a;">,</span> g c<span style="color: #a52a2a;">)</span>
-    <span style="color: #a52a2a;">(</span>acc<span style="color: #a52a2a;">,</span> c<span style="color: #a52a2a;">)</span> l
-
-
-<span style="color: #8D8D84;">(* </span><span style="color: #8D8D84; font-style: italic;">Generic map-fold catamorphism for move tree </span><span style="color: #8D8D84;">*)</span>
-<span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">fold_zipper</span>
-<span style="color: #BA36A5;">    </span><span style="color: #a52a2a;">~</span><span style="color: #BA36A5;">make_mainline </span><span style="color: #a52a2a;">~</span><span style="color: #BA36A5;">make_line </span><span style="color: #a52a2a;">~</span><span style="color: #BA36A5;">make_variation </span><span style="color: #a52a2a;">~</span><span style="color: #BA36A5;">make_variations </span><span style="color: #a52a2a;">~</span><span style="color: #BA36A5;">make_move</span>
-<span style="color: #BA36A5;">    </span><span style="color: #a52a2a;">~</span><span style="color: #BA36A5;">acc </span><span style="color: #a52a2a;">~</span><span style="color: #BA36A5;">fwd </span><span style="color: #a52a2a;">~</span><span style="color: #BA36A5;">back </span><span style="color: #a52a2a;">~</span><span style="color: #BA36A5;">up </span><span style="color: #a52a2a;">~</span><span style="color: #BA36A5;">down </span><span style="color: #a52a2a;">~</span><span style="color: #BA36A5;">next </span><span style="color: #a52a2a;">~</span><span style="color: #BA36A5;">prev </span><span style="color: #a52a2a;">((</span><span style="color: #BA36A5;">context</span><span style="color: #a52a2a;">,</span><span style="color: #BA36A5;"> past</span><span style="color: #a52a2a;">),</span><span style="color: #BA36A5;"> future</span><span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">=</span>
-
-  <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #000000; font-weight: bold;">rec</span> <span style="color: #006699;">fold_node</span><span style="color: #BA36A5;"> acc </span><span style="color: #a52a2a;">(</span><span style="color: #000000; background-color: #FFFFFF;">Node</span><span style="color: #BA36A5;"> </span><span style="color: #a52a2a;">(</span><span style="color: #BA36A5;">move</span><span style="color: #a52a2a;">,</span><span style="color: #BA36A5;"> variations</span><span style="color: #a52a2a;">))</span> <span style="color: #a52a2a;">=</span>
-    fold_variations acc variations
-    <span style="color: #a52a2a;">|&gt;</span> make_move acc move
-  <span style="color: #000000; font-weight: bold;">and</span> <span style="color: #006699;">fold_variations</span><span style="color: #BA36A5;"> acc variations</span> <span style="color: #a52a2a;">=</span>
-    fold_right' fold_variation next <span style="color: #a52a2a;">(</span>down acc<span style="color: #a52a2a;">)</span> variations
-    <span style="color: #a52a2a;">|&gt;</span> make_variations
-  <span style="color: #000000; font-weight: bold;">and</span> <span style="color: #006699;">fold_variation</span><span style="color: #BA36A5;"> acc </span><span style="color: #a52a2a;">(</span><span style="color: #000000; background-color: #FFFFFF;">Var</span><span style="color: #BA36A5;"> </span><span style="color: #a52a2a;">(</span><span style="color: #BA36A5;">move</span><span style="color: #a52a2a;">,</span><span style="color: #BA36A5;"> line</span><span style="color: #a52a2a;">))</span> <span style="color: #a52a2a;">=</span>
-    make_move acc move <span style="color: #a52a2a;">(</span>make_variations <span style="color: #a52a2a;">[])::</span>fold_future <span style="color: #a52a2a;">(</span>fwd acc<span style="color: #a52a2a;">)</span> line
-    <span style="color: #a52a2a;">|&gt;</span> make_line
-    <span style="color: #a52a2a;">|&gt;</span> make_variation
-  <span style="color: #000000; font-weight: bold;">and</span> <span style="color: #006699;">fold_future</span><span style="color: #BA36A5;"> acc list</span> <span style="color: #a52a2a;">=</span> fold_right' fold_node fwd acc list <span style="color: #000000; font-weight: bold;">in</span>
-
-  <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">fold_past</span><span style="color: #BA36A5;"> acc list</span> <span style="color: #a52a2a;">=</span> fold_left' fold_node back acc list <span style="color: #000000; font-weight: bold;">in</span>
-
-  <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #000000; font-weight: bold;">rec</span> <span style="color: #006699;">fold_tree_context</span><span style="color: #BA36A5;"> acc </span><span style="color: #a52a2a;">((</span><span style="color: #BA36A5;">context</span><span style="color: #a52a2a;">,</span><span style="color: #BA36A5;"> past</span><span style="color: #a52a2a;">),</span><span style="color: #BA36A5;"> future</span><span style="color: #a52a2a;">)</span><span style="color: #BA36A5;"> inner</span> <span style="color: #a52a2a;">=</span>
-    <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">fold_acc</span><span style="color: #a52a2a;">,</span><span style="color: #BA36A5;"> acc'</span> <span style="color: #a52a2a;">=</span>
-      inner<span style="color: #a52a2a;">::</span>fold_future <span style="color: #a52a2a;">(</span>fwd acc<span style="color: #a52a2a;">)</span> future
-      <span style="color: #a52a2a;">|&gt;</span> fold_past <span style="color: #a52a2a;">(</span>back acc<span style="color: #a52a2a;">)</span> past <span style="color: #000000; font-weight: bold;">in</span>
-    fold_line_context acc' context fold_acc
-
-  <span style="color: #000000; font-weight: bold;">and</span> <span style="color: #006699;">fold_line_context</span><span style="color: #BA36A5;"> acc context inner</span> <span style="color: #a52a2a;">=</span>
-    <span style="color: #0000FF;">match</span> context <span style="color: #0000FF;">with</span>
-    <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Main_line</span> <span style="color: #a52a2a;">-&gt;</span> make_mainline acc inner
-    <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Var_line</span> <span style="color: #a52a2a;">(</span>context<span style="color: #a52a2a;">,</span> main<span style="color: #a52a2a;">,</span> left<span style="color: #a52a2a;">,</span> var_move<span style="color: #a52a2a;">,</span> right<span style="color: #a52a2a;">,</span> future<span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">-&gt;</span>
-      <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">this_var</span> <span style="color: #a52a2a;">=</span> make_move acc var_move <span style="color: #a52a2a;">(</span>make_variations <span style="color: #a52a2a;">[])::</span>inner
-                     <span style="color: #a52a2a;">|&gt;</span> id <span style="color: #8D8D84;">(* </span><span style="color: #8D8D84; font-style: italic;">+ acc make "not mainline" ? </span><span style="color: #8D8D84;">*)</span>
-                     <span style="color: #a52a2a;">|&gt;</span> make_line
-                     <span style="color: #a52a2a;">|&gt;</span> make_variation <span style="color: #000000; font-weight: bold;">in</span>
-      this_var<span style="color: #a52a2a;">::(</span>fold_right' fold_variation next <span style="color: #a52a2a;">(</span>next acc<span style="color: #a52a2a;">)</span> right<span style="color: #a52a2a;">)</span>
-      <span style="color: #a52a2a;">|&gt;</span> fold_left' fold_variation prev <span style="color: #a52a2a;">(</span>prev acc<span style="color: #a52a2a;">)</span> left
-      <span style="color: #a52a2a;">|&gt;</span> fst
-      <span style="color: #a52a2a;">|&gt;</span> make_variations
-      <span style="color: #a52a2a;">|&gt;</span> make_move <span style="color: #a52a2a;">(</span>up acc<span style="color: #a52a2a;">)</span> main 
-      <span style="color: #a52a2a;">|&gt;</span> fold_tree_context <span style="color: #a52a2a;">(</span>up acc<span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">(</span>context<span style="color: #a52a2a;">,</span> future<span style="color: #a52a2a;">)</span> <span style="color: #000000; font-weight: bold;">in</span>
-
-  <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">fold_acc</span><span style="color: #a52a2a;">,</span><span style="color: #BA36A5;"> acc'</span> <span style="color: #a52a2a;">=</span> fold_future <span style="color: #a52a2a;">(</span>fwd acc<span style="color: #a52a2a;">)</span> future
-                       <span style="color: #a52a2a;">|&gt;</span> fold_past acc past <span style="color: #000000; font-weight: bold;">in</span>
-  fold_line_context acc' context fold_acc
-  <span style="color: #a52a2a;">|&gt;</span> make_line
-</pre>
-</div>
-</div>
-</div>
-
 <div id="outline-container-org59c1833" class="outline-3">
-<h3 id="org59c1833"><span class="todo TODO">TODO</span> Building a zipper recursively</h3>
+<h3 id="org59c1833">Building a zipper recursively</h3>
 <div class="outline-text-3" id="text-org59c1833">
 <p>
-UNDER CONSTRUCTION
+Let&rsquo;s build a game zipper from a parsed PGN game.  This is basically
+the same structure as the PGN parser itself, a group of mutually
+recursive functions.
 </p>
 
 <div class="org-src-container">
@@ -6840,6 +6765,132 @@ UNDER CONSTRUCTION
 <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">game_of_pgn</span><span style="color: #BA36A5;"> pgn</span> <span style="color: #a52a2a;">=</span>
   <span style="color: #0000FF;">try</span> <span style="color: #000000; background-color: #FFFFFF;">Some</span> <span style="color: #a52a2a;">(</span>game_of_pgn' pgn<span style="color: #a52a2a;">)</span>
   <span style="color: #0000FF;">with</span> _ <span style="color: #a52a2a;">-&gt;</span> <span style="color: #000000; background-color: #FFFFFF;">None</span> 
+</pre>
+</div>
+</div>
+</div>
+
+<div id="outline-container-org0ce1bb6" class="outline-3">
+<h3 id="org0ce1bb6">Inside-out folds</h3>
+<div class="outline-text-3" id="text-org0ce1bb6">
+<p>
+Now let&rsquo;s tackle the other side of the coin, serialization of a zipper
+and the move view.
+We will try to abstract as much as possible in this section.  Since
+both PGN serialization and the move tree view involve building the
+tree structure that underlies the game zipper, we will implement a
+generic tree zipper &ldquo;fold&rdquo;-like function that traverses and maps the
+zipper.
+</p>
+
+<p>
+First, let&rsquo;s write two helper functions.  These are similar to the
+&ldquo;past&rdquo; and &ldquo;future&rdquo; folds that we implemented earlier, but take two
+additional parameters: a second accumulator <code>c</code> that regardless of the
+direction of the fold is carried along from the front of the list
+(this will hold the state of the traversal, like the move number), and
+a function <code>g</code> that computes the next state after each step.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-ocaml"><span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">id</span><span style="color: #BA36A5;"> x</span> <span style="color: #a52a2a;">=</span> x
+
+<span style="color: #8D8D84;">(* </span><span style="color: #8D8D84; font-style: italic;">fold_right' is like right fold, but carrying an additional </span>
+<span style="color: #8D8D84; font-style: italic;">   accumulator c that is updated by g and applied together with f </span><span style="color: #8D8D84;">*)</span>
+<span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">fold_right'</span><span style="color: #BA36A5;"> f g</span> <span style="color: #a52a2a;">=</span>  <span style="color: #8D8D84;">(* </span><span style="color: #8D8D84; font-style: italic;">c l </span><span style="color: #8D8D84;">*)</span>
+  <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #000000; font-weight: bold;">rec</span> <span style="color: #006699;">loop</span><span style="color: #BA36A5;"> cont c</span> <span style="color: #a52a2a;">=</span> <span style="color: #0000FF;">function</span>
+    <span style="color: #a52a2a;">|</span> hd<span style="color: #a52a2a;">::</span>tl <span style="color: #a52a2a;">-&gt;</span>
+      <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">c'</span> <span style="color: #a52a2a;">=</span> g c <span style="color: #000000; font-weight: bold;">in</span>
+      loop <span style="color: #a52a2a;">(</span><span style="color: #0000FF;">fun</span> <span style="color: #BA36A5;">acc'</span> <span style="color: #a52a2a;">-&gt;</span> cont <span style="color: #a52a2a;">(</span>f c hd<span style="color: #a52a2a;">::</span>acc'<span style="color: #a52a2a;">))</span> c' tl
+    <span style="color: #a52a2a;">|</span> <span style="color: #a52a2a;">[]</span> <span style="color: #a52a2a;">-&gt;</span> cont <span style="color: #a52a2a;">[]</span>
+  <span style="color: #000000; font-weight: bold;">in</span> loop id
+
+<span style="color: #8D8D84;">(* </span><span style="color: #8D8D84; font-style: italic;">fold_left' is like left fold, but carrying an additional </span>
+<span style="color: #8D8D84; font-style: italic;">   accumulator c that is updated by g and applied together with f </span><span style="color: #8D8D84;">*)</span>
+<span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">fold_left'</span><span style="color: #BA36A5;"> f g c l acc</span> <span style="color: #a52a2a;">=</span>  
+  <span style="color: #6434A3;">List.</span>fold_left
+    <span style="color: #a52a2a;">(</span><span style="color: #0000FF;">fun</span> <span style="color: #a52a2a;">(</span><span style="color: #BA36A5;">acc</span><span style="color: #a52a2a;">,</span><span style="color: #BA36A5;"> c</span><span style="color: #a52a2a;">)</span><span style="color: #BA36A5;"> item</span> <span style="color: #a52a2a;">-&gt;</span> f c item<span style="color: #a52a2a;">::</span>acc<span style="color: #a52a2a;">,</span> g c<span style="color: #a52a2a;">)</span>
+    <span style="color: #a52a2a;">(</span>acc<span style="color: #a52a2a;">,</span> c<span style="color: #a52a2a;">)</span> l
+</pre>
+</div>
+
+<p>
+Now we&rsquo;re ready for the &ldquo;meat&rdquo; of this section, a general &ldquo;fold&rdquo;-like
+function that turns a zipper into a tree, parameterized by the
+following functions:
+</p>
+
+<ul class="org-ul">
+<li><code>make_move</code> formats a move according to the &ldquo;state&rdquo; accumulator</li>
+<li><code>make_line</code> maps a list of moves</li>
+<li><code>make_variation</code> wraps a line that is a variation</li>
+<li><code>make_variations</code> maps a list of variations</li>
+<li><code>make_mainline</code> wraps the main line</li>
+</ul>
+
+<p>
+Additionally, we supply the initial state accumulator and functions
+that change the state accumulator on its way inside the zipper.
+</p>
+
+<p>
+This function looks scary at first.  There are two different groups of
+mutually recursive functions here.  The first group could be called
+&ldquo;top-down&rdquo; functions since they operate on the tree (past/future) parts of the
+zipper.  Similar to the mutually recursive PGN parser functions, they
+build up the &ldquo;triad&rdquo; of moves, lines and variation lists.
+</p>
+
+<p>
+The second group of functions is the &ldquo;bottom-up&rdquo; functions that build
+up the context part of the zipper, branching out into the &ldquo;top-down&rdquo;
+functions when needed.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-ocaml"><span style="color: #8D8D84;">(* </span><span style="color: #8D8D84; font-style: italic;">Generic map-fold catamorphism for move tree </span><span style="color: #8D8D84;">*)</span>
+<span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">fold_zipper</span>
+<span style="color: #BA36A5;">    </span><span style="color: #a52a2a;">~</span><span style="color: #BA36A5;">make_mainline </span><span style="color: #a52a2a;">~</span><span style="color: #BA36A5;">make_line </span><span style="color: #a52a2a;">~</span><span style="color: #BA36A5;">make_variation </span><span style="color: #a52a2a;">~</span><span style="color: #BA36A5;">make_variations </span><span style="color: #a52a2a;">~</span><span style="color: #BA36A5;">make_move</span>
+<span style="color: #BA36A5;">    </span><span style="color: #a52a2a;">~</span><span style="color: #BA36A5;">acc </span><span style="color: #a52a2a;">~</span><span style="color: #BA36A5;">fwd </span><span style="color: #a52a2a;">~</span><span style="color: #BA36A5;">back </span><span style="color: #a52a2a;">~</span><span style="color: #BA36A5;">up </span><span style="color: #a52a2a;">~</span><span style="color: #BA36A5;">down </span><span style="color: #a52a2a;">~</span><span style="color: #BA36A5;">next </span><span style="color: #a52a2a;">~</span><span style="color: #BA36A5;">prev </span><span style="color: #a52a2a;">((</span><span style="color: #BA36A5;">context</span><span style="color: #a52a2a;">,</span><span style="color: #BA36A5;"> past</span><span style="color: #a52a2a;">),</span><span style="color: #BA36A5;"> future</span><span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">=</span>
+
+  <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #000000; font-weight: bold;">rec</span> <span style="color: #006699;">fold_node</span><span style="color: #BA36A5;"> acc </span><span style="color: #a52a2a;">(</span><span style="color: #000000; background-color: #FFFFFF;">Node</span><span style="color: #BA36A5;"> </span><span style="color: #a52a2a;">(</span><span style="color: #BA36A5;">move</span><span style="color: #a52a2a;">,</span><span style="color: #BA36A5;"> variations</span><span style="color: #a52a2a;">))</span> <span style="color: #a52a2a;">=</span>
+    fold_variations acc variations
+    <span style="color: #a52a2a;">|&gt;</span> make_move acc move
+  <span style="color: #000000; font-weight: bold;">and</span> <span style="color: #006699;">fold_variations</span><span style="color: #BA36A5;"> acc variations</span> <span style="color: #a52a2a;">=</span>
+    fold_right' fold_variation next <span style="color: #a52a2a;">(</span>down acc<span style="color: #a52a2a;">)</span> variations
+    <span style="color: #a52a2a;">|&gt;</span> make_variations
+  <span style="color: #000000; font-weight: bold;">and</span> <span style="color: #006699;">fold_variation</span><span style="color: #BA36A5;"> acc </span><span style="color: #a52a2a;">(</span><span style="color: #000000; background-color: #FFFFFF;">Var</span><span style="color: #BA36A5;"> </span><span style="color: #a52a2a;">(</span><span style="color: #BA36A5;">move</span><span style="color: #a52a2a;">,</span><span style="color: #BA36A5;"> line</span><span style="color: #a52a2a;">))</span> <span style="color: #a52a2a;">=</span>
+    make_move acc move <span style="color: #a52a2a;">(</span>make_variations <span style="color: #a52a2a;">[])::</span>fold_future <span style="color: #a52a2a;">(</span>fwd acc<span style="color: #a52a2a;">)</span> line
+    <span style="color: #a52a2a;">|&gt;</span> make_line
+    <span style="color: #a52a2a;">|&gt;</span> make_variation
+  <span style="color: #000000; font-weight: bold;">and</span> <span style="color: #006699;">fold_future</span><span style="color: #BA36A5;"> acc list</span> <span style="color: #a52a2a;">=</span> fold_right' fold_node fwd acc list <span style="color: #000000; font-weight: bold;">in</span>
+
+  <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">fold_past</span><span style="color: #BA36A5;"> acc list</span> <span style="color: #a52a2a;">=</span> fold_left' fold_node back acc list <span style="color: #000000; font-weight: bold;">in</span>
+
+  <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #000000; font-weight: bold;">rec</span> <span style="color: #006699;">fold_tree_context</span><span style="color: #BA36A5;"> acc </span><span style="color: #a52a2a;">((</span><span style="color: #BA36A5;">context</span><span style="color: #a52a2a;">,</span><span style="color: #BA36A5;"> past</span><span style="color: #a52a2a;">),</span><span style="color: #BA36A5;"> future</span><span style="color: #a52a2a;">)</span><span style="color: #BA36A5;"> inner</span> <span style="color: #a52a2a;">=</span>
+    <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">fold_acc</span><span style="color: #a52a2a;">,</span><span style="color: #BA36A5;"> acc'</span> <span style="color: #a52a2a;">=</span>
+      inner<span style="color: #a52a2a;">::</span>fold_future <span style="color: #a52a2a;">(</span>fwd acc<span style="color: #a52a2a;">)</span> future
+      <span style="color: #a52a2a;">|&gt;</span> fold_past <span style="color: #a52a2a;">(</span>back acc<span style="color: #a52a2a;">)</span> past <span style="color: #000000; font-weight: bold;">in</span>
+    fold_line_context acc' context fold_acc
+
+  <span style="color: #000000; font-weight: bold;">and</span> <span style="color: #006699;">fold_line_context</span><span style="color: #BA36A5;"> acc context inner</span> <span style="color: #a52a2a;">=</span>
+    <span style="color: #0000FF;">match</span> context <span style="color: #0000FF;">with</span>
+    <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Main_line</span> <span style="color: #a52a2a;">-&gt;</span> make_mainline acc inner
+    <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Var_line</span> <span style="color: #a52a2a;">(</span>context<span style="color: #a52a2a;">,</span> main<span style="color: #a52a2a;">,</span> left<span style="color: #a52a2a;">,</span> var_move<span style="color: #a52a2a;">,</span> right<span style="color: #a52a2a;">,</span> future<span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">-&gt;</span>
+      <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">this_var</span> <span style="color: #a52a2a;">=</span> make_move acc var_move <span style="color: #a52a2a;">(</span>make_variations <span style="color: #a52a2a;">[])::</span>inner
+                     <span style="color: #a52a2a;">|&gt;</span> make_line
+                     <span style="color: #a52a2a;">|&gt;</span> make_variation <span style="color: #000000; font-weight: bold;">in</span>
+      this_var<span style="color: #a52a2a;">::(</span>fold_right' fold_variation next <span style="color: #a52a2a;">(</span>next acc<span style="color: #a52a2a;">)</span> right<span style="color: #a52a2a;">)</span>
+      <span style="color: #a52a2a;">|&gt;</span> fold_left' fold_variation prev <span style="color: #a52a2a;">(</span>prev acc<span style="color: #a52a2a;">)</span> left
+      <span style="color: #a52a2a;">|&gt;</span> fst
+      <span style="color: #a52a2a;">|&gt;</span> make_variations
+      <span style="color: #a52a2a;">|&gt;</span> make_move <span style="color: #a52a2a;">(</span>up acc<span style="color: #a52a2a;">)</span> main 
+      <span style="color: #a52a2a;">|&gt;</span> fold_tree_context <span style="color: #a52a2a;">(</span>up acc<span style="color: #a52a2a;">)</span> <span style="color: #a52a2a;">(</span>context<span style="color: #a52a2a;">,</span> future<span style="color: #a52a2a;">)</span> <span style="color: #000000; font-weight: bold;">in</span>
+
+  <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">fold_acc</span><span style="color: #a52a2a;">,</span><span style="color: #BA36A5;"> acc'</span> <span style="color: #a52a2a;">=</span> fold_future <span style="color: #a52a2a;">(</span>fwd acc<span style="color: #a52a2a;">)</span> future
+                       <span style="color: #a52a2a;">|&gt;</span> fold_past acc past <span style="color: #000000; font-weight: bold;">in</span>
+  fold_line_context acc' context fold_acc
+  <span style="color: #a52a2a;">|&gt;</span> make_line
 </pre>
 </div>
 </div>
@@ -6943,6 +6994,15 @@ view and PGN serialization, just by supplying the right functions:
 <div id="outline-container-orgc2e6ab3" class="outline-3">
 <h3 id="orgc2e6ab3"><span class="todo TODO">TODO</span> Navigating in a zipper</h3>
 <div class="outline-text-3" id="text-orgc2e6ab3">
+<p>
+In order to navigate in a move tree view, we need to extend our
+&ldquo;vocabulary&rdquo; of navigation primitives.  In a move list, all we needed
+was the offset of how many moves we wanted to navigate forward or
+backward.  Now, we will represent the path in the move tree by a list
+of actions from a variant.  The type <code>acc</code> will serve to carry the
+actions list and the move number along in the fold function.
+</p>
+
 <div class="org-src-container">
 <pre class="src src-ocaml"><span style="color: #000000; font-weight: bold;">type</span> <span style="color: #6434A3;">action</span> <span style="color: #a52a2a;">=</span> <span style="color: #000000; background-color: #FFFFFF;">Fwd</span> <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Back</span> <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Down</span> <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Next</span> <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Prev</span> <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Up</span>
 
@@ -6950,8 +7010,15 @@ view and PGN serialization, just by supplying the right functions:
   <span style="color: #a52a2a;">{</span> ply <span style="color: #a52a2a;">:</span> int
   <span style="color: #a52a2a;">;</span> actions <span style="color: #a52a2a;">:</span> action list
   <span style="color: #a52a2a;">}</span>
+</pre>
+</div>
 
-<span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">game_back</span><span style="color: #BA36A5;"> model</span> <span style="color: #a52a2a;">=</span>
+<p>
+Navigation itself is not tricky:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-ocaml"><span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">game_back</span><span style="color: #BA36A5;"> model</span> <span style="color: #a52a2a;">=</span>
   <span style="color: #0000FF;">match</span> model.position.prev <span style="color: #0000FF;">with</span>
   <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Some</span> position <span style="color: #a52a2a;">-&gt;</span>
     <span style="color: #000000; font-weight: bold;">begin</span> <span style="color: #0000FF;">try</span> <span style="color: #a52a2a;">{</span> model <span style="color: #0000FF;">with</span>
@@ -6997,8 +7064,16 @@ view and PGN serialization, just by supplying the right functions:
 <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">game_prev</span> <span style="color: #a52a2a;">=</span> game_rewind_and_make_move <span style="color: #6434A3;">Zipper.</span>tree_prev
 <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">game_down</span> <span style="color: #a52a2a;">=</span> game_rewind_and_make_move <span style="color: #6434A3;">Zipper.</span>tree_down
 <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #BA36A5;">game_up</span> <span style="color: #a52a2a;">=</span> game_rewind_and_make_move <span style="color: #6434A3;">Zipper.</span>tree_up
+</pre>
+</div>
 
-<span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">fun_of_action</span> <span style="color: #a52a2a;">=</span> <span style="color: #0000FF;">function</span>
+<p>
+Here&rsquo;s how we obtain a single function from a list of actions: of
+course, using a fold!
+</p>
+
+<div class="org-src-container">
+<pre class="src src-ocaml"><span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">fun_of_action</span> <span style="color: #a52a2a;">=</span> <span style="color: #0000FF;">function</span>
   <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Fwd</span> <span style="color: #a52a2a;">-&gt;</span> game_fwd
   <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Back</span> <span style="color: #a52a2a;">-&gt;</span> game_back
   <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Down</span> <span style="color: #a52a2a;">-&gt;</span> game_down
@@ -7006,12 +7081,17 @@ view and PGN serialization, just by supplying the right functions:
   <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Prev</span> <span style="color: #a52a2a;">-&gt;</span> game_prev
   <span style="color: #a52a2a;">|</span> <span style="color: #000000; background-color: #FFFFFF;">Up</span> <span style="color: #a52a2a;">-&gt;</span> game_up
 
-<span style="color: #000000; font-weight: bold;">let</span> <span style="color: #a52a2a;">(&lt;.&lt;)</span> f g x <span style="color: #a52a2a;">=</span> f <span style="color: #a52a2a;">(</span>g x<span style="color: #a52a2a;">)</span>
+<span style="color: #000000; font-weight: bold;">let</span> <span style="color: #a52a2a;">(&lt;&lt;&lt;)</span> f g x <span style="color: #a52a2a;">=</span> f <span style="color: #a52a2a;">(</span>g x<span style="color: #a52a2a;">)</span>
 
 <span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">fun_of_actions</span><span style="color: #BA36A5;"> actions</span> <span style="color: #a52a2a;">=</span>
-  <span style="color: #6434A3;">List.</span>fold_left <span style="color: #a52a2a;">(</span><span style="color: #0000FF;">fun</span> <span style="color: #BA36A5;">acc a</span> <span style="color: #a52a2a;">-&gt;</span> acc <span style="color: #a52a2a;">&lt;.&lt;</span> <span style="color: #a52a2a;">(</span>fun_of_action a<span style="color: #a52a2a;">))</span> id actions
+  <span style="color: #6434A3;">List.</span>fold_left <span style="color: #a52a2a;">(</span><span style="color: #0000FF;">fun</span> <span style="color: #BA36A5;">acc a</span> <span style="color: #a52a2a;">-&gt;</span> acc <span style="color: #a52a2a;">&lt;&lt;&lt;</span> <span style="color: #a52a2a;">(</span>fun_of_action a<span style="color: #a52a2a;">))</span> id actions
 </pre>
 </div>
+
+<p>
+And finally, the <code>update</code> function of <code>Game.ml</code> becomes super easy
+because everything has been factored out:
+</p>
 
 <div class="org-src-container">
 <pre class="src src-ocaml"><span style="color: #000000; font-weight: bold;">let</span> <span style="color: #006699;">update</span><span style="color: #BA36A5;"> model</span> <span style="color: #a52a2a;">=</span> <span style="color: #0000FF;">function</span>
@@ -7029,8 +7109,15 @@ view and PGN serialization, just by supplying the right functions:
 </div>
 
 <div id="outline-container-orgb101770" class="outline-3">
-<h3 id="orgb101770">The final touches (CSS)</h3>
+<h3 id="orgb101770"><span class="todo TODO">TODO</span> The final touches (CSS)</h3>
 <div class="outline-text-3" id="text-orgb101770">
+<p>
+Let&rsquo;s add some CSS to make the move tree look nice.  We&rsquo;ll make
+subvariations a little smaller and assign different list styles.  Also
+note the various CSS selector tricks to show the move numbers at the
+beginning of a variation and after a variation.
+</p>
+
 <div class="org-src-container">
 <pre class="src src-css">li.move.home + li.move &gt; span.number,
 li.move.white &gt; span.number,
